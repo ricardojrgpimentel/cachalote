@@ -321,6 +321,20 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Motor embutido (sem root)", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Testa se o Node embutido na APK consegue executar-se a partir do " +
+                        "nativeLibraryDir — é o que permite correr o motor dentro da app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Text(vm.embedTest, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = { vm.testEmbeddedNode() }, enabled = !vm.busy) { Text("Testar execução") }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("Capacidades autorizadas", fontWeight = FontWeight.SemiBold)
                 Text(

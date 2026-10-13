@@ -239,6 +239,67 @@ if (fs.existsSync(pluginSrc)) {
   report.push("plugin cachalote-tools: AVISO — " + pluginSrc + " não existe");
 }
 
+/* ---------- patch 7: guarda de caminhos no tool-bash ---------- */
+// No Android não há Landlock: o `bash` corre sem confinamento e as aprovações do DSH nunca
+// eram pedidas (nascem do *escalonamento*, que só acontece quando o sandbox falha). Esta
+// guarda fecha esse buraco: antes de executar, se o comando toca em caminhos fora da área
+// permitida, pede autorização pelo serviço `approval` — que o perfil ACP transforma num
+// `session/request_permission` e a app mostra no telefone. Ver D10 no PLANO.md.
+//
+// Nota: tentámos primeiro um listener em `tools/pre-execute` (o seam documentado), mas o
+// waterfall é despachado num escopo por-agente e os listeners registados na raiz não o
+// recebem (ver base de conhecimento #59).
+const toolBashFile = HOME + "/@deepseek-ai/dsh-tool-bash/lib/index.js";
+if (fs.existsSync(toolBashFile)) {
+  let src = fs.readFileSync(toolBashFile, "utf8");
+  const marker = "cachalote: guarda de caminhos";
+  if (src.includes(marker)) {
+    report.push("tool-bash (guarda): já patcheado (nada a fazer)");
+  } else {
+    const anchor = "\tconst approveBashEscalation = (mode, justification, exec, standingPolicy) => {";
+    const callAnchor = "\t\t\t\tvalidateBashArgs(args, standingPolicy?.mode);";
+    if (!src.includes(anchor) || !src.includes(callAnchor)) {
+      report.push("tool-bash (guarda): AVISO — âncoras não encontradas; versão mudou?");
+    } else {
+      const guard = [
+        "\t/** " + marker + " (ver D10 do PLANO.md). */",
+        "\tconst cachaloteGuard = async (command, exec) => {",
+        '\t\tconst readOnly = ["/system","/vendor","/product","/apex","/proc","/sys","/dev","/etc","/bin","/sbin","/lib","/lib64","/usr","/odm","/metadata"];',
+        "\t\tconst cwd = exec?.agent?.session?.header?.cwd;",
+        '\t\tconst roots = [...new Set([...(process.env.CACHALOTE_ALLOWED_ROOTS || "").split(":").filter(Boolean), ...(cwd ? [cwd] : []), process.env.DSH_HOME || "/data/adb/cachalote/home"])];',
+        "\t\tconst bad = /* @__PURE__ */ new Set();",
+        "\t\tfor (const raw of String(command).match(/(?<![\\w.-])\\/[^\\s'\"`;|&()<>]*/g) || []) {",
+        '\t\t\tconst clean = raw.replace(/\\/+$/, "") || "/";',
+        '\t\t\tif (readOnly.some((p) => clean === p || clean.startsWith(p + "/"))) continue;',
+        '\t\t\tif (roots.some((r) => clean === r || clean.startsWith(String(r).replace(/\\/+$/, "") + "/"))) continue;',
+        "\t\t\tbad.add(clean);",
+        "\t\t}",
+        "\t\tif (bad.size === 0) return;",
+        "\t\tconst list = [...bad].slice(0, 5);",
+        '\t\tconst approver = ctx.get("approval");',
+        "\t\tif (approver === void 0) throw new Error(`cachalote guard: comando fora da área permitida (${list.join(\", \")}) e não há canal de aprovação nesta composição`);",
+        "\t\tconst outcome = await approver.request({",
+        "\t\t\tagent: exec.agent,",
+        '\t\t\ttoolName: "bash",',
+        "\t\t\tcallId: exec.callId,",
+        "\t\t\treason: `cachalote guard: o comando toca em caminhos fora da área permitida: ${list.join(\", \")}`,",
+        "\t\t\tdisplayReason: { en: `This command touches paths outside the allowed area: ${list.join(\", \")}`, zh: `该命令访问了允许范围之外的路径：${list.join(\", \")}` },",
+        "\t\t\tsignal: exec.signal",
+        "\t\t});",
+        "\t\tif (outcome !== \"allowed-once\") throw new Error(`cachalote guard: o utilizador não autorizou (${outcome})`);",
+        "\t};",
+        "",
+      ].join("\n");
+      src = src.replace(anchor, guard + anchor);
+      src = src.replace(callAnchor, callAnchor + "\n\t\t\t\tawait cachaloteGuard(args.command, exec); // " + marker);
+      fs.writeFileSync(toolBashFile, src);
+      report.push("tool-bash (guarda): guarda de caminhos instalada (pede aprovação no telefone)");
+    }
+  }
+} else {
+  report.push("tool-bash (guarda): AVISO — ficheiro não encontrado");
+}
+
 /* ---------- verificação final: nenhum .node na árvore ---------- */
 let natives = [];
 (function walk(dir) {

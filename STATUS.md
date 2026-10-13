@@ -316,8 +316,47 @@ instalar por cima da versão de debug é preciso desinstalar primeiro.
 
 | Tema | Nota |
 |---|---|
-| **Confinamento real a caminho** | As capacidades têm allow-list, mas o `bash` continua a correr como root sem sandbox (D10). A barreira definitiva é uma allow-list de caminhos/auditoria no próprio `bash` — hoje o que existe é a aprovação e o registo das capacidades. |
-| **Flavors** | Só existe o flavor root (Magisk). Falta o flavor Shizuku e o "in-app" (`targetSdk 28`) para quem não tem root. |
+| ~~**Confinamento do bash**~~ | ✅ **feito** (ver §12): guarda de caminhos + aprovação no telefone, verificada A/B (aprovar → corre; recusar → bloqueado). |
+| **Flavors** | O núcleo do flavor "in-app" está **provado** (`libnode.so` executa com targetSdk 35, ver §12); falta empacotar a árvore do kernel na APK e o modo de arranque em processo. O flavor Shizuku continua por fazer. |
 | **Onboarding** | A app já guia token/acessibilidade/capacidades, mas não tem um fluxo de primeira execução (9 passos de permissões, como faz o projecto de referência). |
 | **Anexos e voz** | Sem imagens no prompt (o ACP anuncia `promptCapabilities.image: false`) e sem entrada por voz. |
 | **SEA + snapshot** | Arranque do motor já é raro (daemon quente), mas o SEA com snapshot (`--build-snapshot`) daria 5,9× no arranque a frio (D6b). |
+
+
+---
+
+## 12. Fecho do plano — a barreira do bash e o flavor sem root
+
+### Guarda de caminhos do `bash` (o item de segurança que faltava)
+
+```
+comando bash do agente
+   │
+   ├─ caminhos dentro da área permitida  → executa (fica no registo)
+   └─ caminhos fora  → pedido de autorização (ACP session/request_permission)
+                        → diálogo na app:  [Allow once]  [Reject]
+                        → aprovado: executa · recusado: erro claro ao modelo
+```
+
+Área permitida por omissão: `cwd` da sessão + `$DSH_HOME`, configurável com
+`CACHALOTE_ALLOWED_ROOTS` (caminhos de sistema como `/system`, `/proc`, `/dev` são leitura e
+não pedem nada). Implementado como **patch 7** ao `dsh-tool-bash`.
+
+**Verificação A/B no dispositivo:**
+
+| Passo | Resultado |
+|---|---|
+| comando `touch /sdcard/cachalote-guard.txt` | diálogo de autorização na app ([captura](docs/screenshots/app-guarda-bash.png)) |
+| antes de aprovar | `ls /sdcard/cachalote-guard.txt` → **No such file** |
+| depois de "Allow once" | ficheiro **criado** |
+| `touch /sdcard/cachalote-guard-deny.txt` + "Reject" | ficheiro **não criado**; o agente recebeu `cachalote guard: o utilizador não autorizou (rejected)` e respondeu que não ia procurar outra via |
+
+### Flavor sem root: núcleo provado
+
+- `libnode.so` (o Node renomeado) **executa a partir do `nativeLibraryDir` com targetSdk 35** —
+  resultado no ecrã Poderes da app: `libnode.so executou: v24.18.0 [exit 0, farm 9 libs]`.
+- As bibliotecas versionadas são embarcadas com alias `.so` (a AGP descarta nomes que não
+  acabem em `.so`) e a app reconstrói os sonames numa farm de symlinks — o `dlopen` segue o
+  link até ao `nativeLibraryDir`. Runtime embutido: **89 MB**.
+- Falta empacotar a árvore do kernel (145 MB) na APK e o modo de motor em processo para fechar
+  o flavor; a parte tecnicamente incerta está resolvida.

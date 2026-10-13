@@ -15,3 +15,6 @@ app/local.properties
 
 # runtime embutido (gerado por tools/prepare-embed.sh)
 .work/jniLibs/
+
+# runtime embutido (gerado por tools/prepare-embed.sh)
+app/app/src/main/assets/embed-libs.txt

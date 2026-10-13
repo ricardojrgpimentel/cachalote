@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -64,6 +65,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var configPicker by mutableStateOf<ConfigOption?>(null)
     var reconnecting by mutableStateOf(false)
     var audit by mutableStateOf<List<String>>(emptyList())
+    var embedTest by mutableStateOf("(não testado)")
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
 
     private val store = SessionStore(app)
@@ -349,6 +351,47 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         refreshCapabilities()
     }
 
+    /**
+     * Experiência decisiva do flavor "in-app": com targetSdk 35, o directório privado é
+     * noexec, mas o `nativeLibraryDir` (onde a APK extrai os jniLibs) é executável. Se
+     * isto devolver a versão do Node, o motor pode correr dentro da app sem root.
+     */
+    fun testEmbeddedNode() = run("teste embutido") {
+        val dir = File(getApplication<Application>().applicationInfo.nativeLibraryDir)
+        val node = File(dir, "libnode.so")
+        if (!node.isFile) {
+            embedTest = "libnode.so não está no APK (corre tools/prepare-embed.sh e reconstrói)"
+            return@run
+        }
+        embedTest = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                // A AGP só empacota `lib*.so`, portanto os sonames versionados do runtime
+                // (libz.so.1, libcrypto.so.3, …) vão embarcados com alias. Aqui
+                // reconstruímos os nomes verdadeiros com symlinks no nosso filesDir: o
+                // dlopen segue o link e o alvo (nativeLibraryDir) é executável.
+                val farm = File(getApplication<Application>().filesDir, "embed-lib").apply { mkdirs() }
+                getApplication<Application>().assets.open("embed-libs.txt").bufferedReader().forEachLine { line ->
+                    val parts = line.trim().split("=")
+                    if (parts.size != 2) return@forEachLine
+                    val link = File(farm, parts[0])
+                    val target = File(dir, parts[1])
+                    if (!target.isFile) return@forEachLine
+                    if (link.exists()) link.delete()
+                    runCatching { java.nio.file.Files.createSymbolicLink(link.toPath(), target.toPath()) }
+                        .onFailure { runCatching { target.copyTo(link, overwrite = true) } }
+                }
+                val proc = ProcessBuilder(node.absolutePath, "-v")
+                    .apply { environment()["LD_LIBRARY_PATH"] = farm.absolutePath }
+                    .redirectErrorStream(true)
+                    .start()
+                val out = proc.inputStream.bufferedReader().readText().trim()
+                val ended = proc.waitFor(20, java.util.concurrent.TimeUnit.SECONDS)
+                if (!ended) proc.destroyForcibly()
+                "libnode.so executou: ${out.ifBlank { "(sem saída)" }}  [exit ${proc.exitValue()}, farm ${farm.list()?.size ?: 0} libs]"
+            }.getOrElse { "falhou: ${it.message}" }
+        }
+    }
+
     fun clearAudit() {
         Prefs(getApplication()).auditClear()
         refreshCapabilities()
@@ -402,6 +445,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 list.add(o.optString("optionId") to o.optString("name", o.optString("kind")))
             }
         }
+        Prefs(getApplication()).auditAdd(
+            "${System.currentTimeMillis()}  aprovação  " + (tool?.optString("title") ?: "?") +
+                "  " + (tool?.opt("rawInput")?.toString()?.take(120) ?: ""),
+        )
         approval = PendingApproval(
             requestId = obj.optInt("id"),
             title = tool?.optString("title") ?: "o agente pede autorização",

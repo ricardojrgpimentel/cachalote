@@ -509,3 +509,48 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   guarda-o em `home/web.url` (0600) e expõe-no por `cachalote web-url`; a app busca-o por `su`
   e carrega *esse* URL no WebView. Não contornar: o token é a autenticação do motor web.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## Q. Fecho do plano: guarda do bash e runtime embutido
+
+### 59. O waterfall `tools/pre-execute` **não** chega a listeners registados na raiz
+- **Sintoma:** um plugin registado (`ctx.on("tools/pre-execute", …)`) nunca é chamado; o
+  comando corre sem pedir autorização e nenhum log aparece — o plugin carrega sem avisos.
+- **Causa:** o kernel despacha o waterfall num **escopo derivado do agente**
+  (`ctx.waterfall(scopeTarget(this, exec.agent), "tools/pre-execute", …)`); listeners
+  registados no contexto raiz não recebem esse evento.
+- **Solução:** não usar o seam para enforcement global — fazer a guarda **dentro da própria
+  ferramenta** (patch a `dsh-tool-bash`), onde o `ctx` e o `exec` estão à mão. Fica no
+  pipeline de patches ([`tools/patch-android.cjs`](../tools/patch-android.cjs), patch 7).
+- **Origem:** **[LOCAL]** (tentado e verificado que não dispara).
+
+### 60. A guarda de caminhos do `bash` (a barreira que substitui o sandbox)
+- **Problema:** sem Landlock no Android, o `bash` corre como root e as aprovações do DSH
+  nunca eram pedidas (nascem do escalonamento, que só existe quando o sandbox falha).
+- **Solução:** antes de executar, extrair do comando os caminhos absolutos que ficam **fora**
+  da área permitida (`CACHALOTE_ALLOWED_ROOTS` + `cwd` da sessão + `$DSH_HOME`; caminhos de
+  sistema são só leitura) e pedir autorização pelo serviço `approval`. O perfil ACP transforma
+  esse pedido num `session/request_permission` e a **app mostra o diálogo no telefone**.
+- **Recusa:** o comando recebe um erro claro — `cachalote guard: o utilizador não autorizou
+  (rejected)` — e o agente não tenta contornar (verificado: respondeu explicitamente que não
+  ia procurar outra via).
+- **Verificação A/B:** antes de aprovar, `ls /sdcard/cachalote-guard.txt` → *No such file*;
+  depois de "Allow once" → criado. Com "Reject" → não criado.
+- **Origem:** **[LOCAL]**.
+
+### 61. Runtime Node embutido na APK como `libnode.so` (flavor sem root)
+- **Problema:** com `targetSdk ≥ 29` o directório privado da app é noexec — não se pode
+  executar o node a partir de `files/`.
+- **Solução verificada:** o `nativeLibraryDir` **é** executável: renomear o node para
+  `libnode.so` e pô-lo em `jniLibs` (`extractNativeLibs=true` +
+  `packaging.jniLibs.useLegacyPackaging=true`) e correr esse caminho directamente.
+  Resultado no dispositivo: `libnode.so executou: v24.18.0 [exit 0]`.
+- **Segunda armadilha:** a AGP **só empacota `lib*.so`** — os sonames versionados
+  (`libz.so.1`, `libcrypto.so.3`, `libicu*.so.78`) eram descartados em silêncio e o linker
+  falhava com `library "libz.so.1" not found`. Solução: embarcá-los com alias `.so` e a app
+  cria uma **farm de symlinks** (`soname → alias`) no seu `filesDir`; o `dlopen` segue o link
+  e o alvo está no `nativeLibraryDir` (executável). Manifesto gerado por
+  [`tools/prepare-embed.sh`](../tools/prepare-embed.sh).
+- **Tamanho:** 89 MB (só o fecho de `DT_NEEDED`; copiar todos os nomes dava 173 MB).
+- **Origem:** **[LOCAL]**.

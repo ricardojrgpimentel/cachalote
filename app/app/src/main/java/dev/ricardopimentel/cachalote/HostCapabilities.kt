@@ -32,6 +32,11 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
     }
 
     suspend fun execute(capability: String, params: JSONObject): JSONObject = withContext(Dispatchers.IO) {
+        // `audit` é só registo (a guarda do bash escreve aqui): sempre permitida.
+        if (capability == "audit") {
+            record("audit", params)
+            return@withContext JSONObject().put("ok", true)
+        }
         if (capability != "status" && capability !in CAPABILITIES) {
             throw IllegalArgumentException("capacidade desconhecida: $capability")
         }

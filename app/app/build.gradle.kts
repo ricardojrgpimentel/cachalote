@@ -49,7 +49,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // Runtime Node embutido como biblioteca nativa (flavor "in-app", sem root):
+    // gerado por tools/prepare-embed.sh. useLegacyPackaging obriga a APK a EXTRAIR os
+    // .so para o nativeLibraryDir — é lá que o exec é permitido com targetSdk moderno.
+    sourceSets["main"].jniLibs.srcDir("${rootDir}/../.work/jniLibs")
     packaging {
+        jniLibs { useLegacyPackaging = true }
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
 }
