@@ -4,7 +4,8 @@
 #
 #   ./tools/install-app.sh              # build + install + pré-autoriza root + abre a app
 #   ./tools/install-app.sh --no-build   # instala o APK que já existe
-#   ./tools/install-app.sh --no-root    # não mexe nas políticas do Magisk
+#   ./tools/install-app.sh --no-root    # não mexe nas políticas do Magisk (emulador/sem root)
+#   ./tools/install-app.sh --device emulator-5554
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
@@ -32,10 +33,12 @@ APK="$WS/app/app/build/outputs/apk/debug/app-debug.apk"
 ADB=(adb -s "$DEV")
 BUILD=1; ROOT=1
 
-for a in "$@"; do
-  case "$a" in
-    --no-build) BUILD=0 ;;
-    --no-root) ROOT=0 ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-build) BUILD=0; shift ;;
+    --no-root) ROOT=0; shift ;;
+    --device) DEV="$2"; ADB=(adb -s "$DEV"); shift 2 ;;
+    *) echo "opção desconhecida: $1" >&2; exit 2 ;;
   esac
 done
 

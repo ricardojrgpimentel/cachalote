@@ -193,7 +193,11 @@ else
     ( cd "$WS/.work/tools" && unzip -q "$WS/.work/gradle.zip" )
     rm -f "$WS/.work/gradle.zip"
   fi
-  JAVA_HOME="$JAVA" ANDROID_HOME="$SDK" "$WS/tools/install-app.sh"
+  # Passar o dispositivo explicitamente: o `install-app.sh` tem um por omissão (o telefone) e,
+  # sem isto, um bootstrap para o emulador instalava a app no telefone.
+  app_args=(--device "$DEV")
+  [ "$SHIZUKU" = 1 ] && app_args+=(--no-root)
+  CACHALOTE_DEV="$DEV" JAVA_HOME="$JAVA" ANDROID_HOME="$SDK" "$WS/tools/install-app.sh" "${app_args[@]}"
 fi
 
 if [ "$DO_KEY" = 1 ]; then

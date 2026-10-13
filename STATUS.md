@@ -603,7 +603,7 @@ repositório está em `main`, empurrado, sem alterações pendentes.
 |---|---|
 | **vscreen** (ecrã virtual) | decisão LGPL em aberto; não incluí nada do Operit |
 | **SEA + snapshot V8** (D6b) | ganho de arranque; risco de partir o porto |
-| **Kernel na APK** | feito (`--bundle` + verificação sha256); em produção, asset ou download |
+| **Kernel na APK** | `--bundle` funciona, mas a APK fica com **440 MB** (§22.6): para distribuição tem de ser download na primeira execução, não asset |
 | **LMK sob pressão** | FGS + supervisão feitos, nunca testado com o telemóvel sem memória |
 | ~~**CI**~~ | ✅ **feito em §21**: `.github/workflows/ci.yml` (regressão do schema do plugin + sintaxe) |
 | **Arranque do Shizuku no boot** | o Shizuku tem a opção; o modo Shizuku precisa que ele esteja a correr |
@@ -717,3 +717,74 @@ guarda: a mensagem de erro da app estava lá, e sem ela a falha parecia um toque
 
 O que fica em aberto desta ronda: os pontos 2 e 3 do §20 (bootstrap completo e reinstalar a
 árvore a partir do npm) e a reconexão app↔daemon aos solavancos, agora registada no roadmap.
+
+---
+
+## 22. Reprodutibilidade a sério: o bootstrap provado num dispositivo limpo
+
+O §20.2 e o §20.3 ficaram fechados. O que faltava era simples de enunciar e chato de fazer:
+provar que **um clone chega a daemon a correr + app instalada**, com o kernel vindo do **npm**
+(o caminho de quem não tem o DSH no computador), e não da árvore derivada do `app.asar`.
+
+### 22.1 O emulador passou a ser banco de testes do motor
+
+Antes de mexer no telefone, montei tudo num AVD (**Pixel9_API36**, Android 16, **x86_64**) — um
+dispositivo descartável, onde um erro não custa nada. Para isso faltava uma coisa: o runtime do
+Termux que usamos é **arm64** e um AVD x86_64 não executa um binário arm64. O Termux publica as
+mesmas versões para as duas arquitecturas, por isso o caminho é o mesmo e só muda o índice:
+`fetch-runtime.sh --arch x86_64` (Node **24.18.0**, igual ao do telefone) e
+`prepare-embed.sh --arch x86_64` (ABI `x86_64` em vez de `arm64-v8a`).
+
+A imagem é `google_apis_playstore`, que **não** deixa `adb root` — e isso não é problema: o
+daemon não precisa de root, o caminho `--shizuku` instala-o em `/data/local/tmp` como
+`uid=2000(shell)`.
+
+### 22.2 Um bug do daemon que só o emulador revelou
+
+No telefone o socket AF_UNIX funciona; em `/data/local/tmp` o SELinux recusa-o ao domínio
+`shell` (EACCES, armadilha 75). O daemon já tratava isso — dizia "sigo só com TCP" — mas o
+arranque do motor estava **dentro** do callback de sucesso desse socket. Resultado: o daemon
+ficava de pé, anunciava o fallback, e **nunca arrancava o motor** — `daemon: a correr` e
+`motor: parado`, sem um único erro. A correcção torna o arranque idempotente (`bootEngine()`) e
+chama-o em qualquer dos caminhos. Ver armadilha **75** (segunda metade).
+
+### 22.3 O que ficou provado
+
+| Passo | Onde | Resultado |
+|---|---|---|
+| Kernel do **npm** (21 132 ficheiros) + os 12 patches | computador | ✅ |
+| Runtime Termux **x86_64** (Node 24.18.0) | emulador | ✅ `ELF 64-bit x86-64` |
+| Daemon em `/data/local/tmp`, **sem root** | emulador | ✅ `motor: a correr` |
+| **Handshake ACP** | emulador | ✅ `initialize OK: deepseek-harness-acp 0.0.1 \| imagem=true` |
+| App compilada (kernel embutido) e instalada | emulador | ✅ `Success` |
+| **Motor embutido a correr dentro da app** | emulador | ✅ `motor DSH no telefone · ligado`, `kernel extraído (21136 ficheiros)` |
+| Mesma árvore do npm no **telefone** | S10+ | ✅ 21 136 ficheiros, `app-ui-test` 9/9 e `app-capabilities-test --full` 9/9 |
+
+Isto fecha o §20.2 (bootstrap completo) e o §20.3 (árvore nova no dispositivo). O telefone corre
+agora o mesmo caminho que um clone produz — não a árvore do `app.asar` do desktop.
+
+### 22.4 O que foi preciso corrigir pelo caminho (todos bugs a sério)
+
+| # | Onde | O que estava mal | Consequência |
+|---|---|---|---|
+| 1 | `daemon/install.sh` | `SH()` fazia `adb shell "su -c \"$1\""` e recebia um script multi-linha com aspas | o script desfazia-se em fragmentos: instalação **a meio**, daemon parado, sem erro que apontasse para a causa |
+| 2 | `tools/install-app.sh` | o JDK do **macOS** estava fixo e sobrepunha-se ao `JAVA_HOME` do bootstrap | no Linux o build morria sem explicação |
+| 3 | `tools/bootstrap.sh` | `detect_java` acabava num `/usr/lib/jvm/*` genérico (o **JDK 26** desta máquina) | o AGP 8.x falha com `What went wrong: 26.0.2.1` — a versão como única mensagem |
+| 4 | SDK do utilizador | só tinha `android-36`; a app pede `compileSdk = 35` | `assembleDebug` não corria; instalada a plataforma 35 (sem mexer no `compileSdk`) |
+| 5 | `tools/bootstrap.sh` | não passava o dispositivo ao `install-app.sh` | um bootstrap para o emulador instalava a app no **telefone** |
+
+### 22.5 Uma decisão que ficou por tomar
+
+No S10+ o `adb install -r` da APK nova bate em `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: a app
+instalada foi assinada com **outra chave** (a de release, ver §11). Substituí-la obriga a
+**desinstalar** e a app perde as preferências (token, capacidades autorizadas, registo de
+auditoria) — recuperáveis, mas é estado teu. O telefone fica como está: app antiga +
+daemon da árvore do npm, a passar os dois testes. A decisão de reinstalar a app é tua.
+
+### 22.6 Nota honesta sobre o tamanho
+
+A APK de debug com o kernel embutido ficou com **440 MB** (`kernel.zip` de 389 MB, sem
+compressão). O comentário no `prepare-kernel-zip.sh` fala em "~140 MB" — isso era verdade para
+a árvore do `app.asar` (110 MB); a do **npm** é 383 MB. Para distribuição isto não serve como
+está: o caminho é o download do kernel na primeira execução (que o `--push` já suporta), e não
+o asset. Fica anotado no roadmap.
