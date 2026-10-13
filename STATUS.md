@@ -974,3 +974,63 @@ do construtor.
 
 Nada disto é misterioso; é encadeado. E enquanto não estiver feito, é honesto dizer que o
 arranque a frio **continua nos ~900 ms**, não nos 31 ms que o D6b projectou.
+
+---
+
+## 24. Item 4 — o snapshot V8 construído, restaurado… e sem ganho nenhum
+
+Cheguei ao fim da linha técnica do D6b: **o snapshot constrói, restaura e o motor responde.**
+E o resultado é que ele **não ganha nada**:
+
+| | mediana |
+|---|---|
+| kernel como está | 913 ms |
+| **com snapshot V8** | **892 ms** |
+
+O D6b projectava 31 ms contra 187 ms (5,9×). Aqui são 892 contra 913 (~2 %), num emulador
+x86_64. Isto não é uma optimização que não deu certo por pouco: é uma que, medida, não existe.
+
+### 24.1 Os cinco obstáculos, todos medidos (e nenhum é óbvio)
+
+Ficam escritos porque cada um custou uma volta, e porque o caminho já está feito em
+[`tools/snapshot-experiment.sh`](tools/snapshot-experiment.sh) — quem continuar não os repete.
+
+| # | Obstáculo | Erro exacto | Como se resolve |
+|---|---|---|---|
+| 1 | O construtor corre o entry num executor **mínimo** (`minimalRunCjs`) | `Cannot use import statement outside a module`; `Error: Not supported` (para `import()`); `Cannot find module './dep.cjs'` (**mesmo num caso mínimo**, mesmo por caminho absoluto) | o entry tem de **ser** o bundle, em script CJS puro, e só pode exigir módulos **internos** |
+| 2 | `await` de topo no `bin.js` | `Top-level await is currently not supported` | tirar `if (import.meta.main) await runCli();`; a cola chama `runCli()` |
+| 3 | Saída `--format=cjs` usa `module.exports` | `ReferenceError: module is not defined` | `--format=iife --global-name=…` |
+| 4 | `dsh-app-boot` faz `new URL("../package.json", import.meta.url)` | `TypeError: Invalid URL` | `--define:import.meta.url` a apontar para onde o bundle vive |
+| 5 | Restaurar com `--profile acp` | `bad option: --profile` | separador `--` antes dos argumentos do CLI |
+
+### 24.2 Porque é que não ganhou — hipóteses, **nenhuma verificada**
+
+Não invisto mais nisto sem responder a isto primeiro:
+
+1. **O que o snapshot captura pode não ser o que custa.** Os ~900 ms podem ser quase todos
+   trabalho que acontece *depois* da restauração (ler `~/.dsh`, compor o cordis, carregar os
+   *profile bundles* dinamicamente — que continuam a ser `import()` a sério e não estão no
+   blob). O snapshot acelera a compilação do JavaScript, e talvez isso já não fosse o gargalo.
+2. **O bundle pode ter tornado o snapshot irrelevante.** O bundle já tinha ficado *mais lento*
+   que o original (1032 ms vs 913 ms, §23.6); o snapshot recupera até 892 ms. Ou seja: o
+   snapshot pode estar apenas a desfazer o mal que o bundle fez, e não a bater o original.
+3. **Os avisos do construtor não são decorativos.** Ele avisa que `node:module`,
+   `node:worker_threads` e `node:child_process` "não estão totalmente verificados" em snapshots
+   e que o estado pode ficar dessincronizado após a deserialização. Ainda que fosse rápido, um
+   motor que arranca de um estado duvidoso é pior do que um que arranca em 900 ms.
+4. **O emulador pode não ser representativo.** Falta medir no aarch64 do telefone, onde o
+   arranque pode ter outra proporção (o Node é o mesmo, o disco é mais rápido, o CPU é outro).
+
+**A minha recomendação:** antes de retomar o item 4, medir **onde estão** os 900 ms (o
+`--cpu-prof` ou contadores de fase no `bridge.cjs` respondem a isto numa tarde). Se o tempo
+estiver depois da restauração, o snapshot é o instrumento errado e o caminho é outro — e
+evita-se repetir uma semana de trabalho para ganhar 2 %.
+
+### 24.3 O que fica feito e o que fica aberto
+
+**Feito:** `tools/engine-startup-bench.cjs` (a medida, repetível), `tools/snapshot-experiment.sh`
+(a receita inteira, com os cinco obstáculos resolvidos e comentados) e a exploração toda
+registada em §23.6–§23.7 e aqui.
+
+**Aberto:** o item 4, com a pergunta certa agora escrita (§24.2) em vez do caminho errado.
+ITENS 1, 2 e 3 estão fechados e verificados.

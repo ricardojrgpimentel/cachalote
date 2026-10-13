@@ -48,10 +48,15 @@ function envForEngine() {
 function once() {
   return new Promise((resolve, reject) => {
     const t0 = Date.now();
-    const proc = spawn(NODE, [
-      ...(process.env.CACHALOTE_NODE_ARGS ? process.env.CACHALOTE_NODE_ARGS.split(/\s+/).filter(Boolean) : []),
-      "--expose-internals", BINJS, "--profile", "acp",
-    ], {
+    // `CACHALOTE_CMDLINE` substitui a linha de comandos toda (para variantes que precisam de
+    // `-- --profile acp` depois de `--snapshot-blob`, por exemplo).
+    const argv = process.env.CACHALOTE_CMDLINE
+      ? process.env.CACHALOTE_CMDLINE.split(/\s+/).filter(Boolean)
+      : [
+          ...(process.env.CACHALOTE_NODE_ARGS ? process.env.CACHALOTE_NODE_ARGS.split(/\s+/).filter(Boolean) : []),
+          "--expose-internals", BINJS, "--profile", "acp",
+        ];
+    const proc = spawn(NODE, argv, {
       env: envForEngine(),
       cwd: path.join(BASE, "home"),
       stdio: ["pipe", "pipe", "ignore"],
