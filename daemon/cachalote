@@ -1,0 +1,74 @@
+#!/system/bin/sh
+# cachalote — controlo do daemon no dispositivo (corre como root, via su).
+#
+#   cachalote start | stop | restart | status | logs [n] | env
+#
+# Layout:
+#   BASE/runtime/bin/node      runtime Node arm64 (Termux)
+#   BASE/kernel/dsh/node_modules/@deepseek-ai/dsh   kernel 0.2.0-rc.2 + patches
+#   BASE/home/                 DSH_HOME (perfis, sessões, .env, cordis.patch.yml)
+#   BASE/bin/bash              shim -> /system/bin/sh (o Android não tem bash)
+#   BASE/run/cachalote.sock    socket AF_UNIX (0600)
+#   BASE/logs/{daemon,engine}.log
+set -u
+
+BASE="${CACHALOTE_BASE:-/data/adb/cachalote}"
+SOCK="$BASE/run/cachalote.sock"
+PIDFILE="$BASE/run/daemon.pid"
+NODE="$BASE/runtime/bin/node"
+# O próprio node precisa das .so do runtime (libz.so.1 & cia).
+LD_LIBRARY_PATH="$BASE/runtime/lib"
+export LD_LIBRARY_PATH
+PATH="$BASE/bin:$BASE/runtime/bin:$PATH"
+export PATH
+
+pid_of() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
+alive() { p="$(pid_of)"; [ -n "$p" ] && kill -0 "$p" 2>/dev/null; }
+
+case "${1:-}" in
+start)
+  if alive; then echo "já está a correr (pid $(pid_of))"; exit 0; fi
+  [ -x "$NODE" ] || { echo "ERRO: falta $NODE (corre daemon/install.sh)"; exit 1; }
+  mkdir -p "$BASE/run" "$BASE/logs" "$BASE/tmp"
+  export CACHALOTE_BASE="$BASE"
+  # setsid/nohup: desligar do shell que invoca o su
+  nohup "$NODE" "$BASE/bridge.cjs" >>"$BASE/logs/daemon.log" 2>&1 &
+  echo $! > "$PIDFILE"
+  sleep 2
+  if alive; then echo "arrancado (pid $(pid_of))"; else echo "FALHOU — ver $BASE/logs/daemon.log"; tail -n 20 "$BASE/logs/daemon.log"; exit 1; fi
+  ;;
+stop)
+  if ! alive; then echo "não está a correr"; rm -f "$PIDFILE"; exit 0; fi
+  kill "$(pid_of)" 2>/dev/null
+  for i in 1 2 3 4 5 6 7 8 9 10; do alive || break; sleep 1; done
+  alive && kill -9 "$(pid_of)" 2>/dev/null
+  rm -f "$PIDFILE" "$SOCK"
+  echo "parado"
+  ;;
+restart) "$0" stop; "$0" start ;;
+status)
+  echo "== cachalote =="
+  echo "base   : $BASE"
+  echo "perfil : ${CACHALOTE_PROFILE:-acp}"
+  if alive; then echo "daemon : a correr (pid $(pid_of))"; else echo "daemon : PARADO"; fi
+  if [ -S "$SOCK" ]; then echo "socket : $SOCK (modo $(stat -c %a "$SOCK" 2>/dev/null))"; else echo "socket : ausente"; fi
+  if pgrep -f "@deepseek-ai/dsh/lib/bin.js" >/dev/null 2>&1; then echo "motor  : a correr"; else echo "motor  : parado"; fi
+  echo "sessões: $(ls "$BASE/home/sessions" 2>/dev/null | wc -l) (direcções de projecto)"
+  if [ -x "$NODE" ] && [ -S "$SOCK" ]; then
+    echo "handshake:"
+    "$NODE" -e '
+      const net=require("node:net");
+      const s=net.connect(process.argv[1]);
+      let buf="", done=false;
+      const fin=(m)=>{ if(done)return; done=true; console.log("  "+m); try{s.destroy()}catch{}; process.exit(0) };
+      s.on("connect",()=>s.write(JSON.stringify({jsonrpc:"2.0",id:1,method:"initialize",params:{protocolVersion:1,clientCapabilities:{},clientInfo:{name:"cachalote-status",version:"1"}}})+"\n"));
+      s.on("data",(b)=>{ buf+=b; let i; while((i=buf.indexOf("\n"))>=0){ const l=buf.slice(0,i); buf=buf.slice(i+1); if(!l.trim())continue; try{const m=JSON.parse(l); if(m.id===1){ fin(m.result?("OK "+(m.result.agentInfo?.name||"")+" "+(m.result.agentInfo?.version||"")):("ERRO "+JSON.stringify(m.error))); } }catch{} } });
+      s.on("error",(e)=>fin("falha de socket: "+e.message));
+      setTimeout(()=>fin("sem resposta do motor"),8000);
+    ' "$SOCK"
+  fi
+  ;;
+logs) tail -n "${2:-80}" "$BASE/logs/daemon.log"; echo "--- engine ---"; tail -n "${2:-40}" "$BASE/logs/engine.log" ;;
+env) cat "$BASE/home/.env" 2>/dev/null | sed -E 's/^(.*=.{0,4}).*/\1****/' || echo "(sem $BASE/home/.env)" ;;
+*) echo "uso: cachalote start|stop|restart|status|logs [n]|env"; exit 2 ;;
+esac

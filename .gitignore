@@ -1,0 +1,8 @@
+# artefactos de trabalho (árvores extraídas, runtime, tars) — reconstruíveis
+.work/
+*.tar
+# clone do projecto de referência (terceiros; ver atribuições no PLANO.md)
+repo/
+# nunca versionar segredos
+.env
+*.credentials.yaml

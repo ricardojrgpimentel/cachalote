@@ -1,0 +1,55 @@
+# cachalote — camada de patch de perfil para Android (kernel 0.2.0-rc.2)
+#
+# Instalada como $DSH_HOME/cordis.patch.yml, é aplicada depois dos bundles do
+# perfil e antes de qualquer --patch da linha de comandos.
+#
+# Desactivamos os bundles que não têm lugar (ou dependências) no Android.
+# Deliberadamente NÃO desactivamos `sandbox`/`ptc-runtime`: o ptc-runtime
+# injecta o serviço `sandbox` e os presets montam `workflow-ptc`; desligar o
+# sandbox sozinho deixa todas as sessões pendentes. O sandbox-local degrada
+# sozinho (o launcher Landlock não existe no Android ⇒ probe = indisponível) e
+# só falha *fail-closed* se alguém pedir confinamento — que não é o caso do
+# preset por omissão.
+
+# Telemetria OTel: sem lugar no dispositivo e arrasta a maior árvore de deps.
+- id: otel
+  disabled: true
+- id: session-telemetry-otel
+  disabled: true
+
+# Sandbox de bash/PowerShell do desktop.
+- id: bash-sandbox
+  disabled: true
+- id: pwsh-sandbox
+  disabled: true
+
+# Exportação de log de sessão em ZIP (botão do desktop).
+- id: session-log-download
+  disabled: true
+
+# O `shell` service tem de vir de algum lado: o `bash-sandbox` do desktop precisa
+# do sandbox; o `bash-local` só precisa do `subprocess` (que no Android corre por
+# child_process). Sem esta inserção, `permission`, `tool-bash` e tudo o que dependa
+# de `ctx.shell` fica pendente para sempre.
+# Nota: o `bash` do sistema não existe no Android — o daemon fornece um shim
+# `bash` → `/system/bin/sh` no PATH (ver daemon/install.sh).
+- insert:
+    - id: bash-local
+      name: '@deepseek-ai/dsh-bash-local'
+
+# Presets de permissão. O `sandboxMode` declarado pelo bash-local é
+# `workspace-write` (ver D10 do plano): no Android não há Landlock, portanto o
+# que trava comandos fora do workspace é a APROVAÇÃO, não o kernel.
+- id: permission
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+    defaultPreset: workspace-write
