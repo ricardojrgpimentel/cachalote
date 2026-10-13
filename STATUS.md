@@ -550,3 +550,26 @@ Fica uma ressalva honesta: o caminho **imagem → anexo → modelo** está verif
 o caminho da **ferramenta** (`android_see`) usa exactamente o mesmo código de publicação já
 corrigido, mas a verificação pelo agente foi interrompida pelos diálogos da guarda de caminhos
 e pela automação da UI — não é falta de confiança no código, é falta de um teste limpo.
+
+
+---
+
+## 19. Reprodutibilidade: bootstrap de zero
+
+```sh
+./tools/bootstrap.sh          # root ·  --shizuku para /data/local/tmp ·  --dry-run para o plano
+```
+
+O que ficou verificado numa execução real **sem** as árvores de trabalho (escondi o kernel e o
+runtime para simular uma máquina nova):
+
+| Passo | Resultado |
+|---|---|
+| Pré-requisitos + detecção do telemóvel/JDK/SDK | ✅ |
+| Kernel pelo `npm install @deepseek-ai/dsh@0.2.0-rc.2` | ✅ (pacote público) |
+| Patches na árvore vinda do npm | ✅ guarda do `bash`, shell configurável, imagens sem `sharp`, `unlink` tolerante, plugin instalado |
+| Runtime do Termux descarregado e montado | ✅ `node` com **sha256 idêntico** ao que corre no telemóvel |
+| Daemon e app | não correram neste teste (`--skip-daemon --skip-app`); o daemon do telemóvel continua na árvore anterior, com os mesmos patches |
+
+O `--skip-daemon`/`--skip-app` existem de propósito: dá para preparar só as árvores, e é o que
+uso quando não quero mexer no telemóvel.

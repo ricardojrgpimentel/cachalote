@@ -20,19 +20,25 @@ const opt = (name, dflt) => {
   return i >= 0 ? argv[i + 1] : dflt;
 };
 const asar = opt("--asar");
+const nodeModules = opt("--node-modules");
 const out = opt("--out");
 const trim = argv.includes("--trim");
 
-if (!asar || !out) {
-  console.error("uso: extract-kernel.cjs --asar <app.asar> --out <dir> [--trim]");
+if ((!asar && !nodeModules) || !out) {
+  console.error("uso: extract-kernel.cjs (--asar <app.asar> | --node-modules <dir>) --out <dir> [--trim]");
+  console.error("  --asar         tira a árvore de um app.asar do DSH no desktop (Electron)");
+  console.error("  --node-modules tira-a de um node_modules já instalado (npm install @deepseek-ai/dsh)");
   process.exit(2);
 }
 
-const src = asar + "/dsh/node_modules";
+// Duas origens possíveis:
+//  · o app.asar do DSH no desktop (precisa do Electron-as-node, porque o fs do Electron lê asar);
+//  · um node_modules instalado pelo npm — é o caminho reproduzível numa máquina limpa.
+const src = asar ? asar + "/dsh/node_modules" : nodeModules;
 try {
   fs.statSync(src);
 } catch (e) {
-  console.error("não encontrei " + src + " (o asar tem a árvore em dsh/node_modules?)");
+  console.error("não encontrei " + src + (asar ? " (o asar tem a árvore em dsh/node_modules?)" : ""));
   process.exit(1);
 }
 

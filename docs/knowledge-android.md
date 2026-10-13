@@ -778,3 +778,24 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   `agent_thought_chunk: 'The image shows "512"'` e respondeu **512**; objecto guardado em
   `$DSH_HOME/attachments/v1/objects/61/…` (88 KB, `sha256` no nome).
 - **Origem:** **[LOCAL]**.
+
+---
+
+## U. Reprodutibilidade (bootstrap)
+
+### 81. De um clone a funcionar: o que faltava
+- **Kernel:** vem do **npm** (`npm install @deepseek-ai/dsh@<versão>`), não do `app.asar` do
+  desktop — é o que permite a alguém sem o DSH instalado no computador construir isto. O
+  `extract-kernel.cjs` ganhou o modo `--node-modules <dir>` (mesma travessia + trim do modo
+  `--asar`).
+- **Runtime:** os binários oficiais de Node para Linux são **glibc**; o Android é **bionic**.
+  O `tools/fetch-runtime.sh` monta a árvore a partir dos `.deb` do Termux, procurando os nomes
+  dos ficheiros no índice do repositório (não fica preso a versões) e extraindo com um leitor de
+  `ar`+`tar` em Python puro. Verificação: o `node` obtido tem o **mesmo sha256** do que está a
+  correr no telemóvel.
+- **Cache do npm:** usar `--cache .work/npm-cache`. O cache global do utilizador pode ter
+  ficheiros de root (de execuções antigas com `sudo`) e o npm aborta — e não é por isso que um
+  bootstrap deve falhar na máquina de outra pessoa.
+- **`awk`/`pipefail`:** o `awk ... exit` fecha o pipe antes do fim e o `pipefail` mata o script
+  (exit 141, sem mensagem). Passar o índice por **ficheiro**, não por pipe.
+- **Origem:** **[LOCAL]**.

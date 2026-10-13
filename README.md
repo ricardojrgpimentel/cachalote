@@ -56,22 +56,26 @@ PLANO.md / STATUS.md plano, decisões, riscos e o que está verificado (com prov
 
 ## Começar
 
-Os passos completos, incluindo o que vem do telemóvel, estão em
-[`docs/knowledge-android.md`](docs/knowledge-android.md) e [`STATUS.md`](STATUS.md). Em resumo:
+De um clone a **daemon a correr + app instalada**, num comando:
 
 ```sh
-# 1. kernel: extrair do pacote npm e aplicar os nossos patches
-node tools/extract-kernel.cjs --package <dsh.tgz>
-node tools/patch-android.cjs --tree .work/f0/kernel
+./tools/bootstrap.sh                 # root (Magisk)
+./tools/bootstrap.sh --shizuku       # sem root: daemon em /data/local/tmp via Shizuku
+./tools/bootstrap.sh --dry-run       # só mostra o plano
+./tools/bootstrap.sh --skip-app      # só o motor/daemon
+```
 
-# 2. daemon no telefone (root) — ou --base /data/local/tmp/cachalote --no-root para Shizuku
-./daemon/install.sh
+O bootstrap verifica pré-requisitos, instala o kernel do **npm**
+(`@deepseek-ai/dsh`), obtém o runtime Node **arm64/bionic** dos pacotes do
+[Termux](https://termux.dev) (os binários oficiais para Linux são glibc e não correm no
+Android), aplica os nossos patches, instala o daemon e constrói/instala a app.
 
-# 3. chave do provedor (nunca aparece no histórico nem em argv)
-./daemon/set-key.sh --verify
+Depois:
 
-# 4. app
-./tools/install-app.sh
+```sh
+./daemon/set-key.sh --verify              # chave do provedor (nunca em argv nem no histórico)
+./tools/app-ui-test.sh                    # 9 passos (guarda e repõe a tua chave)
+./tools/app-capabilities-test.sh --full   # capacidades Android + interacção real
 ```
 
 Testes repetíveis (protegem a tua chave: guardam e repõem o `.env`):
