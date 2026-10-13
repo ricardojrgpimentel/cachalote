@@ -104,24 +104,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             snapEffort = snap.effort
             loaded = true
         }
-        // 2) Laço de reconexão: o daemon pode reiniciar (ex.: ao mudar a chave) e o
-        // socket cai; a app volta sozinha e retoma a sessão.
+        // 2) Laço de reconexão: o daemon pode reiniciar (ex.: ao mudar a chave) e o socket
+        // cai; a app volta sozinha e retoma a sessão.
+        //
+        // Duas coisas que este laço fazia mal:
+        //   · esperava sempre 5 s, sem recuo — com o daemon em baixo, batia à porta para
+        //     sempre ao mesmo ritmo;
+        //   · tratava `session/resume` recusado como falha e engolia-a. Quando o motor
+        //     responde "session is already active" **não é falha nenhuma**: a sessão está
+        //     activa, que é exactamente o que queríamos. Era a origem das centenas de
+        //     `session is already active` no log do motor.
         viewModelScope.launch {
+            var waitMs = 1_000L
             while (true) {
-                if (!controller.client.connected.value && loaded) {
-                    runCatching {
-                        reconnecting = true
-                        controller.ensureConnected()
-                        controller.ensureAcp()
-                        val sid = sessionId
-                        val cwd = controller.workspace
-                        if (!sid.isNullOrBlank() && cwd.isNotBlank()) {
-                            controller.resumeSession(sid, cwd)
-                        }
-                    }.onFailure { /* fica para a próxima volta */ }
-                    reconnecting = false
+                if (controller.client.connected.value) {
+                    waitMs = 1_000L
+                    kotlinx.coroutines.delay(2_000)
+                    continue
                 }
-                kotlinx.coroutines.delay(5_000)
+                val ok = runCatching {
+                    reconnecting = true
+                    controller.ensureConnected()
+                    controller.ensureAcp()
+                    // Retomar a sessão é um extra: se ainda não há nenhuma (primeira execução,
+                    // sem chave) o transporte reconecta-se à mesma. Exigir `loaded` aqui deixava
+                    // a app "desligada" para sempre quando o motor morria antes de haver sessão
+                    // — foi o que se viu a matar o motor embutido no emulador.
+                    val sid = sessionId
+                    val cwd = controller.workspace
+                    if (!sid.isNullOrBlank() && cwd.isNotBlank()) {
+                        try {
+                            applyConfigOptions(controller.resumeSession(sid, cwd))
+                        } catch (t: Throwable) {
+                            if (isSessionAlreadyActive(t)) restoreChips(snapModel, snapEffort)
+                            else throw t
+                        }
+                    }
+                }.isSuccess
+                reconnecting = false
+                waitMs = if (ok) 1_000L else (waitMs * 2).coerceAtMost(30_000L)
+                kotlinx.coroutines.delay(waitMs)
             }
         }
         // Ligações automáticas ao arrancar: se o token já estiver guardado e o daemon
@@ -596,6 +618,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun textOf(update: JSONObject): String =
         update.optJSONObject("content")?.optString("text", "") ?: ""
+
+    /**
+     * O motor recusa `session/resume` quando a sessão já está activa ("Invalid params: session
+     * is already active: …"). Não é uma falha: é o estado que queríamos atingir. Tratar isto
+     * como erro enchia o log do motor de resumes recusados sem nada de errado acontecer.
+     */
+    private fun isSessionAlreadyActive(t: Throwable): Boolean =
+        t.message?.contains("already active", ignoreCase = true) == true
 
     /** Chips só com o que estava guardado (sem escolhas) — usado quando o motor recusa o resume. */
     private fun restoreChips(model: String?, effort: String?) {
