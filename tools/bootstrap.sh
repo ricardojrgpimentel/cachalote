@@ -6,10 +6,16 @@
 #   ./tools/bootstrap.sh --skip-app          # só o motor/daemon
 #   ./tools/bootstrap.sh --dry-run           # mostra o plano e sai
 #
+# Num emulador (x86_64, sem root), é a conjugação destas opções:
+#
+#   ./tools/bootstrap.sh --device emulator-5554 --arch x86_64 --shizuku --skip-app
+#   JAVA_HOME="$ANDROID_HOME/jdk-21.0.12.1+1" ./tools/bootstrap.sh --device emulator-5554 \
+#     --arch x86_64 --shizuku
+#
 # O que faz, por ordem:
 #   1. verifica pré-requisitos (node, npm, python3, adb, JDK, SDK)
 #   2. obtém o kernel: `npm install @deepseek-ai/dsh` (ou --dsh-dir) e aplica os nossos patches
-#   3. obtém o runtime Node **arm64/bionic** (Termux) — descarrega, copia ou tira do telemóvel
+#   3. obtém o runtime Node/bionic (Termux) — descarrega, copia ou tira do telemóvel
 #   4. instala o daemon (root ou /data/local/tmp) e liga-o
 #   5. prepara e instala a app (runtime embutido + kernel no asset) e verifica
 #   6. (opcional, --key) pede a chave do provedor
@@ -23,6 +29,7 @@ DSH_VERSION="${CACHALOTE_DSH_VERSION:-0.2.0-rc.2}"
 DSH_DIR=""
 RUNTIME_DIR=""
 RUNTIME_FROM_DEVICE=0
+ARCH="${CACHALOTE_ARCH:-aarch64}"
 BASE="/data/adb/cachalote"
 SHIZUKU=0
 AUTOSTART=1
@@ -38,6 +45,7 @@ while [ $# -gt 0 ]; do
     --dsh-dir) DSH_DIR="$2"; shift 2 ;;
     --runtime-dir) RUNTIME_DIR="$2"; shift 2 ;;
     --runtime-from-device) RUNTIME_FROM_DEVICE=1; shift ;;
+    --arch) ARCH="$2"; shift 2 ;;
     --base) BASE="$2"; shift 2 ;;
     --shizuku) SHIZUKU=1; BASE="/data/local/tmp/cachalote"; AUTOSTART=0; shift ;;
     --no-autostart) AUTOSTART=0; shift ;;
@@ -45,12 +53,21 @@ while [ $# -gt 0 ]; do
     --skip-daemon) SKIP_DAEMON=1; shift ;;
     --key) DO_KEY=1; shift ;;
     --dry-run) DRY=1; shift ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     *) echo "opção desconhecida: $1" >&2; exit 2 ;;
   esac
 done
 
-RUNTIME_TREE="$WS/.work/node-android/root/data/data/com.termux/files/usr"
+case "$ARCH" in
+  aarch64) RUNTIME_SUFFIX="" ;;
+  x86_64|arm|i686) RUNTIME_SUFFIX="-$ARCH" ;;
+  *) echo "ERRO: --arch '$ARCH' desconhecida (aarch64, arm, x86_64, i686)" >&2; exit 2 ;;
+esac
+RUNTIME_OUT="$WS/.work/node-android$RUNTIME_SUFFIX"
+RUNTIME_TREE="$RUNTIME_OUT/root/data/data/com.termux/files/usr"
+# O instalador do daemon e o preparador do runtime embutido têm este caminho por omissão;
+# esta variável é o que lhes permite usar a árvore da arquitectura certa.
+export CACHALOTE_RUNTIME_SRC="$RUNTIME_TREE"
 KERNEL="$WS/.work/f0/kernel"
 GRADLE="$WS/.work/tools/gradle-8.13/bin/gradle"
 
@@ -59,15 +76,25 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "ERRO: falta '$1' ($2)"; exit
 
 # ---------------------------------------------------------------- JDK e SDK
 detect_java() {
+  local sdk="${1:-${ANDROID_HOME:-}}"
   if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then echo "$JAVA_HOME"; return; fi
   for candidate in "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
-                   "$HOME/Android/Sdk/jbr" "/usr/lib/jvm/java-21-openjdk-amd64"; do
+                   "$HOME/Android/Sdk/jbr" "/usr/lib/jvm/java-21-openjdk-amd64" \
+                   /usr/lib/jvm/*/bin/java; do
+    candidate="${candidate%/bin/java}"
     [ -x "$candidate/bin/java" ] && { echo "$candidate"; return; }
+  done
+  # Um SDK gerido por ferramentas traz o JDK ao lado (ex.: ~/.local/share/montra-android/
+  # jdk-21.*): não vale a pena obrigar a instalar um JDK que já lá está.
+  local c
+  for c in "$sdk"/jdk-* "$sdk"/jbr; do
+    [ -x "$c/bin/java" ] && { echo "$c"; return; }
   done
 }
 detect_sdk() {
   if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ]; then echo "$ANDROID_HOME"; return; fi
-  for candidate in "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do
+  for candidate in "$HOME/Library/Android/sdk" "$HOME/Android/Sdk" \
+                   "$HOME/.local/share/montra-android"; do
     [ -d "$candidate" ] && { echo "$candidate"; return; }
   done
 }
@@ -76,6 +103,7 @@ if [ "$DRY" = 1 ]; then
   say "plano (--dry-run)"
   cat <<EOF
 dispositivo : ${DEV:-(autodetectar)}
+arquitectura: $ARCH -> $RUNTIME_TREE
 kernel      : ${DSH_DIR:-npm install @deepseek-ai/dsh@$DSH_VERSION} -> $KERNEL
 patches     : tools/patch-android.cjs
 runtime     : $( [ -x "$RUNTIME_TREE/bin/node" ] && echo "reutilizar $RUNTIME_TREE" || { [ "$RUNTIME_FROM_DEVICE" = 1 ] && echo "tirar do Termux do telemóvel" || { [ -n "$RUNTIME_DIR" ] && echo "copiar de $RUNTIME_DIR" || echo "descarregar do repositório do Termux (tools/fetch-runtime.sh)"; }; } )
@@ -92,8 +120,8 @@ need npm "npm (para instalar o kernel)"
 need python3 "Python 3 (pipelines e testes)"
 need adb "Android platform-tools"
 [ "$SKIP_APP" = 1 ] || { need zip "zip (empacotar o kernel)"; need unzip "unzip (extrair o Gradle)"; }
-JAVA="$(detect_java || true)"
 SDK="$(detect_sdk || true)"
+JAVA="$(detect_java "$SDK" || true)"
 if [ "$SKIP_APP" != 1 ]; then
   [ -n "$JAVA" ] || { echo "ERRO: não encontrei um JDK 17+. Define JAVA_HOME (o JBR do Android Studio serve)."; exit 1; }
   [ -n "$SDK" ] || { echo "ERRO: não encontrei o Android SDK. Define ANDROID_HOME."; exit 1; }
@@ -128,20 +156,20 @@ else
 fi
 node "$WS/tools/patch-android.cjs" --tree "$KERNEL"
 
-say "3/6 runtime Node arm64 (bionic)"
+say "3/6 runtime Node $ARCH (bionic)"
 if [ -x "$RUNTIME_TREE/bin/node" ]; then
   echo "a reutilizar $RUNTIME_TREE"
 else
   if [ "$RUNTIME_FROM_DEVICE" = 1 ]; then
-    "$WS/tools/fetch-runtime.sh" --from-device
+    "$WS/tools/fetch-runtime.sh" --out "$RUNTIME_OUT"
   elif [ -n "$RUNTIME_DIR" ]; then
-    "$WS/tools/fetch-runtime.sh" --dir "$RUNTIME_DIR"
+    "$WS/tools/fetch-runtime.sh" --dir "$RUNTIME_DIR" --out "$RUNTIME_OUT"
   else
-    "$WS/tools/fetch-runtime.sh"
+    "$WS/tools/fetch-runtime.sh" --arch "$ARCH" --out "$RUNTIME_OUT"
   fi
 fi
 sha256sum_or_shasum() { shasum -a 256 "$1" 2>/dev/null | cut -c1-16 || sha256sum "$1" | cut -c1-16; }
-echo "node (arm64): $(sha256sum_or_shasum "$RUNTIME_TREE/bin/node")…"
+echo "node ($ARCH): $(sha256sum_or_shasum "$RUNTIME_TREE/bin/node")…"
 
 if [ "$SKIP_DAEMON" = 1 ]; then
   say "4/6 daemon (não pedido)"
@@ -157,7 +185,7 @@ if [ "$SKIP_APP" = 1 ]; then
   say "5/6 app (não pedida)"
 else
   say "5/6 app: runtime embutido, kernel no asset e build"
-  "$WS/tools/prepare-embed.sh"
+  "$WS/tools/prepare-embed.sh" --arch "$ARCH"
   "$WS/tools/prepare-kernel-zip.sh" --bundle
   if [ ! -x "$GRADLE" ]; then
     echo "a descarregar o Gradle 8.13 para .work/tools"
@@ -178,8 +206,15 @@ else
 fi
 
 say "pronto"
+if [ "$SHIZUKU" = 1 ]; then
+  STATUS="adb -s $DEV shell '$BASE/bin/cachalote status'"
+else
+  STATUS="adb -s $DEV shell \"su -c '$BASE/bin/cachalote status'\""
+fi
 cat <<EOF
-daemon   : adb -s $DEV shell "su -c '$BASE/bin/cachalote status'"
-testes   : ./tools/app-ui-test.sh          (9 passos, guarda e repõe a tua chave)
-           ./tools/app-capabilities-test.sh --full
+arquitectura: $ARCH
+runtime   : $RUNTIME_TREE
+daemon    : $STATUS
+testes    : ./tools/app-ui-test.sh          (9 passos, guarda e repõe a tua chave)
+            ./tools/app-capabilities-test.sh --full
 EOF

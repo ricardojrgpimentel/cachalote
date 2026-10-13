@@ -164,7 +164,7 @@ daemon/cachalote.service.sh   arranque no boot (Magisk service.d)
 config/cachalote.patch.yml    camada de patch do perfil (o que desactivamos e inserimos)
 tools/extract-kernel.cjs      app.asar → árvore JS do kernel (com trim)
 tools/patch-android.cjs       os 6 patches Android
-docs/knowledge-android.md     86 armadilhas do Android, com sintoma/causa/solução
+docs/knowledge-android.md     87 armadilhas do Android, com sintoma/causa/solução
 research/                     relatórios de investigação (superfície SDK/ACP, Bun vs Node)
 ```
 
@@ -402,7 +402,7 @@ religar, e o teste de capacidades religa-o automaticamente.
   telefone + registo de auditoria. O que resta é dar ao `bash` uma área permitida configurável
   na UI (hoje é `CACHALOTE_ALLOWED_ROOTS` no ambiente do motor).
 - **Documentação**: [`PLANO.md`](PLANO.md), [`STATUS.md`](STATUS.md) (esta página),
-  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **86 armadilhas**,
+  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **87 armadilhas**,
   [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) e [`LICENSE`](LICENSE).
 
 

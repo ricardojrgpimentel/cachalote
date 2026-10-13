@@ -22,7 +22,9 @@ DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
 APP="/Applications/DeepSeek Harness.app"
 ASAR="$APP/Contents/Resources/app.asar"
 ELECTRON="$APP/Contents/MacOS/DeepSeek Harness"
-RUNTIME_SRC="$WS/.work/node-android/root/data/data/com.termux/files/usr"
+# O runtime Node/bionic. Por omissão o arm64 do telefone; `CACHALOTE_RUNTIME_SRC` aponta para
+# outro (ex.: o x86_64 que o `fetch-runtime.sh --arch x86_64` monta para o emulador).
+RUNTIME_SRC="${CACHALOTE_RUNTIME_SRC:-$WS/.work/node-android/root/data/data/com.termux/files/usr}"
 KERNEL="$WS/.work/f0/kernel"
 WITH_ROOT=1
 AUTOSTART=0
@@ -112,5 +114,9 @@ else
 fi
 
 say "pronto"
-echo "controlo:  adb shell su -c '$BASE/bin/cachalote status'"
+if [ "$WITH_ROOT" = 1 ]; then
+  echo "controlo:  adb shell su -c '$BASE/bin/cachalote status'"
+else
+  echo "controlo:  adb shell '$BASE/bin/cachalote status'"
+fi
 echo "chave:     ./daemon/set-key.sh --base $BASE"

@@ -1,22 +1,43 @@
 #!/bin/bash
 # prepare-embed.sh — prepara o runtime Node para ser embutido na APK como biblioteca nativa.
 #
-#   ./tools/prepare-embed.sh
+#   ./tools/prepare-embed.sh                 # arm64 (telefone)
+#   ./tools/prepare-embed.sh --arch x86_64   # emulador x86_64
 #
 # Porquê: a partir do targetSdk 29 o directório privado da app é noexec, mas o
 # `nativeLibraryDir` (onde a APK extrai os jniLibs) continua executável. Renomear o node
 # para `libnode.so` e pô-lo em jniLibs é o que permite ao flavor "in-app" (sem root nem
 # Shizuku) correr o motor a partir da própria app.
 #
+# A arquitectura tem de casar com a do dispositivo: um `libnode.so` arm64 num emulador x86_64
+# instala-se e depois falha ao carregar. O ABI (nome da pasta em jniLibs) não é o mesmo que o
+# nome da arquitectura no Termux — daí a tabela.
+#
 # Só se copiam as bibliotecas que o node realmente pede (fecho de DT_NEEDED), com o nome
 # exacto do soname — os pacotes do Termux trazem o mesmo ficheiro com 3 nomes, o que
 # triplicaria o tamanho da APK à toa.
 set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$WS/.work/node-android/root/data/data/com.termux/files/usr"
-DST="$WS/.work/jniLibs/arm64-v8a"
+ARCH="aarch64"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --arch) ARCH="$2"; shift 2 ;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    *) echo "opção desconhecida: $1" >&2; exit 2 ;;
+  esac
+done
+case "$ARCH" in
+  aarch64) ABI="arm64-v8a"; SUFFIX="" ;;
+  x86_64)  ABI="x86_64";    SUFFIX="-x86_64" ;;
+  arm)     ABI="armeabi-v7a"; SUFFIX="-arm" ;;
+  i686)    ABI="x86";       SUFFIX="-i686" ;;
+  *) echo "ERRO: --arch '$ARCH' desconhecida (aarch64, arm, x86_64, i686)" >&2; exit 2 ;;
+esac
+SRC="${CACHALOTE_RUNTIME_SRC:-$WS/.work/node-android$SUFFIX/root/data/data/com.termux/files/usr}"
+DST="$WS/.work/jniLibs/$ABI"
 
-[ -x "$SRC/bin/node" ] || { echo "ERRO: falta $SRC/bin/node (corre .work/fetch-node-android.sh)"; exit 1; }
+[ -x "$SRC/bin/node" ] || { echo "ERRO: falta $SRC/bin/node (corre tools/fetch-runtime.sh)"; exit 1; }
+echo "== runtime embutido: $ARCH ($ABI) =="
 rm -rf "$WS/.work/jniLibs"; mkdir -p "$DST"
 cp -f "$SRC/bin/node" "$DST/libnode.so"; chmod 755 "$DST/libnode.so"
 

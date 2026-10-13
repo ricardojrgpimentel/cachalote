@@ -710,6 +710,13 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   domínio que o cria. Por isso é que a app fala **TCP** (foi D11) — o socket unix é só um extra
   para o CLI/adb.
 - **Solução:** o socket unix passou a ser **opcional** (aviso no log, daemon continua só com TCP).
+- **Segunda metade (só apareceu no emulador, §21 do STATUS):** tornar o socket opcional **não
+  chegava**. O arranque do motor estava *dentro* do callback de sucesso do `listen` do unix —
+  logo, quando o socket falhava, o daemon ficava de pé, anunciava "sigo só com TCP" e **nunca
+  arrancava o motor**. O `cachalote status` dizia `daemon: a correr` e `motor: parado`, sem erro
+  nenhum. O arranque passou a ser uma função idempotente (`bootEngine()`) chamada em qualquer dos
+  caminhos: sucesso do unix, falha do unix, ou `listen` do TCP. Lição: ao tornar um passo
+  opcional, verificar **o que estava pendurado nele**.
 - **Bónus:** dois daemons no mesmo telefone precisam de portas diferentes — o porto passou a ser
   escrito em `$BASE/home/port` pelo `install.sh` (root 39731, `/data/local/tmp` 39733).
 - **Origem:** **[LOCAL]**.
@@ -871,4 +878,26 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Correção:** mandar BACK só quando há mesmo teclado **e** confirmar a seguir que a app
   continua em primeiro plano (trazendo-a de volta se não estiver). Em passos onde não se escreve
   nada, simplesmente não chamar o `hide_kb`.
+- **Origem:** **[LOCAL]** (STATUS §21).
+
+### 87. Emulador x86_64: o motor precisa de um runtime **x86_64** (o do telefone é arm64)
+- **Sintoma:** monta-se tudo num AVD x86_64 e o motor não arranca. Se for o `libnode.so` do modo
+  embutido, a app instala-se e falha ao carregar a biblioteca; se for o daemon, o `node` morre
+  com "cannot execute binary file".
+- **Causa:** o runtime do Termux que o telefone usa é **arm64**; o AVD corre x86_64. Instalar um
+  binário doutra arquitectura não dá erro na instalação — só na execução, que é tarde.
+- **Solução:** `tools/fetch-runtime.sh --arch x86_64 --out .work/node-android-x86_64` monta a
+  árvore certa (o Termux publica as mesmas versões: o Node x86_64 é o **24.18.0**, igual ao
+  arm64), e `tools/prepare-embed.sh --arch x86_64` põe o ABI certo em `jniLibs` (`x86_64`;
+  `aarch64`→`arm64-v8a`). O `tools/bootstrap.sh --arch x86_64` passa as duas.
+- **Receita completa para o AVD (sem root):**
+  `./tools/bootstrap.sh --device emulator-5554 --arch x86_64 --shizuku --skip-app`
+- **Notas do AVD:** a imagem `google_apis_playstore` **não** deixa `adb root` — mas o daemon não
+  precisa de root: o caminho `--shizuku` (`--base /data/local/tmp/cachalote --no-root`) instala e
+  arranca como `uid=2000(shell)`. E `/dev/kvm` pode estar fora do sandbox de ficheiros: sem ele
+  o emulador arranca sem aceleração (ou não arranca).
+- **Prova:** no `emulator-5554` (Android 16, x86_64, sem root) o daemon instalou-se a partir do
+  kernel do **npm** e o handshake respondeu
+  `initialize OK: deepseek-harness-acp 0.0.1 | imagem=true`. O `client-smoke.cjs` não serve aí
+  (fala pelo socket AF_UNIX, que o `shell` não pode criar): usar `tools/tcp-acp-probe.cjs`.
 - **Origem:** **[LOCAL]** (STATUS §21).

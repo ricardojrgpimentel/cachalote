@@ -1,23 +1,30 @@
 #!/bin/bash
-# fetch-runtime.sh — obtém o runtime Node **arm64 para Android** (Termux) sem depender de um
+# fetch-runtime.sh — obtém o runtime Node para **Android** (Termux) sem depender de um
 # telemóvel: descarrega os pacotes .deb do repositório do Termux e monta a árvore que o daemon
 # e a app esperam.
 #
-#   ./tools/fetch-runtime.sh                     # descarrega do repositório Termux
+#   ./tools/fetch-runtime.sh                     # descarrega do repositório Termux (arm64)
+#   ./tools/fetch-runtime.sh --arch x86_64       # para o emulador x86_64 (ver em baixo)
 #   ./tools/fetch-runtime.sh --dir DIR           # copia de uma árvore já existente
 #   ./tools/fetch-runtime.sh --from-device       # tira do Termux de um telemóvel ligado
+#   ./tools/fetch-runtime.sh --out DIR           # onde montar (por omissão .work/node-android)
 #
-# Saída: .work/node-android/root/data/data/com.termux/files/usr/{bin/node,lib/*.so*}
+# Saída: <out>/root/data/data/com.termux/files/usr/{bin/node,lib/*.so*}
 #
 # Porque é que não se usa um Node oficial: os binários oficiais para Linux são **glibc** e o
 # Android é **bionic**. O Node do Termux é compilado para bionic e é o que o DSH usa. Ver a base
 # de conhecimento (itens 4 e 61).
+#
+# --arch serve o emulador: o telefone é arm64, mas um AVD x86_64 corre num portátil x86_64 e
+# não consegue executar um binário arm64. O Termux publica as mesmas versões para as duas
+# arquitecturas, por isso o caminho é o mesmo — só muda o índice do repositório.
 set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$WS/.work/node-android"
 DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
 REPO="https://packages.termux.dev/apt/termux-main"
 TERMUX_PREFIX_IN_DEB="data/data/com.termux/files/usr"
+ARCH="aarch64"
+OUT_OVERRIDE=""
 
 MODE="download"
 DIR=""
@@ -25,10 +32,20 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dir) DIR="$2"; MODE="dir"; shift 2 ;;
     --from-device) MODE="device"; shift ;;
-    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+    --arch) ARCH="$2"; shift 2 ;;
+    --out) OUT_OVERRIDE="$2"; shift 2 ;;
+    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
     *) echo "opção desconhecida: $1" >&2; exit 2 ;;
   esac
 done
+
+# As arquitecturas que o Termux publica. Falhar cedo e com a lista à vista é melhor do que
+# montar uma árvore vazia por causa de um nome mal escrito.
+case "$ARCH" in
+  aarch64|arm|x86_64|i686) ;;
+  *) echo "ERRO: --arch '$ARCH' desconhecida (aarch64, arm, x86_64, i686)" >&2; exit 2 ;;
+esac
+OUT="${OUT_OVERRIDE:-$WS/.work/node-android}"
 
 if [ "$MODE" = "dir" ]; then
   [ -d "$DIR/bin" ] || { echo "ERRO: $DIR não tem bin/"; exit 1; }
@@ -45,7 +62,7 @@ elif [ "$MODE" = "device" ]; then
   tar -xf "$OUT/termux-node.tar" -C "$OUT/root/$TERMUX_PREFIX_IN_DEB"
   rm -f "$OUT/termux-node.tar"
 else
-  echo "== a descarregar os pacotes do Termux =="
+  echo "== a descarregar os pacotes do Termux ($ARCH) =="
   command -v python3 >/dev/null || { echo "ERRO: preciso do python3 para extrair os .deb"; exit 1; }
   # O Node e as bibliotecas que ele pede (DT_NEEDED). Os nomes dos ficheiros são procurados
   # no índice do repositório, para não ficarem presos a versões.
@@ -54,7 +71,7 @@ else
   echo "   (a ler o índice do repositório)"
   # Índice num ficheiro: passar 5 MB por um pipe 7 vezes, com o awk a sair cedo, dá SIGPIPE
   # (e com pipefail isso mata o script — foi o que aconteceu à primeira).
-  curl -fsSL "$REPO/dists/stable/main/binary-aarch64/Packages.gz" | gunzip > "$OUT/Packages"
+  curl -fsSL "$REPO/dists/stable/main/binary-$ARCH/Packages.gz" | gunzip > "$OUT/Packages"
   for pkg in "${PKGS[@]}"; do
     file="$(awk -v pkg="$pkg" 'BEGIN{RS="";FS="\n"} {p="";f="";for(i=1;i<=NF;i++){if($i~/^Package: /)p=substr($i,10); if($i~/^Filename: /)f=substr($i,11)} if(p==pkg && f!=""){print f; exit}}' "$OUT/Packages")"
     if [ -z "$file" ]; then
@@ -115,6 +132,11 @@ fi
 
 NODE="$OUT/root/$TERMUX_PREFIX_IN_DEB/bin/node"
 [ -f "$NODE" ] || { echo "ERRO: não encontrei bin/node no runtime montado"; exit 1; }
-echo "== runtime pronto: $(du -sh "$OUT/root" | cut -f1) =="
+echo "== runtime pronto ($ARCH): $(du -sh "$OUT/root" | cut -f1) =="
 ls "$OUT/root/$TERMUX_PREFIX_IN_DEB/bin" "$OUT/root/$TERMUX_PREFIX_IN_DEB/lib" 2>/dev/null | head -14
+# Conferir a arquitectura: um runtime arm64 num emulador x86_64 falha de forma opaca
+# ("cannot execute binary file"), e é barato apanhar isso aqui em vez de no dispositivo.
+if command -v file >/dev/null 2>&1; then
+  echo "arquitectura do node: $(file -b "$NODE" | cut -d, -f1-2)"
+fi
 echo "sha256 do node: $(shasum -a 256 "$NODE" | cut -c1-32)…"

@@ -165,6 +165,22 @@ function startEngine() {
   });
 }
 
+/**
+ * Arranca o motor **uma única vez**, assim que o daemon esteja a atender em ALGUM transporte.
+ *
+ * Estava dentro do callback do socket unix, e isso fazia com que uma falha do socket unix
+ * deixasse o daemon de pé mas **sem motor**: em /data/local/tmp o SELinux nega a criação do
+ * socket ao domínio `shell` (EACCES), o log dizia "sigo só com TCP" — e o motor nunca
+ * arrancava, porque o único sítio que o arrancava era o callback que não corria. O pior dos
+ * dois mundos: o daemon parecia saudável e não tinha motor nenhum.
+ */
+let engineBooted = false;
+function bootEngine() {
+  if (engineBooted) return;
+  engineBooted = true;
+  startEngine();
+}
+
 /** Reinicia o motor (com atraso curto, para a resposta ao cliente sair primeiro). */
 function scheduleEngineRestart(why) {
   log(`a reiniciar o motor: ${why}`);
@@ -343,19 +359,23 @@ const unixServer = net.createServer((s) => attach(s, { requireAuth: false }));
 unixServer.on("error", (e) => {
   log("aviso: socket unix indisponível (" + e.message + ") — sigo só com TCP");
   unixReady = false;
+  bootEngine();
 });
 try { fs.unlinkSync(SOCK); } catch {}
 let unixReady = true;
 unixServer.listen(SOCK, () => {
   try { fs.chmodSync(SOCK, 0o600); } catch {}
   log(`AF_UNIX à escuta em ${SOCK} (0600), pid ${process.pid}`);
-  startEngine();
+  bootEngine();
 });
 
 const tcpServer = net.createServer((s) => attach(s, { requireAuth: true }));
 tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message));
 tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message + " (porta " + PORT + " já ocupada?)"));
-tcpServer.listen(PORT, "127.0.0.1", () => log(`TCP à escuta em 127.0.0.1:${PORT} (token obrigatório)`));
+tcpServer.listen(PORT, "127.0.0.1", () => {
+  log(`TCP à escuta em 127.0.0.1:${PORT} (token obrigatório)`);
+  bootEngine();
+});
 
 function shutdown(why) {
   if (stopping) return;
