@@ -394,6 +394,66 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
     }
 }
 
+/**
+ * Primeiros passos: mostra o que falta para o agente funcionar, item a item, com o botão
+ * que resolve cada um. Desaparece quando está tudo pronto.
+ */
+@Composable
+private fun OnboardingCard(vm: MainViewModel) {
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(3000)
+            tick++
+        }
+    }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val accessibility = remember(tick) { CachaloteAccessibilityService.isEnabled() }
+    val allowed = remember(tick) { vm.capabilityToggles.count { it.value } }
+    val checks = listOf(
+        Triple("daemon instalado", vm.daemonInstalled == true, "Ligar daemon" to { vm.startDaemon() }),
+        Triple("root concedido", vm.rootOk == true, "Obter token (root)" to { vm.obtainToken() }),
+        Triple("token do canal", vm.tokenState.contains("obtido"), "Obter token (root)" to { vm.obtainToken() }),
+        Triple("chave do provedor", vm.keyPresent, "(no separador Chave)" to {}),
+        Triple("acessibilidade ligada", accessibility, "Abrir Acessibilidade" to {
+            runCatching {
+                ctx.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            Unit
+        }),
+        Triple("capacidades autorizadas", allowed > 0, "(no separador Poderes)" to {}),
+    )
+    val missing = checks.count { !it.second }
+    if (missing == 0) return
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2A44)),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Primeiros passos — faltam $missing", fontWeight = FontWeight.SemiBold)
+            checks.forEach { (label, done, action) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (done) "✓" else "•", modifier = Modifier.width(20.dp))
+                    Text(
+                        label,
+                        modifier = Modifier.weight(1f),
+                        color = if (done) MaterialTheme.colorScheme.secondary else Color.Unspecified,
+                    )
+                    if (!done && action.first.isNotBlank() && !action.first.startsWith("(")) {
+                        TextButton(onClick = action.second, enabled = !vm.busy) { Text(action.first) }
+                    } else if (!done) {
+                        Text(action.first, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun StatusScreen(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -401,6 +461,7 @@ private fun StatusScreen(vm: MainViewModel) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        OnboardingCard(vm)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Daemon", fontWeight = FontWeight.SemiBold)

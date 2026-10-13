@@ -554,3 +554,12 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   [`tools/prepare-embed.sh`](../tools/prepare-embed.sh).
 - **Tamanho:** 89 MB (só o fecho de `DT_NEEDED`; copiar todos os nomes dava 173 MB).
 - **Origem:** **[LOCAL]**.
+
+### 62. Composables com scroll não se aninham (e rebentam a app)
+- **Sintoma:** a app fecha-se ao abrir um ecrã: `IllegalStateException: Vertically scrollable
+  component was measured with an infinity maximum height constraints`.
+- **Causa:** envolvi um ecrã que já tinha `Column(verticalScroll)` dentro de outro
+  `Column(verticalScroll)` para pôr um cartão no topo.
+- **Solução:** o cabeçalho entra **dentro** do scroll existente (primeiro filho), ou como
+  `item {}` se o contentor for um `LazyColumn`.
+- **Origem:** **[LOCAL]**.

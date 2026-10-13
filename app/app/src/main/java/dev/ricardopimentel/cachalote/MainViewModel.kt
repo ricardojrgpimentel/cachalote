@@ -49,6 +49,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     var daemonInfo by mutableStateOf("(sem dados — toca em Atualizar)")
     var rootOk by mutableStateOf<Boolean?>(null)
+    var daemonInstalled by mutableStateOf<Boolean?>(null)
     var tokenState by mutableStateOf("(por obter)")
     var keyPresent by mutableStateOf(false)
     var keyLength by mutableStateOf(0)
@@ -147,7 +148,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshStatus() = run("estado") {
         rootOk = controller.hasRoot()
-        if (!controller.daemonInstalled()) {
+        daemonInstalled = controller.daemonInstalled()
+        if (daemonInstalled != true) {
             error = "o daemon não está instalado em ${controller.base} — corre daemon/install.sh no computador"
             return@run
         }
