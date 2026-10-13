@@ -44,7 +44,12 @@ while [ $# -gt 0 ]; do
 done
 ADB=(adb -s "$DEV")
 say() { printf '\n\033[1m== %s ==\033[0m\n' "$*"; }
-SH() { if [ "$WITH_ROOT" = 1 ]; then "${ADB[@]}" shell "su -c \"$1\""; else "${ADB[@]}" shell "$1"; fi; }
+# Cuidado com as aspas: `adb shell "su -c \"$1\""` parece razoável mas **desfaz um script
+# multi-linha em fragmentos** (o adb volta a juntar os argumentos e o `su -c` só apanha o
+# primeiro token). Foi assim que uma instalação root ficou a meio, com o daemon parado e sem
+# erro visível. Regra: `$1` é sempre um comando **simples, sem aspas nem `;`** — para scripts,
+# encenar um ficheiro e correr `sh <ficheiro>` (ver o passo 4).
+SH() { if [ "$WITH_ROOT" = 1 ]; then "${ADB[@]}" shell "su -c '$1'"; else "${ADB[@]}" shell "$1"; fi; }
 
 say "1/6 árvore do kernel"
 if [ "$REBUILD" = 1 ] || [ ! -f "$KERNEL/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" ]; then
@@ -76,39 +81,58 @@ echo "encenado"
 
 [ -n "$PORT" ] || { if [ "$BASE" = "/data/adb/cachalote" ]; then PORT=39731; else PORT=39733; fi; }
 say "4/6 instalar em $BASE (porto $PORT)"
-SH "set -e
-  mkdir -p '$BASE/home/ws' '$BASE/run' '$BASE/logs' '$BASE/tmp' '$BASE/bin' '$BASE/runtime/bin' '$BASE/runtime/lib'
-  rm -rf '$BASE/dsh' '$BASE/kernel'
-  mkdir -p '$BASE/kernel' && cd '$STAGE' && tar -xf kernel.tar -C '$BASE/kernel'
-  cp -f '$STAGE/runtime/bin/node' '$BASE/runtime/bin/node'
-  cp -f '$STAGE/runtime/lib/'*.so* '$BASE/runtime/lib/'
-  cp -f '$STAGE/bin/bash' '$BASE/bin/bash'
-  cp -f '$STAGE/bridge.cjs' '$BASE/bridge.cjs'
-  cp -f '$STAGE/cachalote' '$BASE/bin/cachalote'
-  cp -f '$STAGE/client-smoke.cjs' '$BASE/bin/client-smoke.cjs'
-  [ -f '$BASE/home/.env' ] || : > '$BASE/home/.env'
-  cp -f '$STAGE/cachalote.patch.yml' '$BASE/home/cordis.patch.yml'
-  # O CLI e a ponte têm o base por omissão dentro do ficheiro: reescrevê-lo para o base
-  # escolhido, senão um --base alternativo (ex.: /data/local/tmp para o Shizuku) arranca o
-  # daemon do sítio errado.
-  sed -i \"s|/data/adb/cachalote|$BASE|g\" '$BASE/bin/cachalote' '$BASE/bridge.cjs' '$BASE/home/cordis.patch.yml' '$BASE/bin/client-smoke.cjs' 2>/dev/null || true
-  chmod 755 '$BASE/bin/cachalote' '$BASE/bin/bash' '$BASE/runtime/bin/node'
-  chmod 600 '$BASE/home/.env'
-  chmod -R a+rX '$BASE/kernel' '$BASE/runtime/lib'
-  chmod -R u+w '$BASE/home'
-  printf '%s\n' '$PORT' > '$BASE/home/port'
-  chmod 644 '$BASE/home/port'
-  echo 'instalado em $BASE (porto $PORT)'"
-SH "du -sh '$BASE'; ls '$BASE' '$BASE/bin'"
+# O trabalho todo vai num ficheiro encenado e corre-se com `sh`: assim não há aspas nenhumas
+# a atravessar o adb -> sh -> su (ver a nota no SH()).
+INSTALL_SH="$WS/.work/install-tree.sh"
+cat > "$INSTALL_SH" <<EOS
+set -e
+mkdir -p "$BASE/home/ws" "$BASE/run" "$BASE/logs" "$BASE/tmp" "$BASE/bin" "$BASE/runtime/bin" "$BASE/runtime/lib"
+rm -rf "$BASE/dsh" "$BASE/kernel"
+mkdir -p "$BASE/kernel"
+tar -xf "$STAGE/kernel.tar" -C "$BASE/kernel"
+cp -f "$STAGE/runtime/bin/node" "$BASE/runtime/bin/node"
+cp -f "$STAGE/runtime/lib/"*.so* "$BASE/runtime/lib/"
+cp -f "$STAGE/bin/bash" "$BASE/bin/bash"
+cp -f "$STAGE/bridge.cjs" "$BASE/bridge.cjs"
+cp -f "$STAGE/cachalote" "$BASE/bin/cachalote"
+cp -f "$STAGE/client-smoke.cjs" "$BASE/bin/client-smoke.cjs"
+[ -f "$BASE/home/.env" ] || : > "$BASE/home/.env"
+cp -f "$STAGE/cachalote.patch.yml" "$BASE/home/cordis.patch.yml"
+# O CLI e a ponte têm o base por omissão dentro do ficheiro: reescrevê-lo para o base
+# escolhido, senão um --base alternativo (ex.: /data/local/tmp para o Shizuku) arranca o
+# daemon do sítio errado.
+sed -i "s|/data/adb/cachalote|$BASE|g" "$BASE/bin/cachalote" "$BASE/bridge.cjs" "$BASE/home/cordis.patch.yml" "$BASE/bin/client-smoke.cjs" 2>/dev/null || true
+chmod 755 "$BASE/bin/cachalote" "$BASE/bin/bash" "$BASE/runtime/bin/node"
+chmod 600 "$BASE/home/.env"
+chmod -R a+rX "$BASE/kernel" "$BASE/runtime/lib"
+chmod -R u+w "$BASE/home"
+printf '%s\n' "$PORT" > "$BASE/home/port"
+chmod 644 "$BASE/home/port"
+echo "instalado em $BASE (porto $PORT)"
+EOS
+"${ADB[@]}" push "$INSTALL_SH" "$STAGE/install-tree.sh" >/dev/null
+SH "sh $STAGE/install-tree.sh"
+SH "du -sh $BASE"
+SH "ls $BASE"
 
 say "5/6 arrancar"
-SH "'$BASE/bin/cachalote' start || true"
-SH "'$BASE/bin/cachalote' status || true"
+SH "$BASE/bin/cachalote start" || true
+SH "$BASE/bin/cachalote status" || true
 
 if [ "$AUTOSTART" = 1 ]; then
   say "6/6 arranque automático (Magisk service.d)"
   "${ADB[@]}" push "$WS/daemon/cachalote.service.sh" "$STAGE/cachalote.service.sh" >/dev/null
-  SH "mkdir -p /data/adb/service.d && cp -f '$STAGE/cachalote.service.sh' /data/adb/service.d/cachalote.sh && chmod 755 /data/adb/service.d/cachalote.sh && ls -l /data/adb/service.d/cachalote.sh"
+  # Outro script encenado, pela mesma razão do passo 4 (nada de `&&` nem aspas a atravessar o su).
+  AUTOSTART_SH="$WS/.work/install-autostart.sh"
+  cat > "$AUTOSTART_SH" <<EOS
+set -e
+mkdir -p /data/adb/service.d
+cp -f "$STAGE/cachalote.service.sh" /data/adb/service.d/cachalote.sh
+chmod 755 /data/adb/service.d/cachalote.sh
+ls -l /data/adb/service.d/cachalote.sh
+EOS
+  "${ADB[@]}" push "$AUTOSTART_SH" "$STAGE/install-autostart.sh" >/dev/null
+  SH "sh $STAGE/install-autostart.sh"
 else
   say "6/6 arranque automático: não pedido (--autostart para instalar no Magisk service.d)"
 fi

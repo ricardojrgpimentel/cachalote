@@ -15,7 +15,18 @@ GRADLE="$WS/.work/tools/gradle-8.13/bin/gradle"
 # do workspace evita a política de ficheiros do harness (ver knowledge-android #47).
 export GRADLE_USER_HOME="$WS/.work/gradle-home"
 export ANDROID_USER_HOME="$WS/.work/android-home"
-JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+# O JDK: respeitar o que vier do ambiente (o bootstrap detecta-o e passa-o) e só procurar
+# sozinho se não vier nada. O caminho do Android Studio é o **do macOS** e estava fixo aqui —
+# no Linux sobrepunha-se ao JAVA_HOME do bootstrap e o build morria sem explicação.
+if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME:-}/bin/java" ]; then
+  for c in "$HOME/Android/Sdk/jbr" "${ANDROID_HOME:-}/jdk-"* "${ANDROID_HOME:-}/jbr" \
+           "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+           /usr/lib/jvm/*/bin/java; do
+    c="${c%/bin/java}"
+    [ -x "$c/bin/java" ] && { JAVA_HOME="$c"; break; }
+  done
+fi
+export JAVA_HOME
 APK="$WS/app/app/build/outputs/apk/debug/app-debug.apk"
 ADB=(adb -s "$DEV")
 BUILD=1; ROOT=1
