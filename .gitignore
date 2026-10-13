@@ -12,3 +12,6 @@ app/.gradle/
 app/build/
 app/app/build/
 app/local.properties
+
+# runtime embutido (gerado por tools/prepare-embed.sh)
+.work/jniLibs/
