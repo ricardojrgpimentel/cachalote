@@ -400,16 +400,9 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
  */
 @Composable
 private fun OnboardingCard(vm: MainViewModel) {
-    var tick by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(3000)
-            tick++
-        }
-    }
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val accessibility = remember(tick) { CachaloteAccessibilityService.isEnabled() }
-    val allowed = remember(tick) { vm.capabilityToggles.count { it.value } }
+    val accessibility = vm.accessibilityOn
+    val allowed = vm.capabilityToggles.count { it.value }
     val checks = listOf(
         Triple("daemon instalado", vm.daemonInstalled == true, "Ligar daemon" to { vm.startDaemon() }),
         Triple("root concedido", vm.rootOk == true, "Obter token (root)" to { vm.obtainToken() }),
@@ -477,6 +470,10 @@ private fun StatusScreen(vm: MainViewModel) {
                 Text("Acesso", fontWeight = FontWeight.SemiBold)
                 Text("root: " + when (vm.rootOk) { true -> "concedido"; false -> "negado"; null -> "?" })
                 Text("token: ${vm.tokenState}")
+                Text(
+                    "diagnóstico: pid ${android.os.Process.myPid()} · a11y ${vm.accessibilityOn}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Text("motor: ${vm.agentInfo.ifBlank { "(handshake ainda não feito)" }}")
             }
         }

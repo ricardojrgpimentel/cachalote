@@ -67,6 +67,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var reconnecting by mutableStateOf(false)
     var audit by mutableStateOf<List<String>>(emptyList())
     var embedTest by mutableStateOf("(não testado)")
+
+    /** Acessibilidade ligada? Vem do próprio serviço; refrescado por um laço do ViewModel. */
+    var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
 
     private val store = SessionStore(app)
@@ -132,6 +135,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { refreshStatus() }
             runCatching { run("chave") { refreshKeyStatus() } }
         refreshCapabilities()
+        // O serviço de acessibilidade liga/desliga fora do nosso controlo (Definições do
+        // sistema, force-stop): manter o estado fresco sem depender de efeitos da UI.
+        viewModelScope.launch {
+            while (true) {
+                accessibilityOn = CachaloteAccessibilityService.isEnabled()
+                kotlinx.coroutines.delay(2_000)
+            }
+        }
         }
         viewModelScope.launch {
             controller.client.events.collect { onEvent(it) }

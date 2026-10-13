@@ -563,3 +563,24 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Solução:** o cabeçalho entra **dentro** do scroll existente (primeiro filho), ou como
   `item {}` se o contentor for um `LazyColumn`.
 - **Origem:** **[LOCAL]**.
+
+### 63. `force-stop` **desliga** o serviço de acessibilidade
+- **Observação:** depois de `adb shell am force-stop <pkg>` (ou de uma reinstalação da APK),
+  `settings get secure enabled_accessibility_services` fica `null`/vazio e
+  `dumpsys accessibility` mostra `Bound services:{}`. O Android revalida/limpa os serviços de
+  acessibilidade quando a app é actualizada ou forçada a parar.
+- **Consequência para o produto:** o utilizador (e os nossos testes) tem de **religar** o
+  serviço; a app não pode assumir que continua ligado. O cartão de primeiros passos detecta e
+  oferece o botão "Abrir Acessibilidade" — foi assim que se descobriu, não por acidente.
+- **Nos testes:** `tools/app-capabilities-test.sh` religa-o automaticamente quando falta.
+- **Origem:** **[LOCAL]**.
+
+### 64. Estado lido de um singleton não pode ficar preso num `remember` local
+- **Sintoma:** o cartão de primeiros passos mostrava "acessibilidade ligada" como pendente
+  enquanto uma linha de diagnóstico, na **mesma** composição, imprimia `a11y true`.
+- **Causa:** o valor vinha de `remember { mutableStateOf(Servico.isEnabled()) }` inicializado
+  quando o serviço ainda não estava ligado; o `LaunchedEffect` local que o devia refrescar não
+  corria como esperado.
+- **Solução:** o estado vive no **ViewModel** (`accessibilityOn`) e é refrescado por um laço
+  do `viewModelScope` — independente do ciclo de composição. A UI só lê.
+- **Origem:** **[LOCAL]**.
