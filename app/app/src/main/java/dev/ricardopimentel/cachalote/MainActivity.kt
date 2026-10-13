@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
@@ -44,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -52,6 +54,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +78,13 @@ class MainActivity : ComponentActivity() {
         // Sem isto, o Compose desenha por baixo do teclado e o botão Enviar fica
         // inalcançável com o teclado aberto (apanhado em teste de UI).
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        // O agente usa notificações (android_notify): pedir já, para não falhar depois.
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
         setContent { CachaloteApp() }
     }
 }
@@ -117,6 +127,12 @@ fun CachaloteApp() {
                             icon = { Icon(Icons.Filled.Chat, null) },
                             label = { Text("Conversa") },
                         )
+                        NavigationBarItem(
+                            selected = tab == 3,
+                            onClick = { tab = 3 },
+                            icon = { Icon(Icons.Filled.Build, null) },
+                            label = { Text("Poderes") },
+                        )
                     }
                 },
             ) { pad ->
@@ -133,10 +149,12 @@ fun CachaloteApp() {
                             Text(vm.error, modifier = Modifier.padding(12.dp), color = Color(0xFFFFC9D0))
                         }
                     }
+                    LaunchedEffect(tab) { if (tab == 3) vm.refreshCapabilities() }
                     when (tab) {
                         0 -> StatusScreen(vm)
                         1 -> KeyScreen(vm)
-                        else -> ChatScreen(vm)
+                        2 -> ChatScreen(vm)
+                        else -> CapabilitiesScreen(vm)
                     }
                 }
             }
@@ -265,6 +283,99 @@ private fun SessionsDialog(vm: MainViewModel) {
         confirmButton = {},
         dismissButton = { TextButton(onClick = { vm.showSessions = false }) { Text("Fechar") } },
     )
+}
+
+/**
+ * O que o agente pode fazer no telefone: interruptores por capacidade e o registo do
+ * que ele já pediu. É a barreira de segurança do projecto (ver D10 no plano) — no
+ * Android não há sandbox a travar o agente, por isso quem decide é o utilizador.
+ */
+@Composable
+private fun CapabilitiesScreen(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val accessibilityOn = CachaloteAccessibilityService.isEnabled()
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Acessibilidade", fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (accessibilityOn) "serviço ligado — o agente consegue ver e tocar no ecrã"
+                    else "serviço desligado — sem ele o agente só envia notificações",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedButton(onClick = {
+                    runCatching {
+                        ctx.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }) { Text("Abrir Definições → Acessibilidade") }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Capacidades autorizadas", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "O agente pede; tu decides. Cada pedido fica registado em baixo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, true) } }) {
+                        Text("Autorizar todas")
+                    }
+                    OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, false) } }) {
+                        Text("Negar todas")
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                vm.capabilityNames.forEach { cap ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(cap, modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = vm.capabilityToggles[cap] == true,
+                            onCheckedChange = { vm.setCapability(cap, it) },
+                        )
+                    }
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Registo", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.clearAudit() }) { Text("Limpar") }
+                }
+                if (vm.audit.isEmpty()) {
+                    Text("ainda não houve pedidos", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    vm.audit.take(25).forEach { line ->
+                        Text(
+                            line,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(vertical = 1.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        Text(
+            "Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. " +
+                "Estes interruptores são a barreira real — desliga o que não precisares.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+    }
 }
 
 @Composable

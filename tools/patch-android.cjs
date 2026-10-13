@@ -26,6 +26,8 @@ if (!tree) {
   process.exit(2);
 }
 
+const path = require("node:path");
+const REPO = path.resolve(__dirname, "..");
 const report = [];
 const HOME = tree + "/dsh/node_modules";
 
@@ -195,6 +197,46 @@ if (fs.existsSync(toolBash)) {
   }
 } else {
   report.push("tool-bash: AVISO — não encontrei " + toolBash);
+}
+
+/* ---------- patch 6: instalar o plugin de ferramentas Android ---------- */
+// O plugin vive no repositório (kernel-plugins/cachalote-tools) e é copiado para dentro
+// da árvore, no mesmo sítio onde o projecto de referência punha os dele — e declarado nas
+// dependências do pacote `dsh`, que é o que o loader consulta.
+const pluginSrc = path.join(REPO, "kernel-plugins", "cachalote-tools");
+// Duas localizações de propósito: o kernel 0.2.0-rc.2 tem as dependências *hoisted* no
+// topo (`dsh/node_modules/@deepseek-ai/`), mas o projecto de referência instalava os
+// plugins dele dentro de `dsh/node_modules/...` e declarava-os em `dsh/package.json`.
+// Instalar nos dois sítios torna o plugin resolúvel em qualquer das convenções.
+const pluginDsts = [
+  path.join(HOME, "@deepseek-ai", "dsh-tool-cachalote"),
+  path.join(HOME, "@deepseek-ai", "dsh", "node_modules", "@deepseek-ai", "dsh-tool-cachalote"),
+];
+if (fs.existsSync(pluginSrc)) {
+  const copyTree = (from, to) => {
+    fs.mkdirSync(to, { recursive: true });
+    for (const e of fs.readdirSync(from, { withFileTypes: true })) {
+      const a = path.join(from, e.name), b = path.join(to, e.name);
+      if (e.isDirectory()) copyTree(a, b);
+      else fs.writeFileSync(b, fs.readFileSync(a));
+    }
+  };
+  for (const dst of pluginDsts) {
+    fs.rmSync(dst, { recursive: true, force: true });
+    copyTree(pluginSrc, dst);
+  }
+  const dshPkg = path.join(HOME, "@deepseek-ai", "dsh", "package.json");
+  const pkg = JSON.parse(fs.readFileSync(dshPkg, "utf8"));
+  pkg.dependencies = pkg.dependencies || {};
+  if (!pkg.dependencies["@deepseek-ai/dsh-tool-cachalote"]) {
+    pkg.dependencies["@deepseek-ai/dsh-tool-cachalote"] = "0.1.0";
+    fs.writeFileSync(dshPkg, JSON.stringify(pkg, null, 2) + "\n");
+    report.push("plugin cachalote-tools: instalado (topo + ninho) e declarado em dsh/package.json");
+  } else {
+    report.push("plugin cachalote-tools: reinstalado (dependência já declarada)");
+  }
+} else {
+  report.push("plugin cachalote-tools: AVISO — " + pluginSrc + " não existe");
 }
 
 /* ---------- verificação final: nenhum .node na árvore ---------- */

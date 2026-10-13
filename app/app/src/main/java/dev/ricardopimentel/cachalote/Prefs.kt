@@ -29,4 +29,27 @@ class Prefs(context: Context) {
     var workspace: String
         get() = sp.getString("workspace", RootShell.BASE + "/home/ws")!!
         set(v) = sp.edit().putString("workspace", v).apply()
+
+    // ---------------------------------------------------------------- capacidades
+
+    /** O agente só usa o que o utilizador autorizar. `notify` nasce autorizada. */
+    fun isCapabilityAllowed(capability: String): Boolean =
+        sp.getBoolean("cap_$capability", capability == "notify")
+
+    fun setCapabilityAllowed(capability: String, allowed: Boolean) =
+        sp.edit().putBoolean("cap_$capability", allowed).apply()
+
+    // ---------------------------------------------------------------- auditoria
+
+    /** Últimos pedidos do agente (mais recente primeiro), em memória + prefs. */
+    fun auditAdd(line: String) {
+        val current = sp.getString("audit", "") ?: ""
+        val lines = (line + "\n" + current).lines().filter { it.isNotBlank() }.take(80)
+        sp.edit().putString("audit", lines.joinToString("\n")).apply()
+    }
+
+    fun auditList(): List<String> =
+        (sp.getString("audit", "") ?: "").lines().filter { it.isNotBlank() }
+
+    fun auditClear() = sp.edit().remove("audit").apply()
 }

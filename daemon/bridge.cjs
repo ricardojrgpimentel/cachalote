@@ -149,6 +149,45 @@ function scheduleEngineRestart(why) {
   setTimeout(() => { try { engine?.kill("SIGTERM"); } catch {} }, 700);
 }
 
+/* ---------------- canal reverso: o motor pede, a APP executa ----------------
+ * Fluxo: plugin do kernel → `cachalote.host.call` (TCP, cliente "tool") → daemon →
+ * pedido `host.call` (id string "host-N") → app → resposta → daemon → plugin.
+ * Os ids string distinguem-se dos ids numéricos do ACP: não há colisões possíveis.
+ */
+let appSocket = null;          // ligação autenticada com client:"app"
+let hostSeq = 0;
+const hostPending = new Map();
+
+function hostCall(capability, params, timeoutMs = 30_000) {
+  const sock = appSocket;
+  if (!sock || sock.destroyed) return Promise.reject(new Error("a app não está ligada ao daemon"));
+  const id = "host-" + (++hostSeq);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      hostPending.delete(id);
+      reject(new Error(`a app não respondeu a ${capability} em ${timeoutMs} ms`));
+    }, timeoutMs);
+    hostPending.set(id, { resolve, reject, timer });
+    try {
+      sock.write(JSON.stringify({ jsonrpc: "2.0", id, method: "host.call", params: { capability, params } }) + "\n");
+    } catch (e) {
+      clearTimeout(timer);
+      hostPending.delete(id);
+      reject(e);
+    }
+  });
+}
+
+function settleHost(msg) {
+  const slot = hostPending.get(msg.id);
+  if (!slot) return false;
+  hostPending.delete(msg.id);
+  clearTimeout(slot.timer);
+  if (msg.error) slot.reject(new Error(msg.error.message || JSON.stringify(msg.error)));
+  else slot.resolve(msg.result ?? {});
+  return true;
+}
+
 /* ---------------- operações do daemon (não vão ao motor) ---------------- */
 function control(method, params) {
   switch (method) {
@@ -179,6 +218,10 @@ function control(method, params) {
       // Confirma que o motor tem mesmo a chave: pergunta ao serviço de credenciais
       // através de um turno trivial seria caro; aqui só dizemos o que está no ficheiro.
       return credentialState(params?.name || "DEEPSEEK_API_KEY");
+    case "cachalote.host.call":
+      return hostCall(params?.capability, params?.params ?? {}, params?.timeoutMs ?? 30_000);
+    case "cachalote.host.status":
+      return { appConnected: !!appSocket && !appSocket.destroyed, pending: hostPending.size };
     case "cachalote.engine.restart":
       scheduleEngineRestart("pedido explícito");
       return { ok: true, note: "motor a reiniciar" };
@@ -210,11 +253,23 @@ function attach(socket, { requireAuth }) {
         continue;
       }
 
+      // resposta da app a um pedido host.* (id string)
+      if (typeof msg.id === "string" && msg.id.startsWith("host-") && (msg.result !== undefined || msg.error !== undefined)) {
+        if (!settleHost(msg)) log("resposta host sem pedido pendente: " + msg.id);
+        continue;
+      }
+
       // autenticação (só TCP)
       if (msg.method === "cachalote.auth") {
         const okToken = typeof msg.params?.token === "string" && msg.params.token.length === TOKEN.length &&
           crypto.timingSafeEqual(Buffer.from(msg.params.token), Buffer.from(TOKEN));
-        if (okToken) { authed = true; log("app autenticado no TCP"); reply(msg.id, { ok: true, version: VERSION }); }
+        if (okToken) {
+          authed = true;
+          const role = msg.params?.client === "tool" ? "tool" : "app";
+          if (role === "app") appSocket = socket;
+          log(`cliente "${role}" autenticado no TCP`);
+          reply(msg.id, { ok: true, version: VERSION, role });
+        }
         else { log("token inválido — a fechar ligação"); reply(msg.id, null, { code: -32001, message: "token inválido" }); try { socket.destroy(); } catch {} }
         continue;
       }
@@ -229,7 +284,9 @@ function attach(socket, { requireAuth }) {
         try {
           const result = control(msg.method, msg.params);
           if (result === undefined) reply(msg.id, null, { code: -32601, message: "método de daemon desconhecido: " + msg.method });
-          else reply(msg.id, result);
+          else if (typeof result?.then === "function") {
+            result.then((v) => reply(msg.id, v ?? {})).catch((e) => reply(msg.id, null, { code: -32603, message: String(e?.message || e) }));
+          } else reply(msg.id, result);
         } catch (e) {
           reply(msg.id, null, { code: -32603, message: String(e?.message || e) });
         }
@@ -249,7 +306,10 @@ function attach(socket, { requireAuth }) {
     }
   });
 
-  const bye = () => { if (registered) { clients.delete(socket); log("cliente ACP desligado"); } };
+  const bye = () => {
+    if (registered) { clients.delete(socket); log("cliente ACP desligado"); }
+    if (appSocket === socket) { appSocket = null; log("app desligada do daemon"); }
+  };
   socket.on("close", bye);
   socket.on("error", (e) => { log("erro de socket: " + e.message); bye(); });
 }

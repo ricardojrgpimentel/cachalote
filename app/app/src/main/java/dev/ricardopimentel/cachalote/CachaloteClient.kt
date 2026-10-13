@@ -102,7 +102,7 @@ class CachaloteClient {
     }
 
     /** Responde a um pedido do motor (o `id` vem no pedido). */
-    suspend fun respond(id: Int, result: JSONObject) = withContext(Dispatchers.IO) {
+    suspend fun respond(id: Any, result: JSONObject) = withContext(Dispatchers.IO) {
         writeLock.withLock {
             val w = writer ?: error("sem ligação ao daemon")
             w.write(JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", result).toString())

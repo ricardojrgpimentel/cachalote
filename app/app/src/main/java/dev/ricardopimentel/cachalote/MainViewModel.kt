@@ -63,8 +63,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var showSessions by mutableStateOf(false)
     var configPicker by mutableStateOf<ConfigOption?>(null)
     var reconnecting by mutableStateOf(false)
+    var audit by mutableStateOf<List<String>>(emptyList())
+    var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
 
     private val store = SessionStore(app)
+    private val caps = HostCapabilities(app, Prefs(app))
+    val capabilityNames: List<String> = HostCapabilities.CAPABILITIES
     private var loaded = false
 
     val transcript = mutableStateListOf<ChatLine>()
@@ -124,6 +128,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             runCatching { refreshStatus() }
             runCatching { run("chave") { refreshKeyStatus() } }
+        refreshCapabilities()
         }
         viewModelScope.launch {
             controller.client.events.collect { onEvent(it) }
@@ -332,9 +337,55 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         saveState()
     }
 
-    /** Pedido do motor: hoje só o de aprovação, que exige resposta do utilizador. */
+    /** Recarrega os interruptores de capacidades e o registo de auditoria. */
+    fun refreshCapabilities() {
+        val p = Prefs(getApplication())
+        capabilityToggles = HostCapabilities.CAPABILITIES.associateWith { p.isCapabilityAllowed(it) }
+        audit = p.auditList()
+    }
+
+    fun setCapability(capability: String, allowed: Boolean) {
+        Prefs(getApplication()).setCapabilityAllowed(capability, allowed)
+        refreshCapabilities()
+    }
+
+    fun clearAudit() {
+        Prefs(getApplication()).auditClear()
+        refreshCapabilities()
+    }
+
+    /**
+     * Pedidos que vêm do motor: `session/request_permission` (aprovação do utilizador) e
+     * `host.call` (o agente quer uma capacidade Android — notificação, ecrã, toque…).
+     */
     private fun onRequest(obj: JSONObject) {
-        if (obj.optString("method") != "session/request_permission") {
+        val method = obj.optString("method")
+
+        if (method == "host.call") {
+            val rawId: Any = obj.opt("id") ?: return
+            val params = obj.optJSONObject("params") ?: JSONObject()
+            val capability = params.optString("capability")
+            val args = params.optJSONObject("params") ?: JSONObject()
+            viewModelScope.launch {
+                val result = runCatching { caps.execute(capability, args) }
+                runCatching {
+                    controller.client.respond(
+                        rawId,
+                        result.getOrElse { e ->
+                            JSONObject().put("error", JSONObject().put("code", -32000).put("message", e.message ?: "falhou"))
+                        },
+                    )
+                }
+                if (result.isFailure) {
+                    transcript.add(ChatLine("error", "capacidade $capability: ${result.exceptionOrNull()?.message}"))
+                }
+                refreshCapabilities()
+                saveState()
+            }
+            return
+        }
+
+        if (method != "session/request_permission") {
             // Desconhecido mas com id: responder "cancelled" para não pendurar o turno.
             viewModelScope.launch {
                 runCatching { controller.client.respond(obj.optInt("id"), JSONObject().put("outcome", "cancelled")) }

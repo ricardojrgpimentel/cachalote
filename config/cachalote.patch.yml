@@ -36,6 +36,15 @@
 - insert:
     - id: bash-local
       name: '@deepseek-ai/dsh-bash-local'
+    # Ferramentas Android do Cachalote: falam com o daemon, que fala com a app
+    # (notificações, acessibilidade, ecrã). Ver kernel-plugins/cachalote-tools.
+    #
+    # ⚠ Caminho ABSOLUTO de propósito: um plugin colocado à mão na árvore não é
+    # resolvido por nome pelo loader (o `bareModuleBaseUrl` do perfil não inclui a
+    # nossa pasta). O loader aceita caminhos absolutos e resolve as dependências do
+    # plugin a partir da localização do ficheiro.
+    - id: tool-cachalote
+      name: '/data/adb/cachalote/kernel/dsh/node_modules/@deepseek-ai/dsh-tool-cachalote/lib/index.js'
 
 # Presets de permissão. O `sandboxMode` declarado pelo bash-local é
 # `workspace-write` (ver D10 do plano): no Android não há Landlock, portanto o

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Cachalote</string>
+    <string name="accessibility_description">Dá ao agente Cachalote olhos e dedos: lê a árvore de controlos do ecrã, toca, escreve, faz scroll e captura o ecrã, quando lhe pedires.</string>
 </resources>
