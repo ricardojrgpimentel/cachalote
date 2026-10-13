@@ -41,11 +41,33 @@ dump() {
   "${ADB[@]}" exec-out cat /sdcard/ui.xml > "$UI" 2>/dev/null
   [ -s "$UI" ]
 }
-hide_kb() { "${ADB[@]}" shell input keyevent 4 >/dev/null 2>&1; sleep 0.6; }
+# BACK só quando há teclado: sem ele, o BACK fecha a app (foi o que fazia o teste falhar).
+hide_kb() {
+  if "${ADB[@]}" shell "dumpsys input_method | grep -q 'mInputShown=true'" 2>/dev/null; then
+    "${ADB[@]}" shell input keyevent 4 >/dev/null 2>&1
+    sleep 0.6
+  fi
+}
 
 coords() { python3 "$WS/tools/ui.py" "$UI" find "$1" 2>/dev/null; }
+# Traz a app para a frente: sem isto os toques caem noutra app (calculadora, definições…).
+foreground_app() {
+  local focus
+  focus="$("${ADB[@]}" shell "dumpsys window | grep -m1 mCurrentFocus" 2>/dev/null | tr -d '\r')"
+  case "$focus" in
+    *"$PKG"*) return 0 ;;
+    *) "${ADB[@]}" shell "am start -n $ACT" >/dev/null 2>&1; sleep 3; return 1 ;;
+  esac
+}
 tap_text() {
-  local c; c="$(coords "$1")" || { echo "   (não encontrei '$1' no ecrã)"; return 1; }
+  local c attempt
+  for attempt in 1 2 3; do
+    dump
+    c="$(coords "$1")" && break
+    foreground_app || true
+    sleep 2
+  done
+  [ -n "${c:-}" ] || { echo "   (não encontrei '$1' no ecrã)"; return 1; }
   set -- $c
   "${ADB[@]}" shell input tap "$1" "$2" >/dev/null 2>&1
   sleep 1.2
@@ -87,13 +109,53 @@ sleep 5; dump
 has "obtido" && check 0 "token obtido" || check 1 "token obtido"
 
 echo "== 4. ecrã da chave: colar e guardar =="
-tap_text "Chave" || true
+# O teclado pode estar aberto (separador Conversa) e tapa a barra de navegação.
+hide_kb; sleep 1
+foreground_app || true
+hide_kb; sleep 1
+# Ir para o separador Chave e CONFIRMAR que lá estamos (antes, um toque falhado deixava o
+# teste a escrever no vazio e a apagar a chave do utilizador sem se aperceber).
+for attempt in 1 2 3; do
+  tap_text "Chave" || true
+  dump
+  python3 "$WS/tools/ui.py" "$UI" exists "DEEPSEEK_API_KEY" && break
+  foreground_app || true
+done
+dump
+python3 "$WS/tools/ui.py" "$UI" exists "DEEPSEEK_API_KEY" \
+  && echo "   (no ecrã da chave)" || { echo "   ERRO: não cheguei ao ecrã da chave — a abortar sem tocar na chave"; restore_key; exit 1; }
 sleep 1; dump
-tap_text "DEEPSEEK_API_KEY" || true
-"${ADB[@]}" shell input text "$DUMMY" >/dev/null 2>&1
-sleep 1; hide_kb; dump
-tap_text "Guardar no daemon" || true
-sleep 3; dump
+# O campo é um OutlinedTextField com password visual: o texto aparece como pontos. Como o
+# teclado e o layout mudam, verificamos o estado e repetimos se necessário.
+env_has_dummy() {
+  "${ADB[@]}" shell "su -c 'grep -q \"^DEEPSEEK_API_KEY=$DUMMY\" $BASE/home/.env'" >/dev/null 2>&1
+}
+typed_ok() {
+  dump
+  python3 "$WS/tools/ui.py" "$UI" list >/dev/null 2>&1 || return 1
+  grep -q "EditText" "$UI" 2>/dev/null && python3 - "$UI" <<'PYTYPED'
+import sys, xml.etree.ElementTree as ET
+t = ET.parse(sys.argv[1])
+for n in t.getroot().iter('node'):
+    if (n.get('class') or '').endswith('EditText') and (n.get('text') or '').strip():
+        raise SystemExit(0)
+raise SystemExit(1)
+PYTYPED
+}
+saved=1
+for attempt in 1 2 3; do
+  tap_text "DEEPSEEK_API_KEY" || { echo "   (ecrã actual: $(python3 "$WS/tools/ui.py" "$UI" list | head -4 | tr '\n' ' ' | cut -c1-140))"; continue; }
+  "${ADB[@]}" shell input text "$DUMMY" >/dev/null 2>&1
+  sleep 1; hide_kb
+  if ! typed_ok; then echo "   (o campo ficou vazio — a repetir)"; continue; fi
+  tap_text "Guardar no daemon" || true
+  for i in $(seq 1 8); do
+    sleep 2
+    if env_has_dummy; then saved=0; break; fi
+  done
+  [ "$saved" = 0 ] && break
+done
+dump
 echo "   (o daemon reinicia o motor ao gravar a chave; a dar-lhe tempo)"
 for i in $(seq 1 12); do
   OKH="$("${ADB[@]}" shell "su -c '$BASE/bin/cachalote status'" 2>/dev/null | grep -c 'OK deepseek-harness-acp' || true)"
@@ -102,8 +164,7 @@ for i in $(seq 1 12); do
 done
 
 echo "== 5. confirmar no daemon (ficheiro home/.env) =="
-ENV_OUT="$("${ADB[@]}" shell "su -c 'cat $BASE/home/.env'" 2>/dev/null | tr -d '\r')"
-if echo "$ENV_OUT" | grep -q "^DEEPSEEK_API_KEY=$DUMMY$"; then
+if env_has_dummy; then
   check 0 "o daemon gravou a chave de teste no .env"
 else
   check 1 "o daemon gravou a chave de teste no .env (obtido: ${ENV_OUT:0:40}…)"

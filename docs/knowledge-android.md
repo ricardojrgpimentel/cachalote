@@ -611,3 +611,20 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Lição:** para "o agente consegue mesmo fazer X?", a resposta tem de vir do caminho do
   agente — não de uma flag paralela que pode divergir.
 - **Origem:** **[LOCAL]**.
+
+### 67. Nunca testar a chave "à mão" — usar o caminho guardado do teste
+- **O que aconteceu:** para diagnosticar o passo da chave, escrevi uma chave de teste
+  directamente na UI. O teste automático tem backup/restauro (`trap EXIT`), mas o meu passo
+  manual **substituiu a chave real do utilizador** e não havia cópia no dispositivo (o daemon
+  só regista o *comprimento*, e o registo de auditoria só guarda capacidades `host.*`, nunca
+  `credentials.set`).
+- **Regras que ficam:**
+  1. Qualquer experiência com chaves passa pelo `tools/app-ui-test.sh` (que guarda
+     `home/.env.bak`, repõe no fim e reinicia o motor) ou pelo `daemon/set-key.sh`.
+  2. O teste **confirma que está no ecrã da chave** antes de escrever; se não chegar lá,
+     aborta sem tocar em nada (era isto que faltava).
+  3. O `hide_kb` só manda BACK quando o teclado está aberto — sem teclado, o BACK **fecha a
+     app** e o resto do teste escreve no vazio.
+- **Boa notícia de segurança:** o valor da chave **nunca** entrou no registo de auditoria
+  (só capacidades `host.*` são registadas) nem no log do daemon (só o comprimento).
+- **Origem:** **[LOCAL]**.
