@@ -843,3 +843,16 @@ utilizador extra, o que obriga a empacotar o núcleo fixo num único entry com *
 não partir o `require`/`import()` dinâmico do cordis. É um trabalho com várias fases, e não
 algo que se faça bem em cima do resto — fica para uma sessão própria, com o emulador (que
 agora funciona) como banco de ensaio antes do telefone.
+
+### 23.4 Voz (fecha o item 3)
+
+Botão **Falar** ao lado do Anexar, no chat. Usa o `RecognizerIntent` do **sistema** — é o
+reconhecedor do telefone que pede o microfone, por isso a app não precisa de permissão nenhuma
+para isto. O texto reconhecido entra no **campo**, onde pode ser corrigido antes de enviar:
+ditar e enviar à cegueira seria pior do que ditar e ver. Se não houver reconhecedor instalado,
+a mensagem é clara em vez de um toque que não faz nada.
+
+Verificado no emulador: o botão existe, lança o reconhecedor **real** do sistema
+(`com.google.android.tts/…GoogleTTSActivity`), que abre a ouvir, e ao fechar o diálogo a app
+volta intacta. O reconhecimento em si não dá para exercitar num emulador headless, que não tem
+microfone — o que se prova é o caminho: intenção lançada, resultado tratado, texto inserido.

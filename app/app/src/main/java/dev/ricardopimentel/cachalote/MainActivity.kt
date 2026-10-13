@@ -1,6 +1,9 @@
 package dev.ricardopimentel.cachalote
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -763,7 +766,32 @@ private fun ChatScreen(vm: MainViewModel) {
             val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
                 if (uri != null) vm.attachImage(uri)
             }
+            // Voz: usa o reconhecedor do sistema (`RecognizerIntent`), que é quem pede o
+            // microfone — a app não precisa de permissão nenhuma para isto e funciona com o
+            // que o telefone já tiver. O texto reconhecido entra no campo, onde pode ser
+            // corrigido antes de enviar: ditar e enviar à cegueira é pior do que ditar e ver.
+            val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                    ?.firstOrNull()?.trim()
+                when {
+                    result.resultCode == Activity.RESULT_OK && !spoken.isNullOrBlank() ->
+                        input = if (input.isBlank()) spoken else "$input $spoken"
+                    result.resultCode == Activity.RESULT_OK -> vm.error = "não percebi nada — tenta outra vez"
+                    // Cancelado pelo utilizador: não é erro.
+                }
+            }
             TextButton(onClick = { picker.launch("image/*") }, enabled = !vm.busy) { Text("Anexar") }
+            TextButton(
+                onClick = {
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Fala para escrever")
+                    }
+                    runCatching { voice.launch(intent) }
+                        .onFailure { vm.error = "não há reconhecedor de voz neste dispositivo" }
+                },
+                enabled = !vm.busy,
+            ) { Text("Falar") }
             Spacer(Modifier.width(4.dp))
             OutlinedTextField(
                 value = input,
