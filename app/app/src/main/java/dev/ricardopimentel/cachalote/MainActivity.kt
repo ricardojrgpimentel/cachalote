@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -120,6 +123,8 @@ fun CachaloteApp() {
                 Column(modifier = Modifier.padding(pad).fillMaxSize()) {
                     Header(vm, busy = vm.busy)
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
+                    vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
+                    if (vm.showSessions) SessionsDialog(vm)
                     if (vm.error.isNotBlank()) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -192,6 +197,73 @@ private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
         dismissButton = {
             TextButton(onClick = { vm.answerApproval(null) }) { Text("Recusar o turno") }
         },
+    )
+}
+
+/** Escolha de uma opção da sessão (modelo, esforço de raciocínio) — as escolhas vêm do motor. */
+@Composable
+private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
+    AlertDialog(
+        onDismissRequest = { vm.configPicker = null },
+        title = { Text(opt.name) },
+        text = {
+            LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                itemsIndexed(opt.choices) { _, ch ->
+                    val selected = ch.value == opt.currentValue
+                    TextButton(
+                        onClick = { vm.chooseOption(opt.id, ch.value) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            (if (selected) "✓ " else "") + ch.label,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = { vm.configPicker = null }) { Text("Fechar") } },
+    )
+}
+
+/** Lista das sessões persistidas no motor, para retomar uma conversa anterior. */
+@Composable
+private fun SessionsDialog(vm: MainViewModel) {
+    AlertDialog(
+        onDismissRequest = { vm.showSessions = false },
+        title = { Text("Sessões") },
+        text = {
+            if (vm.sessions.isEmpty()) {
+                Text("não há sessões guardadas no motor")
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                    itemsIndexed(vm.sessions) { _, row ->
+                        val current = row.id == vm.sessionId
+                        TextButton(
+                            onClick = { vm.resumeSession(row.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    (if (current) "✓ " else "") + row.title,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (current) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                                )
+                                Text(
+                                    row.id.take(8) + "  ·  " + row.updatedAt.replace("T", " ").take(19),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = { vm.showSessions = false }) { Text("Fechar") } },
     )
 }
 
@@ -302,11 +374,28 @@ private fun ChatScreen(vm: MainViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "sessão: " + (vm.sessionId?.take(8) ?: "nenhuma"),
+                "sessão: " + (vm.sessionId?.take(8) ?: "nenhuma") +
+                    (if (vm.reconnecting) "  · a reconectar…" else ""),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f),
             )
+            TextButton(onClick = { vm.refreshSessions() }, enabled = !vm.busy) { Text("Sessões") }
             TextButton(onClick = { vm.newSession() }, enabled = !vm.busy) { Text("Nova sessão") }
+        }
+        if (vm.configOptions.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                vm.configOptions.forEach { opt ->
+                    AssistChip(
+                        onClick = { vm.configPicker = opt },
+                        label = { Text(opt.name + ": " + opt.currentLabel.take(28)) },
+                    )
+                }
+            }
         }
         Divider()
 

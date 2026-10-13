@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Pedido de aprovação vindo do motor (ACP `session/request_permission`). */
@@ -17,6 +18,22 @@ data class PendingApproval(
     val detail: String,
     val options: List<Pair<String, String>>, // optionId -> nome visível
 )
+
+/** Uma escolha dentro de uma opção de configuração (modelo, esforço…). */
+data class ConfigChoice(val value: String, val label: String)
+
+/** Opção de configuração da sessão, tal como o motor a descreve (ACP `configOptions`). */
+data class ConfigOption(
+    val id: String,
+    val name: String,
+    val currentValue: String,
+    val choices: List<ConfigChoice>,
+) {
+    val currentLabel: String get() = choices.firstOrNull { it.value == currentValue }?.label ?: currentValue
+}
+
+/** Linha da lista de sessões persistidas no motor. */
+data class SessionRow(val id: String, val title: String, val updatedAt: String)
 
 data class ChatLine(
     val role: String,          // user | assistant | thought | tool | error | system
@@ -41,10 +58,49 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var sessionId by mutableStateOf<String?>(null)
     var connected by mutableStateOf(false)
     var approval by mutableStateOf<PendingApproval?>(null)
+    var configOptions by mutableStateOf<List<ConfigOption>>(emptyList())
+    var sessions by mutableStateOf<List<SessionRow>>(emptyList())
+    var showSessions by mutableStateOf(false)
+    var configPicker by mutableStateOf<ConfigOption?>(null)
+    var reconnecting by mutableStateOf(false)
+
+    private val store = SessionStore(app)
+    private var loaded = false
 
     val transcript = mutableStateListOf<ChatLine>()
 
     init {
+        // 1) Repor a conversa anterior (a app pode ter sido morta pelo sistema).
+        var snapModel: String? = null
+        var snapEffort: String? = null
+        store.load()?.let { snap ->
+            transcript.clear()
+            transcript.addAll(snap.lines)
+            sessionId = snap.sessionId
+            snapModel = snap.model
+            snapEffort = snap.effort
+            loaded = true
+        }
+        // 2) Laço de reconexão: o daemon pode reiniciar (ex.: ao mudar a chave) e o
+        // socket cai; a app volta sozinha e retoma a sessão.
+        viewModelScope.launch {
+            while (true) {
+                if (!controller.client.connected.value && loaded) {
+                    runCatching {
+                        reconnecting = true
+                        controller.ensureConnected()
+                        controller.ensureAcp()
+                        val sid = sessionId
+                        val cwd = controller.workspace
+                        if (!sid.isNullOrBlank() && cwd.isNotBlank()) {
+                            controller.resumeSession(sid, cwd)
+                        }
+                    }.onFailure { /* fica para a próxima volta */ }
+                    reconnecting = false
+                }
+                kotlinx.coroutines.delay(5_000)
+            }
+        }
         // Ligações automáticas ao arrancar: se o token já estiver guardado e o daemon
         // estiver de pé, a app fica operacional sem tocar em nada.
         viewModelScope.launch {
@@ -54,6 +110,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }.onSuccess {
                 tokenState = "obtido (guardado)"
                 agentInfo = "deepseek-harness-acp"
+                // Se temos uma sessão guardada, tentar retomá-la para recuperar as opções
+                // (modelo/esforço). Se o motor ainda a tiver activa, o resume é recusado —
+                // nesse caso mostramos os rótulos que guardámos.
+                val sid = sessionId
+                if (!sid.isNullOrBlank()) {
+                    runCatching { controller.resumeSession(sid, controller.workspace) }
+                        .onSuccess { applyConfigOptions(it) }
+                        .onFailure { restoreChips(snapModel, snapEffort) }
+                }
             }.onFailure {
                 tokenState = "(toca em Obter token)" 
             }
@@ -135,8 +200,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun newSession() = run("nova sessão") {
         val res = controller.newSession()
         sessionId = res.optString("sessionId").takeIf { it.isNotBlank() }
+        applyConfigOptions(res)
         transcript.clear()
         transcript.add(ChatLine("system", "sessão ${sessionId?.take(8) ?: "?"} criada"))
+        loaded = true
+        saveState()
     }
 
     fun send(text: String) = run("prompt") {
@@ -146,8 +214,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val res = controller.newSession()
             sid = res.optString("sessionId")
             sessionId = sid
+            applyConfigOptions(res)
         }
         transcript.add(ChatLine("user", text))
+        loaded = true
+        saveState()
         // Só regressa no fim do turno; as falhas ficam no transcript (não apenas na faixa
         // de erro), para se perceber o que aconteceu ao turno.
         try {
@@ -184,6 +255,81 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /** Guarda as `configOptions` que o motor devolve em session/new, resume e set_config_option. */
+    private fun applyConfigOptions(res: JSONObject?) {
+        val arr = res?.optJSONArray("configOptions") ?: return
+        val out = ArrayList<ConfigOption>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val choices = ArrayList<ConfigChoice>()
+            val opts = o.optJSONArray("options") ?: JSONArray()
+            for (j in 0 until opts.length()) {
+                val e = opts.optJSONObject(j) ?: continue
+                val nested = e.optJSONArray("options")
+                if (nested != null) {
+                    // forma agrupada: {group, name, options:[{value,name}]}
+                    val group = e.optString("group", e.optString("name"))
+                    for (k in 0 until nested.length()) {
+                        val sub = nested.optJSONObject(k) ?: continue
+                        choices.add(ConfigChoice(sub.optString("value"), group + ": " + sub.optString("name")))
+                    }
+                } else if (e.has("value")) {
+                    choices.add(ConfigChoice(e.optString("value"), e.optString("name", e.optString("value"))))
+                }
+            }
+            out.add(
+                ConfigOption(
+                    id = o.optString("id"),
+                    name = o.optString("name", o.optString("id")),
+                    currentValue = o.optString("currentValue"),
+                    choices = choices,
+                ),
+            )
+        }
+        configOptions = out
+        saveState()
+    }
+
+    /** Lista as sessões persistidas no motor (para retomar). */
+    fun refreshSessions() = run("sessões") {
+        val res = controller.listSessions(controller.workspace)
+        val arr = res.optJSONArray("sessions") ?: JSONArray()
+        val rows = ArrayList<SessionRow>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            rows.add(
+                SessionRow(
+                    id = o.optString("sessionId"),
+                    title = o.optString("title").ifBlank { o.optString("sessionId").take(8) },
+                    updatedAt = o.optString("updatedAt"),
+                ),
+            )
+        }
+        sessions = rows
+        showSessions = true
+    }
+
+    /** Retoma uma sessão; o transcript local é substituído pelo da sessão escolhida. */
+    fun resumeSession(id: String) = run("retomar") {
+        val res = controller.resumeSession(id, controller.workspace)
+        sessionId = id
+        applyConfigOptions(res)
+        transcript.clear()
+        transcript.add(ChatLine("system", "sessão ${id.take(8)} retomada"))
+        showSessions = false
+        saveState()
+    }
+
+    /** Muda modelo/esforço e o motor devolve as opções actualizadas. */
+    fun chooseOption(configId: String, value: String) = run("opção") {
+        val sid = sessionId ?: error("sem sessão activa")
+        val res = controller.setConfigOption(sid, configId, value)
+        applyConfigOptions(res)
+        configPicker = null
+        transcript.add(ChatLine("system", "opção $configId = ${value.take(60)}"))
+        saveState()
     }
 
     /** Pedido do motor: hoje só o de aprovação, que exige resposta do utilizador. */
@@ -237,6 +383,31 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun textOf(update: JSONObject): String =
         update.optJSONObject("content")?.optString("text", "") ?: ""
 
+    /** Chips só com o que estava guardado (sem escolhas) — usado quando o motor recusa o resume. */
+    private fun restoreChips(model: String?, effort: String?) {
+        val out = ArrayList<ConfigOption>()
+        if (!model.isNullOrBlank()) {
+            // O valor do modelo é uma tupla JSON (["provider","modelo"]) — mostrar só o modelo.
+            val label = runCatching {
+                val a = JSONArray(model)
+                a.optString(a.length() - 1)
+            }.getOrNull()?.takeIf { it.isNotBlank() } ?: model
+            out.add(ConfigOption("model", "Model", model, listOf(ConfigChoice(model, label))))
+        }
+        if (!effort.isNullOrBlank()) {
+            val label = effort.replaceFirstChar { it.uppercase() }
+            out.add(ConfigOption("reasoning_effort", "Reasoning effort", effort, listOf(ConfigChoice(effort, label))))
+        }
+        if (out.isNotEmpty()) configOptions = out
+    }
+
+    /** Persiste o essencial (sessão, opções e transcript) no armazenamento privado. */
+    fun saveState() {
+        val model = configOptions.firstOrNull { it.id == "model" }?.currentValue
+        val effort = configOptions.firstOrNull { it.id == "reasoning_effort" }?.currentValue
+        store.save(sessionId, controller.workspace, model, effort, transcript)
+    }
+
     private fun append(role: String, chunk: String) {
         if (chunk.isEmpty()) return
         val last = transcript.lastOrNull()
@@ -245,6 +416,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             transcript.add(ChatLine(role, chunk))
         }
+        saveState()
     }
 
     // ---------------------------------------------------------------- utilitário

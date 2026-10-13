@@ -25,6 +25,10 @@ class DaemonController(private val context: Context) {
         get() = prefs.port
         set(v) { prefs.port = v }
 
+    /** Directório de trabalho das sessões (o motor usa-o como workspace do agente). */
+    val workspace: String
+        get() = prefs.workspace
+
     /** Token do canal TCP: vem das prefs ou é pedido ao daemon por `su`. */
     suspend fun ensureToken(rotate: Boolean = false): String {
         val cached = prefs.token
@@ -73,6 +77,30 @@ class DaemonController(private val context: Context) {
         )
         res.optString("sessionId").takeIf { it.isNotBlank() }?.let { prefs.lastSessionId = it }
         return res
+    }
+
+    /** Sessões persistidas no motor (para a lista/retoma). */
+    suspend fun listSessions(cwd: String): JSONObject {
+        ensureAcp()
+        return client.callForResult("session/list", JSONObject().put("cwd", cwd))
+    }
+
+    /** Retoma uma sessão existente. O `cwd` tem de ser o mesmo com que foi criada. */
+    suspend fun resumeSession(sessionId: String, cwd: String): JSONObject {
+        ensureAcp()
+        return client.callForResult(
+            "session/resume",
+            JSONObject().put("sessionId", sessionId).put("cwd", cwd).put("mcpServers", org.json.JSONArray()),
+        )
+    }
+
+    /** Muda uma opção da sessão (modelo, esforço de raciocínio…). Devolve as opções actualizadas. */
+    suspend fun setConfigOption(sessionId: String, configId: String, value: String): JSONObject {
+        ensureAcp()
+        return client.callForResult(
+            "session/set_config_option",
+            JSONObject().put("sessionId", sessionId).put("configId", configId).put("value", value),
+        )
     }
 
     suspend fun prompt(sessionId: String, text: String): JSONObject {
