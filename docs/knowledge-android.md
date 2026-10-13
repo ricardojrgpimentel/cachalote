@@ -499,3 +499,13 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Sintoma:** `unresolved reference 'ACTION_IME_ENTER'` no Kotlin com compileSdk 35.
 - **Solução:** `AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id`.
 - **Origem:** **[LOCAL]**.
+
+### 58. O perfil `web` do DSH exige o URL com token
+- **Sintoma:** o WebView mostra `dsh web authentication required; reopen the URL printed by
+  dsh web.`
+- **Causa:** o `dsh web` gera um token por arranque e imprime
+  `http://127.0.0.1:<porta>/?token=<...>`; sem esse parâmetro a SPA recusa servir.
+- **Solução:** o daemon captura o URL do log (`grep -aoE 'http://127\.0\.0\.1:[0-9]+/\?token=…'`),
+  guarda-o em `home/web.url` (0600) e expõe-no por `cachalote web-url`; a app busca-o por `su`
+  e carrega *esse* URL no WebView. Não contornar: o token é a autenticação do motor web.
+- **Origem:** **[LOCAL]**.

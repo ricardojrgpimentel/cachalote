@@ -277,3 +277,47 @@ adb shell su -c '/data/adb/cachalote/bin/cachalote status'          # estado do 
 adb shell su -c 'LD_LIBRARY_PATH=/data/adb/cachalote/runtime/lib \
   /data/adb/cachalote/runtime/bin/node /data/adb/cachalote/ctl.cjs host.status'   # app ligada?
 ```
+
+
+---
+
+## 11. F4/F5 — paridade total e entrega
+
+### Modo completo (a interface web do DSH, dentro da app)
+
+O perfil `web` corre **ao lado** do motor ACP, no próprio telefone:
+
+```
+/daemon: cachalote web-start   →  node bin.js --profile web --host 127.0.0.1 --port 3080
+app:     "Modo completo"       →  WebView no URL autenticado que o motor imprime
+```
+
+Serve para o que a UI nativa ainda não cobre: **definições de modelos e provedores, gestão de
+plugins, anexos**. O motor web exige o URL com token (`/?token=…`), que o daemon captura e a
+app busca por `su`. Verificado: a SPA do Harness 0.2 carrega no WebView
+([captura](docs/screenshots/app-modo-completo.png)).
+
+Comandos: `cachalote web-start | web-stop | web-status | web-url`.
+
+### Empacotamento (`tools/build-release.sh`)
+
+```sh
+./tools/build-release.sh
+# → app/app/build/outputs/apk/release/app-release.apk (10 MB, assinada)
+#   keystore em .work/cachalote-release.jks (NÃO versionado)
+#   sha256 e certificado impressos no fim
+```
+
+⚠ A chave de assinatura vive fora do repositório e **tem de ser guardada**: sem ela não
+consegues actualizar uma app já instalada (assinaturas diferentes não se sobrepõem). Para
+instalar por cima da versão de debug é preciso desinstalar primeiro.
+
+### O que ainda falta (trabalho futuro, não bloqueia o uso)
+
+| Tema | Nota |
+|---|---|
+| **Confinamento real a caminho** | As capacidades têm allow-list, mas o `bash` continua a correr como root sem sandbox (D10). A barreira definitiva é uma allow-list de caminhos/auditoria no próprio `bash` — hoje o que existe é a aprovação e o registo das capacidades. |
+| **Flavors** | Só existe o flavor root (Magisk). Falta o flavor Shizuku e o "in-app" (`targetSdk 28`) para quem não tem root. |
+| **Onboarding** | A app já guia token/acessibilidade/capacidades, mas não tem um fluxo de primeira execução (9 passos de permissões, como faz o projecto de referência). |
+| **Anexos e voz** | Sem imagens no prompt (o ACP anuncia `promptCapabilities.image: false`) e sem entrada por voz. |
+| **SEA + snapshot** | Arranque do motor já é raro (daemon quente), mas o SEA com snapshot (`--build-snapshot`) daria 5,9× no arranque a frio (D6b). |

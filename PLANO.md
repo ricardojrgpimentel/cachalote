@@ -262,11 +262,11 @@ Gradle + Kotlin + Compose. Módulos `:app`, `:rpc`, `:caps`. Cliente do protocol
 Ponte reversa `host.*`; `AccessibilityService` (ler árvore, tap/type/scroll, screenshot), notificações, share sheet, SAF/ficheiros, arranque/paragem/diagnóstico do daemon na UI, ferramentas do modelo correspondentes.
 - **Saída:** “abre a app X e faz Y” e “tira screenshot e descreve” sem tocar no ecrã.
 
-### F4 — Modo completo, plugins e extras (2–4 dias) — ⏳ por fazer (ver §11 do STATUS)
+### F4 — Modo completo, plugins e extras (2–4 dias) — ✅ **feito**: perfil `web` + WebView no modo completo (ver STATUS §11)
 Perfil `web` no daemon + WebView na app (paridade), gestão de plugins (pnpm), browser tool, virtual display **se** valer a pena (decisão LGPL em D8).
 - **Saída:** paridade funcional com o DSH desktop.
 
-### F5 — Empacotamento (2–3 dias)
+### F5 — Empacotamento (2–3 dias) — ✅ **parcial**: APK de release assinada; faltam flavors (ver STATUS §11)
 Flavors (`root`/`shizuku`/`in-app`), onboarding de permissões, actualização do kernel com payload assinado, docs, atribuições.
 - **Saída:** instalação limpa num segundo dispositivo.
 

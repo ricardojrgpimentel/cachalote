@@ -2,19 +2,23 @@
 # cachalote — controlo do daemon no dispositivo (corre como root, via su).
 #
 #   cachalote start | stop | restart | status | logs [n] | env
+#   cachalote app-token [--rotate] | app-info
+#   cachalote web-start | web-stop | web-status      (interface completa do DSH)
 #
 # Layout:
-#   BASE/runtime/bin/node      runtime Node arm64 (Termux)
-#   BASE/kernel/dsh/node_modules/@deepseek-ai/dsh   kernel 0.2.0-rc.2 + patches
-#   BASE/home/                 DSH_HOME (perfis, sessões, .env, cordis.patch.yml)
-#   BASE/bin/bash              shim -> /system/bin/sh (o Android não tem bash)
-#   BASE/run/cachalote.sock    socket AF_UNIX (0600)
-#   BASE/logs/{daemon,engine}.log
+#   BASE/runtime/bin/node                          runtime Node arm64
+#   BASE/kernel/dsh/node_modules/@deepseek-ai/dsh  kernel + patches + plugin cachalote-tools
+#   BASE/home/                                     DSH_HOME (perfis, sessões, .env, cordis.patch.yml)
+#   BASE/bin/bash                                  shim -> /system/bin/sh
+#   BASE/run/cachalote.sock                        socket AF_UNIX (0600) do motor ACP
+#   BASE/run/web.pid                               engine do perfil "web" (interface completa)
+#   BASE/logs/{daemon,engine,web}.log
 set -u
 
 BASE="${CACHALOTE_BASE:-/data/adb/cachalote}"
 SOCK="$BASE/run/cachalote.sock"
 PIDFILE="$BASE/run/daemon.pid"
+WEBPID="$BASE/run/web.pid"
 NODE="$BASE/runtime/bin/node"
 # O próprio node precisa das .so do runtime (libz.so.1 & cia).
 LD_LIBRARY_PATH="$BASE/runtime/lib"
@@ -24,14 +28,16 @@ export PATH
 
 pid_of() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
 alive() { p="$(pid_of)"; [ -n "$p" ] && kill -0 "$p" 2>/dev/null; }
+port_open() { "$NODE" -e 'require("node:net").connect(Number(process.argv[1]),"127.0.0.1").on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))' "$1" 2>/dev/null; }
 
 case "${1:-}" in
+
+# ---------------------------------------------------------------- motor ACP
 start)
   if alive; then echo "já está a correr (pid $(pid_of))"; exit 0; fi
   [ -x "$NODE" ] || { echo "ERRO: falta $NODE (corre daemon/install.sh)"; exit 1; }
   mkdir -p "$BASE/run" "$BASE/logs" "$BASE/tmp"
   export CACHALOTE_BASE="$BASE"
-  # setsid/nohup: desligar do shell que invoca o su
   nohup "$NODE" "$BASE/bridge.cjs" >>"$BASE/logs/daemon-console.log" 2>&1 &
   echo $! > "$PIDFILE"
   sleep 2
@@ -69,12 +75,12 @@ status)
   fi
   ;;
 logs) tail -n "${2:-80}" "$BASE/logs/daemon.log"; echo "--- engine ---"; tail -n "${2:-40}" "$BASE/logs/engine.log" ;;
+
+# ---------------------------------------------------------------- app
 app-token)
-  # Provisionamento do app: imprime o token do canal TCP (a app guarda-o no Keystore).
+  # Provisionamento do app: imprime o token do canal TCP (a app guarda-o).
   # --rotate gera um novo (invalida o antigo).
   if [ "${2:-}" = "--rotate" ]; then rm -f "$BASE/home/app.token"; fi
-  # O bridge cria/le o token; se o daemon estiver parado, gera aqui um equivalente
-  # (o bridge aceita o ficheiro como está, desde que tenha >= 32 caracteres).
   if [ ! -s "$BASE/home/app.token" ]; then
     "$NODE" -e 'const c=require("node:crypto"),f=require("node:fs");f.writeFileSync(process.argv[1],c.randomBytes(16).toString("hex")+"\n",{mode:0o600});' "$BASE/home/app.token"
   fi
@@ -85,6 +91,48 @@ app-info)
   TOK="$("$0" app-token)"
   printf '{"port":%s,"token":"%s","base":"%s","profile":"%s"}\n' "${CACHALOTE_PORT:-39731}" "$TOK" "$BASE" "${CACHALOTE_PROFILE:-acp}"
   ;;
-env) cat "$BASE/home/.env" 2>/dev/null | sed -E 's/^(.*=.{0,4}).*/\1****/' || echo "(sem $BASE/home/.env)" ;;
-*) echo "uso: cachalote start|stop|restart|status|logs [n]|env|app-token [--rotate]|app-info"; exit 2 ;;
+
+# ---------------------------------------------------------------- interface web completa
+web-start)
+  # Engine separado com o perfil "web" do DSH (paridade total: definições, modelos,
+  # plugins). Corre ao lado do motor ACP, em 127.0.0.1:3080.
+  PORT="${CACHALOTE_WEB_PORT:-3080}"
+  if [ -f "$WEBPID" ] && kill -0 "$(cat "$WEBPID")" 2>/dev/null; then echo "já está a correr (pid $(cat "$WEBPID")) em $PORT"; exit 0; fi
+  mkdir -p "$BASE/run" "$BASE/logs" "$BASE/tmp"
+  nohup env DSH_HOME="$BASE/home" HOME="$BASE" TMPDIR="$BASE/tmp" TERM=dumb \
+      PATH="$BASE/bin:$BASE/runtime/bin:/system/bin:/system/xbin" \
+      LD_LIBRARY_PATH="$BASE/runtime/lib" \
+      "$NODE" --expose-internals "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" \
+      --profile web --host 127.0.0.1 --port "$PORT" >>"$BASE/logs/web.log" 2>&1 &
+  echo $! > "$WEBPID"
+  for i in $(seq 1 40); do
+    sleep 1
+    if port_open "$PORT"; then
+      # O perfil `web` exige autenticação: imprime um URL com token. Guardamo-lo para a app.
+      URL="$(grep -aoE "http://127\.0\.0\.1:[0-9]+/\?token=[A-Za-z0-9_-]+" "$BASE/logs/web.log" 2>/dev/null | tail -1)"
+      if [ -n "$URL" ]; then printf '%s\n' "$URL" > "$BASE/home/web.url"; chmod 600 "$BASE/home/web.url"; fi
+      echo "interface web pronta: ${URL:-http://127.0.0.1:$PORT/} (pid $(cat "$WEBPID"))"
+      exit 0
+    fi
+  done
+  echo "não ficou pronta em 40s — ver $BASE/logs/web.log"; exit 1
+  ;;
+web-url)
+  # URL autenticado da interface web (a app usa-o no WebView).
+  if [ -s "$BASE/home/web.url" ]; then cat "$BASE/home/web.url";
+  else grep -aoE "http://127\.0\.0\.1:[0-9]+/\?token=[A-Za-z0-9_-]+" "$BASE/logs/web.log" 2>/dev/null | tail -1; fi
+  ;;
+web-stop)
+  if [ -f "$WEBPID" ]; then kill "$(cat "$WEBPID")" 2>/dev/null; rm -f "$WEBPID"; echo "interface web parada"; else echo "não estava a correr"; fi
+  ;;
+web-status)
+  PORT="${CACHALOTE_WEB_PORT:-3080}"
+  if [ -f "$WEBPID" ] && kill -0 "$(cat "$WEBPID")" 2>/dev/null; then
+    if port_open "$PORT"; then echo "interface web: a correr em http://127.0.0.1:$PORT (pid $(cat "$WEBPID"))"; else echo "interface web: processo vivo mas porta $PORT fechada"; fi
+  else
+    echo "interface web: parada"
+  fi
+  ;;
+env) sed -E 's/^(.*=.{0,4}).*/\1****/' "$BASE/home/.env" 2>/dev/null || echo "(sem $BASE/home/.env)" ;;
+*) echo "uso: cachalote start|stop|restart|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status"; exit 2 ;;
 esac

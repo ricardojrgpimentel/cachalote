@@ -426,6 +426,11 @@ private fun StatusScreen(vm: MainViewModel) {
                 else CachaloteAgentService.start(ctx2)
             }) { Text(if (CachaloteAgentService.running) "Desligar" else "Ligar") }
         }
+        OutlinedButton(onClick = {
+            // Arranca o motor do perfil web (se preciso) e abre a interface completa.
+            vm.busy = true
+            ctx.startActivity(android.content.Intent(ctx, WebModeActivity::class.java))
+        }, enabled = !vm.busy) { Text("Modo completo (interface web do DSH)") }
         Text(
             "O daemon corre como root e o sandbox do Android não é imposto: quem trava comandos " +
                 "fora do workspace é a aprovação. Ver D10 no plano.",

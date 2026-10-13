@@ -16,9 +16,25 @@ android {
         versionName = "0.3.0-f2"
     }
 
+    // Assinatura de release: a chave vive FORA do repositório (por omissão em .work/).
+    // Gera-a com tools/build-release.sh; para distribuir, guarda-a e usa variáveis de
+    // ambiente (CACHALOTE_KEYSTORE / CACHALOTE_STORE_PASS / CACHALOTE_KEY_ALIAS).
+    signingConfigs {
+        create("release") {
+            val ks = file(System.getenv("CACHALOTE_KEYSTORE") ?: "${rootDir}/../.work/cachalote-release.jks")
+            if (ks.exists()) {
+                storeFile = ks
+                storePassword = System.getenv("CACHALOTE_STORE_PASS") ?: "cachalote"
+                keyAlias = System.getenv("CACHALOTE_KEY_ALIAS") ?: "cachalote"
+                keyPassword = System.getenv("CACHALOTE_KEY_PASS") ?: "cachalote"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
