@@ -144,7 +144,7 @@ class EmbeddedEngine(private val ctx: Context) {
     }
 
     /** Arranca o motor e devolve os streams do seu stdio (idempotente e sincronizado). */
-    suspend fun start(): CachaloteClient.Streams = withContext(Dispatchers.IO) {
+    suspend fun start(allowedRoots: String = ""): CachaloteClient.Streams = withContext(Dispatchers.IO) {
         synchronized(startLock) {
             streams?.let { if (proc?.isAlive == true) return@withContext it }
         }
@@ -181,6 +181,9 @@ class EmbeddedEngine(private val ctx: Context) {
         env["CACHALOTE_SHELL"] = "/system/bin/sh"
         env["CACHALOTE_PORT"] = HOST_PORT.toString()
         env["CACHALOTE_TOKEN_FILE"] = tokenFile.absolutePath
+        if (allowedRoots.isNotBlank()) {
+            env["CACHALOTE_ALLOWED_ROOTS"] = allowedRoots.split(Regex("\\s+")).filter { it.isNotBlank() }.joinToString(":")
+        }
         pb.redirectErrorStream(false)
 
         val p = pb.start()
@@ -214,9 +217,9 @@ class EmbeddedEngine(private val ctx: Context) {
     }
 
     /** Reinicia (usado quando a chave muda: o motor lê credenciais no arranque). */
-    suspend fun restart(): CachaloteClient.Streams {
+    suspend fun restart(allowedRoots: String = ""): CachaloteClient.Streams {
         stop()
-        return start()
+        return start(allowedRoots)
     }
 }
 

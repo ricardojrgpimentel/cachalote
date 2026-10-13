@@ -79,6 +79,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Motor embutido (sem root) em vez do daemon? */
     var embeddedMode by mutableStateOf(controller.mode == DaemonController.Mode.EMBEDDED)
     var embeddedInfo by mutableStateOf("")
+    var allowedRootsText by mutableStateOf("")
+    var allowedRootsSaved by mutableStateOf("")
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
 
     private val store = SessionStore(app)
@@ -441,6 +443,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 "libnode.so executou: ${out.ifBlank { "(sem saída)" }}  [exit ${proc.exitValue()}, farm ${farm.list()?.size ?: 0} libs]"
             }.getOrElse { "falhou: ${it.message}" }
         }
+    }
+
+    /** Áreas onde o agente pode escrever sem pedir autorização (uma por linha). */
+    fun saveAllowedRoots() = run("áreas permitidas") {
+        val res = controller.saveAllowedRoots(allowedRootsText.trim())
+        allowedRootsSaved = "gravado (" + res.optString("mode") + "): " +
+            allowedRootsText.trim().lines().filter { it.isNotBlank() }.joinToString(", ")
+        transcript.add(ChatLine("system", "áreas permitidas actualizadas — motor reiniciado"))
     }
 
     fun clearAudit() {

@@ -685,3 +685,16 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   caminho **absoluto** do plugin dentro do armazenamento privado (o loader não resolve plugins
   postos à mão por nome — item 53).
 - **Origem:** **[LOCAL]**.
+
+### 74. Áreas permitidas do bash: onde a configuração vive e por onde passa
+- **Desenho:** a app grava `$BASE/home/allowed-roots` (uma pasta por linha, via `su` + base64
+  para não haver problemas de aspas); a **ponte do daemon** lê esse ficheiro em cada arranque do
+  motor e passa-o como `CACHALOTE_ALLOWED_ROOTS` (separado por `:`) no ambiente do motor; o
+  patch ao `dsh-bash-local` (guarda de caminhos) usa-o para decidir se pede autorização.
+- **No modo embutido** o caminho é o mesmo conceito mas sem daemon: a app passa a variável
+  directamente ao processo filho.
+- **Verificado:** com `/sdcard` autorizado, `touch /sdcard/...` corre sem diálogo; sem
+  autorização, o mesmo comando pede aprovação no telefone e fica bloqueado até à decisão.
+- **Default seguro:** sem o ficheiro, a área permitida é só o workspace da sessão + `$DSH_HOME`
+  (o teste deixou-o assim).
+- **Origem:** **[LOCAL]**.

@@ -461,3 +461,26 @@ processo da app, não o daemon — prova de que as capacidades vieram do servido
 
 Interruptor na app: **Estado → Motor embutido (sem root)**. Em modo daemon fica o
 comportamento anterior (root/Shizuku, autostart, guarda de caminhos com aprovação).
+
+
+---
+
+## 16. Áreas permitidas do bash (configurável na app)
+
+Fecha o último item de segurança em aberto: o agente pede autorização **fora** das áreas
+permitidas e corre **dentro** delas sem perguntar.
+
+- **Na app:** separador **Poderes → Áreas permitidas do bash** (uma pasta por linha; `Gravar e
+  reiniciar`). Em modo daemon a app grava `$BASE/home/allowed-roots` por `su`; em modo embutido
+  passa a variável ao processo filho.
+- **Default (o que está agora):** vazio — só o workspace da sessão e o `$DSH_HOME`. Tudo o resto
+  pede aprovação no telefone.
+
+| Cenário | Comportamento verificado |
+|---|---|
+| `touch /sdcard/…` sem autorização | diálogo de autorização; bloqueado até decidires |
+| `touch /sdcard/…` com `/sdcard` autorizado | corre directo, sem diálogo (5 s) |
+| `touch` dentro do workspace | corre directo |
+
+Estado final do dispositivo: modo **daemon** (root, autostart no boot, guarda activa), chave
+intacta, acessibilidade ligada, e `app-ui-test` **9/9** + `app-capabilities-test` **5/5**.

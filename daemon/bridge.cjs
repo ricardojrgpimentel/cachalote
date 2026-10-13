@@ -117,6 +117,13 @@ function startEngine() {
     NODE_OPTIONS: "",
   };
   fs.mkdirSync(env.TMPDIR, { recursive: true });
+  // Áreas permitidas do bash (guarda de caminhos). Ficheiro editável pela app:
+  // uma ou mais linhas; convertidas no separador que o patch espera (`:`).
+  try {
+    const rootsFile = path.join(BASE, "home", "allowed-roots");
+    const roots = fs.readFileSync(rootsFile, "utf8").trim();
+    if (roots) env.CACHALOTE_ALLOWED_ROOTS = roots.split(/\s+/).filter(Boolean).join(":");
+  } catch {}
 
   log(`a arrancar motor: perfil=${PROFILE} node=${NODE}`);
   engine = spawn(NODE, ["--expose-internals", BINJS, "--profile", PROFILE], {

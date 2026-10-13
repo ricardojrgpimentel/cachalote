@@ -26,6 +26,11 @@ class Prefs(context: Context) {
         get() = sp.getString("sessionId", null)
         set(v) = sp.edit().putString("sessionId", v).apply()
 
+    /** Áreas onde o agente pode escrever sem pedir autorização (uma por linha). */
+    var allowedRoots: String
+        get() = sp.getString("allowedRoots", "")!!
+        set(v) = sp.edit().putString("allowedRoots", v).apply()
+
     /** "daemon" (root/Shizuku) ou "embedded" (motor dentro da app, sem root). */
     var mode: String
         get() = sp.getString("mode", "daemon")!!

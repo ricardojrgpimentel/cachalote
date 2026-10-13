@@ -69,7 +69,7 @@ class DaemonController(private val context: Context) {
             Mode.DAEMON -> client.connectTcp(prefs.port, ensureToken())
             Mode.EMBEDDED -> {
                 if (!engine.isPrepared()) engine.prepare()
-                val streams = if (engine.running) engine.restart() else engine.start()
+                val streams = if (engine.running) engine.restart(prefs.allowedRoots) else engine.start(prefs.allowedRoots)
                 if (hostServer == null) {
                     hostServer = HostServer(context, caps, EmbeddedEngine.HOST_PORT).also { it.start() }
                 }
@@ -213,7 +213,7 @@ class DaemonController(private val context: Context) {
 
     /** O motor lê as credenciais no arranque: depois de mexer na chave, reiniciar. */
     private suspend fun restartEmbedded() {
-        val streams = engine.restart()
+        val streams = engine.restart(prefs.allowedRoots)
         client.connect(streams)
         acpReady = false
         ensureAcp()
@@ -228,6 +228,30 @@ class DaemonController(private val context: Context) {
     suspend fun daemonInstalled(): Boolean = RootShell.daemonInstalled()
 
     suspend fun hasRoot(): Boolean = RootShell.hasRoot()
+
+    /** Áreas permitidas (uma por linha) — lidas pelo daemon e pelo motor embutido. */
+    var allowedRoots: String
+        get() = prefs.allowedRoots
+        set(v) { prefs.allowedRoots = v }
+
+    /** Grava as áreas permitidas e reinicia o motor para as aplicar. */
+    suspend fun saveAllowedRoots(roots: String): JSONObject {
+        prefs.allowedRoots = roots
+        return when (mode) {
+            Mode.EMBEDDED -> {
+                restartEmbedded()
+                JSONObject().put("ok", true).put("mode", "embedded").put("roots", roots)
+            }
+            Mode.DAEMON -> {
+                val b64 = android.util.Base64.encodeToString(roots.toByteArray(), android.util.Base64.NO_WRAP)
+                RootShell.run(
+                    "cd ${prefs.base} && printf '%s' '$b64' | base64 -d > home/allowed-roots && chmod 600 home/allowed-roots",
+                ).getOrThrow()
+                client.callForResult("cachalote.engine.restart")
+                JSONObject().put("ok", true).put("mode", "daemon").put("roots", roots)
+            }
+        }
+    }
 
     // ---------------------------------------------------------------- modo embutido
 

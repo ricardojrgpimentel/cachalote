@@ -385,6 +385,31 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Áreas permitidas do bash", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Fora destas pastas o agente tem de pedir autorização no telefone. " +
+                        "Uma por linha; o workspace da sessão é sempre permitido.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                OutlinedTextField(
+                    value = vm.allowedRootsText,
+                    onValueChange = { vm.allowedRootsText = it },
+                    placeholder = { Text("/sdcard/Download") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 4,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = { vm.saveAllowedRoots() }, enabled = !vm.busy) { Text("Gravar e reiniciar") }
+                    if (vm.allowedRootsSaved.isNotBlank()) {
+                        Text(vm.allowedRootsSaved, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+
         Text(
             "Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. " +
                 "Estes interruptores são a barreira real — desliga o que não precisares.",
