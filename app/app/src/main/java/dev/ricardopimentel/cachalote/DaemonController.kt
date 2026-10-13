@@ -2,19 +2,30 @@ package dev.ricardopimentel.cachalote
 
 import android.content.Context
 import org.json.JSONObject
+import java.io.File
 
 /**
- * Junta as duas peças de acesso ao motor:
- *  · [CachaloteClient] — canal TCP autenticado, para tudo o que é ACP e operações do daemon;
- *  · [RootShell] — só para o que exige root: obter/rodar o token, arrancar/parar o daemon.
+ * Acesso ao motor, em dois modos:
  *
- * Nota de desenho: a API key nunca é guardada pela app. O ecrã da chave envia-a para
- * o daemon (`cachalote.credentials.set`), que a escreve em `home/.env` com modo 600.
+ *  · **DAEMON** (root ou Shizuku): o motor corre fora do sandbox da app, num daemon que
+ *    arranca no boot. A app liga-se por TCP autenticado e as operações do daemon
+ *    (`cachalote.*`: credenciais, restart) são-lhe delegadas.
+ *  · **EMBEDDED** (sem root): a app extrai o kernel, arranca o motor como seu filho
+ *    (`libnode.so`, ver [EmbeddedEngine]) e fala-lhe por stdio. Levanta também o
+ *    [HostServer], que dá as capacidades Android ao plugin do kernel.
+ *
+ * A chave do provedor nunca é guardada pela app: no modo daemon é o daemon que a escreve
+ * (0600, root); no modo embutido a app escreve `dsh-home/.env` (só legível pelo uid da app).
  */
 class DaemonController(private val context: Context) {
 
+    enum class Mode { DAEMON, EMBEDDED }
+
     val client = CachaloteClient()
     private val prefs = Prefs(context)
+    private val engine = EmbeddedEngine(context)
+    private val caps = HostCapabilities(context, prefs)
+    private var hostServer: HostServer? = null
     private var acpReady = false
 
     var base: String
@@ -25,17 +36,27 @@ class DaemonController(private val context: Context) {
         get() = prefs.port
         set(v) { prefs.port = v }
 
-    /** Directório de trabalho das sessões (o motor usa-o como workspace do agente). */
+    /**
+     * Directório de trabalho das sessões. No modo embutido tem de ser um caminho que a app
+     * consegue ler/escrever (o motor corre com o uid da app); o do daemon é root-only.
+     */
     val workspace: String
-        get() = prefs.workspace
+        get() = if (mode == Mode.EMBEDDED) File(engine.home, "ws").absolutePath else prefs.workspace
 
-    /** Token do canal TCP: vem das prefs ou é pedido ao daemon por `su`. */
+    var mode: Mode
+        get() = if (prefs.mode == "embedded") Mode.EMBEDDED else Mode.DAEMON
+        set(v) {
+            prefs.mode = if (v == Mode.EMBEDDED) "embedded" else "daemon"
+            client.disconnect()
+            acpReady = false
+        }
+
+    // ---------------------------------------------------------------- ligação
+
     suspend fun ensureToken(rotate: Boolean = false): String {
         val cached = prefs.token
         if (!rotate && !cached.isNullOrBlank() && cached.length >= 32) return cached
-        val args = StringBuilder("app-token")
-        if (rotate) args.append(" --rotate")
-        val out = RootShell.run("${prefs.base}/bin/cachalote $args").getOrThrow()
+        val out = RootShell.run("${prefs.base}/bin/cachalote app-token" + if (rotate) " --rotate" else "").getOrThrow()
         val token = out.lines().map { it.trim() }.lastOrNull { it.length >= 32 }
             ?: error("o daemon não devolveu token (saída: ${out.take(200)})")
         prefs.token = token
@@ -43,9 +64,18 @@ class DaemonController(private val context: Context) {
     }
 
     suspend fun connect(): JSONObject {
-        val token = ensureToken()
         acpReady = false
-        return client.connect(prefs.port, token)
+        return when (mode) {
+            Mode.DAEMON -> client.connectTcp(prefs.port, ensureToken())
+            Mode.EMBEDDED -> {
+                if (!engine.isPrepared()) engine.prepare()
+                val streams = if (engine.running) engine.restart() else engine.start()
+                if (hostServer == null) {
+                    hostServer = HostServer(context, caps, EmbeddedEngine.HOST_PORT).also { it.start() }
+                }
+                client.connect(streams)
+            }
+        }
     }
 
     suspend fun ensureConnected(): Boolean {
@@ -73,19 +103,19 @@ class DaemonController(private val context: Context) {
         ensureAcp()
         val res = client.callForResult(
             "session/new",
-            JSONObject().put("cwd", prefs.workspace).put("mcpServers", org.json.JSONArray()),
+            // `workspace` (getter) respeita o modo: no embutido é um caminho que a app pode
+            // ler/escrever; o do daemon é root-only.
+            JSONObject().put("cwd", workspace).put("mcpServers", org.json.JSONArray()),
         )
         res.optString("sessionId").takeIf { it.isNotBlank() }?.let { prefs.lastSessionId = it }
         return res
     }
 
-    /** Sessões persistidas no motor (para a lista/retoma). */
     suspend fun listSessions(cwd: String): JSONObject {
         ensureAcp()
         return client.callForResult("session/list", JSONObject().put("cwd", cwd))
     }
 
-    /** Retoma uma sessão existente. O `cwd` tem de ser o mesmo com que foi criada. */
     suspend fun resumeSession(sessionId: String, cwd: String): JSONObject {
         ensureAcp()
         return client.callForResult(
@@ -94,7 +124,6 @@ class DaemonController(private val context: Context) {
         )
     }
 
-    /** Muda uma opção da sessão (modelo, esforço de raciocínio…). Devolve as opções actualizadas. */
     suspend fun setConfigOption(sessionId: String, configId: String, value: String): JSONObject {
         ensureAcp()
         return client.callForResult(
@@ -113,40 +142,107 @@ class DaemonController(private val context: Context) {
         )
     }
 
-    // Todas as operações garantem a ligação: a app pode arrancar sem sessão TCP
-    // (processo morto, telefone reiniciado) e o token já estar guardado.
-    suspend fun status(): JSONObject {
-        ensureConnected()
-        return client.callForResult("cachalote.status")
+    // ---------------------------------------------------------------- estado / credenciais
+
+    suspend fun status(): JSONObject = when (mode) {
+        Mode.DAEMON -> {
+            ensureConnected()
+            client.callForResult("cachalote.status")
+        }
+        Mode.EMBEDDED -> JSONObject()
+            .put("daemon", false)
+            .put("embedded", true)
+            .put("engine", engine.running)
+            .put("kernelExtracted", engine.isPrepared())
+            .put("kernelZip", engine.hasZip())
+            .put("hostServer", hostServer?.running == true)
+            .put("base", engine.home.absolutePath)
     }
 
+    private val embeddedEnv: File get() = File(engine.home, ".env")
+
     suspend fun keyStatus(name: String = "DEEPSEEK_API_KEY"): JSONObject {
+        if (mode == Mode.EMBEDDED) {
+            val line = runCatching { embeddedEnv.readLines().first { it.startsWith("$name=") } }.getOrNull()
+            return JSONObject()
+                .put("name", name)
+                .put("present", line != null && line.length > name.length + 1)
+                .put("length", if (line != null) line.length - name.length - 1 else 0)
+                .put("file", embeddedEnv.absolutePath)
+        }
         ensureConnected()
         return client.callForResult("cachalote.credentials.status", JSONObject().put("name", name))
     }
 
     suspend fun setKey(value: String, name: String = "DEEPSEEK_API_KEY"): JSONObject {
+        if (mode == Mode.EMBEDDED) {
+            require(value.trim().length >= 8) { "valor demasiado curto" }
+            engine.home.mkdirs()
+            val kept = runCatching { embeddedEnv.readLines() }.getOrDefault(emptyList())
+                .filter { it.isNotBlank() && !it.startsWith("$name=") }
+            embeddedEnv.writeText((kept + "$name=${value.trim()}").joinToString("\n") + "\n")
+            restartEmbedded()
+            return keyStatus(name)
+        }
         ensureConnected()
         return client.callForResult("cachalote.credentials.set", JSONObject().put("name", name).put("value", value))
     }
 
     suspend fun removeKey(name: String = "DEEPSEEK_API_KEY"): JSONObject {
+        if (mode == Mode.EMBEDDED) {
+            val kept = runCatching { embeddedEnv.readLines() }.getOrDefault(emptyList())
+                .filter { it.isNotBlank() && !it.startsWith("$name=") }
+            embeddedEnv.writeText(if (kept.isEmpty()) "" else kept.joinToString("\n") + "\n")
+            restartEmbedded()
+            return keyStatus(name)
+        }
         ensureConnected()
         return client.callForResult("cachalote.credentials.remove", JSONObject().put("name", name))
     }
 
-    suspend fun restartEngine(): JSONObject {
-        ensureConnected()
-        return client.callForResult("cachalote.engine.restart")
+    suspend fun restartEngine(): JSONObject = when (mode) {
+        Mode.EMBEDDED -> {
+            restartEmbedded()
+            JSONObject().put("ok", true).put("embedded", true)
+        }
+        Mode.DAEMON -> {
+            ensureConnected()
+            client.callForResult("cachalote.engine.restart")
+        }
     }
+
+    /** O motor lê as credenciais no arranque: depois de mexer na chave, reiniciar. */
+    private suspend fun restartEmbedded() {
+        val streams = engine.restart()
+        client.connect(streams)
+        acpReady = false
+        ensureAcp()
+    }
+
+    // ---------------------------------------------------------------- daemon (root/Shizuku)
 
     suspend fun startDaemon(): String = RootShell.run("${prefs.base}/bin/cachalote start", 45).getOrThrow()
 
     suspend fun stopDaemon(): String = RootShell.run("${prefs.base}/bin/cachalote stop").getOrThrow()
 
-    suspend fun daemonCliStatus(): String = RootShell.run("${prefs.base}/bin/cachalote status").getOrThrow()
-
     suspend fun daemonInstalled(): Boolean = RootShell.daemonInstalled()
 
     suspend fun hasRoot(): Boolean = RootShell.hasRoot()
+
+    // ---------------------------------------------------------------- modo embutido
+
+    suspend fun prepareEmbedded(): Int = engine.prepare()
+
+    fun embeddedPrepared(): Boolean = engine.isPrepared()
+
+    fun embeddedHasZip(): Boolean = engine.hasZip()
+
+    fun embeddedEngineRunning(): Boolean = engine.running
+
+    fun stopEmbedded() {
+        hostServer?.stop()
+        hostServer = null
+        engine.stop()
+        client.disconnect()
+    }
 }

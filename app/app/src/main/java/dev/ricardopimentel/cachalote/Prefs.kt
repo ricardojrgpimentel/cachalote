@@ -26,6 +26,11 @@ class Prefs(context: Context) {
         get() = sp.getString("sessionId", null)
         set(v) = sp.edit().putString("sessionId", v).apply()
 
+    /** "daemon" (root/Shizuku) ou "embedded" (motor dentro da app, sem root). */
+    var mode: String
+        get() = sp.getString("mode", "daemon")!!
+        set(v) = sp.edit().putString("mode", v).apply()
+
     var workspace: String
         get() = sp.getString("workspace", RootShell.BASE + "/home/ws")!!
         set(v) = sp.edit().putString("workspace", v).apply()

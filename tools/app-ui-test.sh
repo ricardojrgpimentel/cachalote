@@ -67,7 +67,8 @@ tap_exact() {
     dump
     c="$(python3 "$WS/tools/ui.py" "$UI" find-exact "$1" 2>/dev/null)" && break
     foreground_app || true
-    sleep 2
+    "${ADB[@]}" shell input swipe 720 2000 720 1100 200 >/dev/null 2>&1
+    sleep 1
   done
   [ -n "${c:-}" ] || { echo "   (não encontrei '$1' exacto)"; return 1; }
   set -- $c
@@ -81,7 +82,9 @@ tap_text() {
     dump
     c="$(coords "$1")" && break
     foreground_app || true
-    sleep 2
+    # Os ecrãs têm crescido: se o alvo não está visível, rolar e tentar outra vez.
+    "${ADB[@]}" shell input swipe 720 2000 720 1100 200 >/dev/null 2>&1
+    sleep 1
   done
   [ -n "${c:-}" ] || { echo "   (não encontrei '$1' no ecrã)"; return 1; }
   set -- $c

@@ -1,0 +1,238 @@
+package dev.ricardopimentel.cachalote
+
+import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.TimeUnit
+import java.util.zip.ZipInputStream
+
+/**
+ * Motor **dentro da própria app** — o modo sem root (nem Shizuku).
+ *
+ * Porque é que isto funciona com `targetSdk 35`: o directório privado da app é noexec, mas o
+ * `nativeLibraryDir` (onde a APK extrai os jniLibs) é executável. O Node vai embarcado como
+ * `libnode.so` e as bibliotecas versionadas como alias `.so`, reconstruídas numa farm de
+ * symlinks no `filesDir` (ver base de conhecimento 61 e `tools/prepare-embed.sh`).
+ *
+ * O kernel é extraído de `files/kernel.zip` para `files/kernel/` (o Android não traz `tar`).
+ *
+ * Consequência de segurança: o motor corre como o **uid da app**, portanto o sandbox do
+ * Android é o limite real — o contrário do modo daemon, onde o motor corre como root e a
+ * barreira é a nossa guarda (D10).
+ */
+class EmbeddedEngine(private val ctx: Context) {
+
+    companion object {
+        /** Porta do servidor de capacidades que a app levanta para o motor embutido. */
+        const val HOST_PORT = 39732
+        private const val MARKER = ".extracted"
+    }
+
+    private var proc: Process? = null
+    private var streams: CachaloteClient.Streams? = null
+    private val startLock = Any()
+
+    val home: File get() = File(ctx.filesDir, "dsh-home")
+    private val kernelRoot: File get() = File(ctx.filesDir, "kernel")
+    private val kernelZip: File get() = File(ctx.filesDir, "kernel.zip")
+    val binJs: File get() = File(kernelRoot, "dsh/node_modules/@deepseek-ai/dsh/lib/bin.js")
+
+    fun isPrepared(): Boolean = binJs.isFile
+
+    fun hasZip(): Boolean = kernelZip.isFile
+
+    val running: Boolean get() = proc?.isAlive == true
+
+    /**
+     * Reconstrói os nomes verdadeiros das bibliotecas (soname) como symlinks para os ficheiros
+     * embarcados no nativeLibraryDir. Feito uma vez; é o que faz o `dlopen` funcionar.
+     */
+    fun libraryFarm(): File {
+        val nativeDir = File(ctx.applicationInfo.nativeLibraryDir)
+        val farm = File(ctx.filesDir, "embed-lib")
+        // Se o caminho da instalação mudou (reinstalação da APK), a farm antiga tem links
+        // mortos: apagamos tudo e refazemos. `exists()` não serve para detectar links mortos.
+        val marker = File(farm, ".native-dir")
+        val current = nativeDir.absolutePath
+        if (farm.isDirectory && marker.isFile && marker.readText() != current) {
+            farm.deleteRecursively()
+        }
+        farm.mkdirs()
+        runCatching { ctx.assets.open("embed-libs.txt").bufferedReader().forEachLine { line ->
+            val parts = line.trim().split("=")
+            if (parts.size != 2) return@forEachLine
+            val link = File(farm, parts[0])
+            val target = File(nativeDir, parts[1])
+            if (!target.isFile) return@forEachLine
+            val linkPath = link.toPath()
+            runCatching { java.nio.file.Files.deleteIfExists(linkPath) }
+            runCatching { java.nio.file.Files.createSymbolicLink(linkPath, target.toPath()) }
+                .onFailure { runCatching { target.copyTo(link, overwrite = true) } }
+        } }
+        marker.writeText(current)
+        return farm
+    }
+
+    /** Extrai o kernel do zip (uma vez). Devolve o número de ficheiros escritos. */
+    suspend fun prepare(): Int = withContext(Dispatchers.IO) {
+        if (isPrepared()) return@withContext 0
+        require(hasZip()) { "falta ${kernelZip.name} em files/ (envia com tools/prepare-kernel-zip.sh --push)" }
+        var files = 0
+        ZipInputStream(kernelZip.inputStream().buffered()).use { zin ->
+            while (true) {
+                val e = zin.nextEntry ?: break
+                // O zip tem a raiz `dsh/`: extrair para files/kernel/ dá files/kernel/dsh/...
+                val out = File(kernelRoot, e.name)
+                if (e.isDirectory) {
+                    out.mkdirs()
+                } else {
+                    out.parentFile?.mkdirs()
+                    out.outputStream().use { zin.copyTo(it) }
+                    files++
+                }
+                zin.closeEntry()
+            }
+        }
+        kernelRoot.mkdirs()
+        File(kernelRoot, MARKER).writeText("ok")
+        files
+    }
+
+    /**
+     * Escreve a camada de patch do perfil no DSH_HOME embutido. É o equivalente ao
+     * `config/cachalote.patch.yml` do modo daemon, mas com o caminho ABSOLUTO do plugin
+     * dentro do armazenamento privado da app (o loader não resolve plugins postos à mão por
+     * nome — ver base de conhecimento 53).
+     */
+    fun ensureProfilePatch(): File {
+        val plugin = File(kernelRoot, "dsh/node_modules/@deepseek-ai/dsh-tool-cachalote/lib/index.js")
+        val file = File(home, "cordis.patch.yml")
+        val content = """
+# cachalote (modo embutido) — gerado pela app; não editar à mão.
+- id: otel
+  disabled: true
+- id: session-telemetry-otel
+  disabled: true
+- id: bash-sandbox
+  disabled: true
+- id: pwsh-sandbox
+  disabled: true
+- id: session-log-download
+  disabled: true
+- insert:
+    - id: bash-local
+      name: '@deepseek-ai/dsh-bash-local'
+    - id: tool-cachalote
+      name: '${plugin.absolutePath}'
+- id: permission
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+    defaultPreset: workspace-write
+""".trimIndent() + "\n"
+        if (!file.isFile || file.readText() != content) file.writeText(content)
+        return file
+    }
+
+    /** Arranca o motor e devolve os streams do seu stdio (idempotente e sincronizado). */
+    suspend fun start(): CachaloteClient.Streams = withContext(Dispatchers.IO) {
+        synchronized(startLock) {
+            streams?.let { if (proc?.isAlive == true) return@withContext it }
+        }
+        stop()
+        require(isPrepared()) { "kernel não extraído" }
+        val farm = libraryFarm()
+        val node = File(ctx.applicationInfo.nativeLibraryDir, "libnode.so")
+        require(node.isFile) { "libnode.so não está na APK (corre tools/prepare-embed.sh e reconstrói)" }
+        val nativeDir = ctx.applicationInfo.nativeLibraryDir
+        val tmp = File(ctx.cacheDir, "tmp").apply { mkdirs() }
+        home.mkdirs()
+        File(home, "ws").mkdirs()
+        // O plugin do kernel procura o servidor de capacidades pelo porto + token.
+        val tokenFile = File(home, "app.token")
+        tokenFile.writeText(HostToken.ensure(ctx) + "\n")
+        // A camada de patch do perfil tem de existir ANTES de o motor arrancar (é lida no boot).
+        ensureProfilePatch()
+
+        val pb = ProcessBuilder(
+            node.absolutePath,
+            "--expose-internals",
+            binJs.absolutePath,
+            "--profile", "acp",
+        )
+        val env = pb.environment()
+        env["LD_LIBRARY_PATH"] = farm.absolutePath
+        env["PATH"] = "$nativeDir:${File(ctx.filesDir, "bin").absolutePath}:/system/bin:/system/xbin"
+        env["DSH_HOME"] = home.absolutePath
+        env["HOME"] = ctx.filesDir.absolutePath
+        env["TMPDIR"] = tmp.absolutePath
+        env["TERM"] = "dumb"
+        env["NODE_OPTIONS"] = ""
+        // O Android não tem `bash`: o patch ao dsh-bash-local usa esta variável como fallback.
+        env["CACHALOTE_SHELL"] = "/system/bin/sh"
+        env["CACHALOTE_PORT"] = HOST_PORT.toString()
+        env["CACHALOTE_TOKEN_FILE"] = tokenFile.absolutePath
+        pb.redirectErrorStream(false)
+
+        val p = pb.start()
+        proc = p
+        // O stderr do motor vai para um ficheiro, para diagnóstico.
+        val log = File(ctx.filesDir, "engine-embedded.log")
+        Thread {
+            runCatching {
+                p.errorStream.bufferedReader().use { r ->
+                    // stderr do motor num ficheiro (com tecto, para não encher o telefone).
+                    val text = r.readText()
+                    if (log.length() < 1_000_000) log.appendText(text)
+                }
+            }
+        }.apply { isDaemon = true; start() }
+
+        val s = CachaloteClient.Streams(p.inputStream, p.outputStream, close = { runCatching { p.destroy() } })
+        streams = s
+        s
+    }
+
+    fun stop() {
+        val p = proc ?: run { streams = null; return }
+        proc = null
+        streams = null
+        runCatching {
+            p.outputStream.close()          // EOF no stdin → o motor desliga-se
+            if (!p.waitFor(3, TimeUnit.SECONDS)) p.destroy()
+            if (!p.waitFor(2, TimeUnit.SECONDS)) p.destroyForcibly()
+        }
+    }
+
+    /** Reinicia (usado quando a chave muda: o motor lê credenciais no arranque). */
+    suspend fun restart(): CachaloteClient.Streams {
+        stop()
+        return start()
+    }
+}
+
+/** Token local do servidor de capacidades (o motor embutido lê-o do seu DSH_HOME). */
+object HostToken {
+    private const val PREFS = "dsh_prefs"
+    private const val KEY = "local_token"
+
+    fun ensure(ctx: Context): String {
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val existing = sp.getString(KEY, null)
+        if (!existing.isNullOrBlank() && existing.length >= 32) return existing
+        val bytes = ByteArray(16)
+        java.security.SecureRandom().nextBytes(bytes)
+        val token = bytes.joinToString("") { "%02x".format(it) }
+        sp.edit().putString(KEY, token).apply()
+        return token
+    }
+}

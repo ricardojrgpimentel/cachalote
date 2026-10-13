@@ -403,7 +403,21 @@ private fun OnboardingCard(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val accessibility = vm.accessibilityOn
     val allowed = vm.capabilityToggles.count { it.value }
-    val checks = listOf(
+    val checks = if (vm.embeddedMode) listOf(
+        Triple("kernel extraído", vm.daemonInstalled != null && vm.embeddedInfo.contains("extraído"), "(automático)" to {}),
+        Triple("motor embutido", vm.embeddedInfo.contains("a correr") || vm.embeddedInfo.contains("extraído"), "Verificar" to {}),
+        Triple("chave do provedor", vm.keyPresent, "(no separador Chave)" to {}),
+        Triple("acessibilidade ligada", accessibility, "Abrir Acessibilidade" to {
+            runCatching {
+                ctx.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            Unit
+        }),
+        Triple("capacidades autorizadas", allowed > 0, "(no separador Poderes)" to {}),
+    ) else listOf(
         Triple("daemon instalado", vm.daemonInstalled == true, "Ligar daemon" to { vm.startDaemon() }),
         Triple("root concedido", vm.rootOk == true, "Obter token (root)" to { vm.obtainToken() }),
         Triple("token do canal", vm.tokenState.contains("obtido"), "Obter token (root)" to { vm.obtainToken() }),
@@ -460,7 +474,30 @@ private fun StatusScreen(vm: MainViewModel) {
         OnboardingCard(vm)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Daemon", fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Motor embutido (sem root)", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (vm.embeddedMode) "a app corre o motor como seu filho — o sandbox do Android é o limite"
+                            else "usa o daemon com root/Shizuku (fora do sandbox da app)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    Switch(
+                        checked = vm.embeddedMode,
+                        onCheckedChange = { vm.switchMode(it) },
+                        enabled = !vm.busy,
+                    )
+                }
+                if (vm.embeddedInfo.isNotBlank()) {
+                    Text(vm.embeddedInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                }
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(if (vm.embeddedMode) "Motor" else "Daemon", fontWeight = FontWeight.SemiBold)
                 Text(
                     vm.daemonInfo,
                     fontFamily = FontFamily.Monospace,

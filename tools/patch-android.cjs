@@ -300,6 +300,31 @@ if (fs.existsSync(toolBashFile)) {
   report.push("tool-bash (guarda): AVISO — ficheiro não encontrado");
 }
 
+/* ---------- patch 8: fallback do shell no bash-local ---------- */
+// O `dsh-bash-local` invoca o binário `bash` fixo no argv. O Android não tem bash (só `sh`,
+// mksh), e no modo embutido não há sequer um directório com executáveis nossos para pôr um
+// shim (o directório privado da app é noexec com targetSdk moderno). Solução: respeitar
+// `CACHALOTE_SHELL` (o motor embutido injecta `/system/bin/sh`).
+const bashLocalFile = HOME + "/@deepseek-ai/dsh-bash-local/lib/index.js";
+if (fs.existsSync(bashLocalFile)) {
+  let src = fs.readFileSync(bashLocalFile, "utf8");
+  const marker = "cachalote: shell configurável";
+  if (src.includes(marker)) {
+    report.push("bash-local (shell): já patcheado (nada a fazer)");
+  } else {
+    const anchor = '\t\treturn this.executeArgv(spec, [\n\t\t\t"bash",';
+    if (!src.includes(anchor)) {
+      report.push("bash-local (shell): AVISO — âncora não encontrada; versão mudou?");
+    } else {
+      src = src.replace(anchor, '\t\treturn this.executeArgv(spec, [\n\t\t\tprocess.env.CACHALOTE_SHELL || "bash", // ' + marker);
+      fs.writeFileSync(bashLocalFile, src);
+      report.push("bash-local (shell): usa CACHALOTE_SHELL quando definido (Android não tem bash)");
+    }
+  }
+} else {
+  report.push("bash-local (shell): AVISO — ficheiro não encontrado");
+}
+
 /* ---------- verificação final: nenhum .node na árvore ---------- */
 let natives = [];
 (function walk(dir) {

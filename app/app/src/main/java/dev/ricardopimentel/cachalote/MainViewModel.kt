@@ -75,6 +75,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
     var a11yTicks by mutableStateOf(0)
+
+    /** Motor embutido (sem root) em vez do daemon? */
+    var embeddedMode by mutableStateOf(controller.mode == DaemonController.Mode.EMBEDDED)
+    var embeddedInfo by mutableStateOf("")
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
 
     private val store = SessionStore(app)
@@ -154,6 +158,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------------------------------------------------------------- estado
 
+    /**
+     * Troca entre o daemon (root/Shizuku) e o motor embutido (sem root). No modo embutido a
+     * app extrai o kernel de `files/kernel.zip` (uma vez) e arranca o motor como seu filho.
+     */
+    fun switchMode(embedded: Boolean) = run("modo") {
+        if (embedded == embeddedMode) return@run
+        controller.stopEmbedded()
+        controller.mode = if (embedded) DaemonController.Mode.EMBEDDED else DaemonController.Mode.DAEMON
+        embeddedMode = embedded
+        tokenState = if (embedded) "n/d (modo embutido)" else "(por obter)"
+        if (embedded) {
+            if (!controller.embeddedHasZip()) {
+                error("falta kernel.zip no armazenamento privado da app — envia com tools/prepare-kernel-zip.sh --push")
+            }
+            if (!controller.embeddedPrepared()) {
+                embeddedInfo = "a extrair o kernel (pode levar um minuto)…"
+                val n = controller.prepareEmbedded()
+                embeddedInfo = "kernel extraído ($n ficheiros)"
+            } else {
+                embeddedInfo = "kernel já extraído"
+            }
+        } else {
+            embeddedInfo = ""
+        }
+        controller.ensureConnected()
+        controller.ensureAcp()
+        refreshStatus()
+        runCatching { refreshKeyStatus() }
+    }
+
     fun refreshStatus() = run("estado") {
         rootOk = controller.hasRoot()
         // A acessibilidade lê-se pela mesma via que o agente usa (a flag do singleton pode
@@ -167,6 +201,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             error = "o daemon não está instalado em ${controller.base} — corre daemon/install.sh no computador"
             return@run
         }
+        if (embeddedMode) embeddedInfo = if (controller.embeddedEngineRunning()) "motor embutido a correr" else "motor embutido parado"
         runCatching { controller.status().toString(2) }
             .onSuccess { daemonInfo = it }
             .onFailure { daemonInfo = "não consegui falar com o daemon:\n${it.message}" }

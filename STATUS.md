@@ -423,3 +423,41 @@ exactamente o que precisa da chave. Depois de repores a chave, corre outra vez:
 ```sh
 ./daemon/set-key.sh --verify && ./tools/app-capabilities-test.sh --full
 ```
+
+
+---
+
+## 15. Modo sem root (motor embutido) — feito e verificado
+
+O que faltava do plano em matéria de flavors está resolvido **sem Shizuku e sem root**: a app
+corre o motor como seu próprio filho.
+
+| Peça | Como |
+|---|---|
+| Runtime | Node embarcado como `libnode.so` (jniLibs) — executa no `nativeLibraryDir` mesmo com `targetSdk 35`; sonames versionados com alias `.so` e farm de symlinks no `filesDir` |
+| Kernel | extraído de `files/kernel.zip` (114 MB, enviado com `tools/prepare-kernel-zip.sh --push`) para `files/kernel/` |
+| Transporte | **stdio** do processo filho (o cliente fala TCP *ou* stdio com o mesmo protocolo) |
+| Capacidades | a app levanta o seu próprio servidor `host.*` em `127.0.0.1:39732` (IPv4 explícito); o plugin do kernel fala-lhe como falaria ao daemon |
+| Chave | `files/dsh-home/.env` (só o uid da app lê) |
+| Perfil | a app escreve `files/dsh-home/cordis.patch.yml` com o caminho absoluto do plugin |
+| Shell | patch 8: `dsh-bash-local` usa `CACHALOTE_SHELL` (o Android não tem `bash`) |
+
+**Confinamento:** no modo embutido o motor corre como o **uid da app**, portanto o sandbox do
+Android é o limite real — exactamente o que o D10 previa como a alternativa sólida ao "root com
+guarda".
+
+### Provas no dispositivo (sem root nenhum)
+
+```
+RPC (logcat)  → initialize (id=3) · session/resume (id=4) · session/new (id=5)
+              → session/prompt (id=6) · ← session/update · ← resposta id=6 erro=false
+resposta do agente (android_status):
+   {"app":"cachalote","pid":19020,"accessibility":false,"notifications":true,
+    "allowed":["notify","screen","tap","type","key","screenshot"],"hint":"…"}
+```
+
+E o `app-capabilities-test.sh` passou **5/5 com o modo embutido ligado** (o `pid 19020` é o
+processo da app, não o daemon — prova de que as capacidades vieram do servidor da própria app).
+
+Interruptor na app: **Estado → Motor embutido (sem root)**. Em modo daemon fica o
+comportamento anterior (root/Shizuku, autostart, guarda de caminhos com aprovação).

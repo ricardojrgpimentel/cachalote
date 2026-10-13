@@ -628,3 +628,60 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Boa notícia de segurança:** o valor da chave **nunca** entrou no registo de auditoria
   (só capacidades `host.*` são registadas) nem no log do daemon (só o comprimento).
 - **Origem:** **[LOCAL]**.
+
+---
+
+## R. Modo sem root (motor embutido na app)
+
+### 68. Extrair o zip do kernel para o sítio certo
+- **Sintoma:** `falta kernel.zip` / `kernel não extraído` depois de extrair com sucesso.
+- **Causa:** o zip tem a raiz `dsh/`; extrair para `filesDir` deixa a árvore em `files/dsh/`,
+  mas o código procura `files/kernel/dsh/...`.
+- **Solução:** extrair sempre para `files/kernel/` (e o marcador `.extracted` lá dentro).
+  Mesma classe de erro do tar do daemon (ver itens 36 e F1).
+- **Origem:** **[LOCAL]**.
+
+### 69. A farm de symlinks morre quando o caminho da instalação muda
+- **Sintoma:** `CANNOT LINK EXECUTABLE ".../libnode.so": library "libz.so.1" not found` depois de
+  reinstalar a APK (o caminho `/data/app/~~<hash>/...` muda).
+- **Causa:** `File.exists()` **segue** o symlink; para um link morto devolve `false`, portanto o
+  código antigo não o apagava e a criação falhava com "já existe".
+- **Solução:** guardar o `nativeLibraryDir` actual num marcador dentro da farm e, se mudou,
+  apagar a farm inteira; e usar `Files.deleteIfExists` (que remove o link mesmo morto) antes de
+  recriar.
+- **Origem:** **[LOCAL]**.
+
+### 70. `getLoopbackAddress()` pode dar `::1` — e o cliente liga a `127.0.0.1`
+- **Sintoma:** `connect ECONNREFUSED 127.0.0.1:39732` com o servidor "a correr".
+- **Causa:** o `ServerSocket` ligou-se ao loopback IPv6 (`::1`) e o cliente usa IPv4.
+- **Solução:** `InetAddress.getByName("127.0.0.1")` explícito. (O daemon usa
+  `listen(PORT, "127.0.0.1")` e nunca teve este problema.)
+- **Origem:** **[LOCAL]**.
+
+### 71. O `workspace` da sessão tem de depender do modo
+- **Sintoma:** a sessão embutida é criada mas o turno não avança (ficheiro de sessão só com o
+  cabeçalho).
+- **Causa:** o `session/new` enviava o `cwd` do daemon (`/data/adb/cachalote/home/ws`), que é
+  root-only — o motor embutido corre com o uid da app e não lá chega.
+- **Solução:** o `workspace` é derivado do modo (`files/dsh-home/ws` no embutido). O caminho
+  aparece no slug da sessão (`--data-user-0-...-files-dsh-home-ws--`), o que torna o erro visível.
+- **Origem:** **[LOCAL]**.
+
+### 72. Arrancar o motor embutido tem de ser idempotente e sincronizado
+- **Sintoma:** dois processos `libnode.so` a competir pelo mesmo DSH_HOME (bloqueios e sessões
+  estranhas).
+- **Causa:** `start()` era chamado por dois caminhos concorrentes (arranque da app + laço de
+  reconexão) sem protecção.
+- **Solução:** guardar os streams actuais e devolvê-los se o processo estiver vivo, com
+  `synchronized` no arranque.
+- **Origem:** **[LOCAL]**.
+
+### 73. A camada `cordis.patch.yml` do DSH_HOME embutido é gerada pela app
+- **Sintoma:** no modo embutido o motor arranca mas as nossas ferramentas não existem e o OTel
+  falha no boot.
+- **Causa:** o `$DSH_HOME` embutido não tinha a camada de patch do perfil (o equivalente ao
+  `config/cachalote.patch.yml` do daemon) — e o caminho do plugin não pode ser o do daemon.
+- **Solução:** a app escreve `files/dsh-home/cordis.patch.yml` no arranque do motor, com o
+  caminho **absoluto** do plugin dentro do armazenamento privado (o loader não resolve plugins
+  postos à mão por nome — item 53).
+- **Origem:** **[LOCAL]**.
