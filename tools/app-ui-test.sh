@@ -59,6 +59,22 @@ foreground_app() {
     *) "${ADB[@]}" shell "am start -n $ACT" >/dev/null 2>&1; sleep 3; return 1 ;;
   esac
 }
+# Corresponde ao texto EXACTO: evita apanhar dicas como "(no separador Chave)" em vez do
+# separador verdadeiro da barra de navegação.
+tap_exact() {
+  local c attempt
+  for attempt in 1 2 3; do
+    dump
+    c="$(python3 "$WS/tools/ui.py" "$UI" find-exact "$1" 2>/dev/null)" && break
+    foreground_app || true
+    sleep 2
+  done
+  [ -n "${c:-}" ] || { echo "   (não encontrei '$1' exacto)"; return 1; }
+  set -- $c
+  "${ADB[@]}" shell input tap "$1" "$2" >/dev/null 2>&1
+  sleep 1.2
+}
+
 tap_text() {
   local c attempt
   for attempt in 1 2 3; do
@@ -116,7 +132,7 @@ hide_kb; sleep 1
 # Ir para o separador Chave e CONFIRMAR que lá estamos (antes, um toque falhado deixava o
 # teste a escrever no vazio e a apagar a chave do utilizador sem se aperceber).
 for attempt in 1 2 3; do
-  tap_text "Chave" || true
+  tap_exact "Chave" || true
   dump
   python3 "$WS/tools/ui.py" "$UI" exists "DEEPSEEK_API_KEY" && break
   foreground_app || true
@@ -174,7 +190,7 @@ PERM="$("${ADB[@]}" shell "su -c 'stat -c %a $BASE/home/.env'" 2>/dev/null | tr 
 dump; has "presente" && check 0 "a app mostra a chave como presente" || check 1 "a app mostra a chave como presente"
 
 echo "== 6. conversa: nova sessão + prompt (sem chave válida → erro esperado do modelo) =="
-tap_text "Conversa" || true
+tap_exact "Conversa" || true
 sleep 1; dump
 tap_text "Nova sessão" || true
 sleep 6; dump
@@ -197,7 +213,7 @@ fi
 
 echo "== 7. limpeza =="
 if [ "$KEEP" = 0 ]; then
-  tap_text "Chave" || true
+  tap_exact "Chave" || true
   sleep 1; dump
   tap_text "Remover chave" || true
   sleep 2

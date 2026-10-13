@@ -1,5 +1,19 @@
 # Cachalote — estado do projecto
 
+> ## ⚠ ACÇÃO NECESSÁRIA (1 minuto)
+>
+> **A chave do provedor tem de ser introduzida outra vez.** Durante o diagnóstico do ecrã da
+> chave escrevi uma chave de teste directamente na app e **substituí a tua chave real**, que não
+> tinha cópia no dispositivo (o daemon só registava o comprimento). O `.env` está agora vazio,
+> modo 600. Repõe com:
+>
+> ```sh
+> cd /Users/ricardopimentel/Documents/dshm && ./daemon/set-key.sh --verify
+> ```
+>
+> (ou na app: separador **Chave** → colar → Guardar). O `--verify` confirma no fim com um turno
+> real. Regras para não voltar a acontecer: [`docs/knowledge-android.md`](docs/knowledge-android.md) #67.
+
 > Relatório para revisão. Tudo o que está marcado ✅ foi **verificado no Samsung
 > Galaxy S10+ (SM-G975F, LineageOS 23.2 / Android 16, Magisk)** — as provas estão citadas.
 >
