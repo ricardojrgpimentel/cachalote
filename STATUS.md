@@ -894,3 +894,43 @@ V8/SEA — que tem de ser construído **no próprio aarch64** (o blob é especí
 arch+sistema+versão de Node). São fases encadeadas, cada uma com o seu teste; fazem-se mal
 enxertadas no fim de uma sessão longa. O esbuild também ainda não está instalado neste
 ambiente (e o `npx` não consegue escrever fora do workspace).
+
+### 23.6 Item 4 — o que a medição diz sobre o plano do D6b (e não é o que o plano previa)
+
+Fiz o instrumento, o baseline e três experiências. O resultado é **negativo** e vale a pena
+ficar escrito, porque evita que a próxima sessão repita estes caminhos.
+
+| Experiência | Mediana | Comparação |
+|---|---|---|
+| kernel como está (baseline) | **913 ms** | — |
+| + `NODE_COMPILE_CACHE` | 1046 ms | pior; só 24 KB de cache de um kernel de 214 MB |
+| bundle esbuild (ESM) **dentro da árvore** | 1032 ms | corre, mas **mais lento** que o original |
+| bundle (ESM) + `NODE_COMPILE_CACHE` | 1100 ms | a cache continua a agarrar 24 KB |
+
+O que se aprendeu, com provas:
+
+1. **O bundle sozinho não ganha nada aqui.** O D6b fala de −68 %, mas isso foi medido noutra
+   máquina e sobre uma árvore sintética de 5 000 módulos. Aqui, o bundle (2,4 MB num ficheiro
+   único, feito em 41 ms a partir de 214 MB) é **mais lento**: o Node passa a compilar 2,4 MB
+   de uma vez, enquanto o original compila cada módulo só quando o usa.
+2. **A cache de compilação não agarra ESM.** Escreveu 24 KB em todas as configurações — com o
+   kernel original, com o bundle, e com o bundle em cache. É por isso que o D6b insiste no
+   **wrapper CJS**: a cache serve CJS.
+3. **O bundle em CJS não é directo**: falha com `Top-level await is currently not supported
+   with the "cjs" output format`, no `if (import.meta.main) await runCli()` do `bin.js`. É
+   exactamente o wrapper que o D6b previa — mas note-se que, com o wrapper, o que a cache
+   passaria a agarrar é o **wrapper**, não o bundle ESM que ele importa. O ganho da cache
+   exige converter mesmo os módulos para CJS, não embrulhá-los.
+4. **O bundle tem de viver dentro da árvore.** Fora dela não arranca: os *profile bundles*
+   (`@deepseek-ai/dsh-base`, `@deepseek-ai/dsh-acp-app`) são resolvidos **dinamicamente** a
+   partir da instalação, não estaticamente — logo não entram no bundle e têm de continuar a ser
+   encontrados ao lado (`ENOENT: …/package.json` e "cannot resolve profile bundle" foram os
+   dois erros pelo caminho).
+
+**Conclusão honesta:** neste dispositivo, nem o bundle nem a cache dão o ganho prometido. Se o
+arranque a frio tiver mesmo de descer, o que resta é o **snapshot V8/SEA** — e esse tem de ser
+construído no próprio aarch64, com o entry único (ESM, como está; o snapshot não exige CJS).
+Isto é uma unidade de trabalho própria, com o instrumento já feito para a medir.
+
+**Artefactos:** `tools/engine-startup-bench.cjs` (a medida) e o esbuild instalado em
+`.work/tools` (fora do repositório). O emulador ficou limpo dos ficheiros de teste.
