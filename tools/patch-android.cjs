@@ -424,6 +424,43 @@ if (fs.existsSync(attachFile)) {
   report.push("attachment-local (imagens): AVISO — ficheiro não encontrado");
 }
 
+/* ---------- patch 10: fsync de directórios que a app não alcança ---------- */
+// O `dsh-attachment-local` prova a durabilidade de um caminho fazendo fsync de **todos** os
+// directórios antepassados, de $DSH_HOME até à raiz. O daemon corre como root e consegue; o
+// motor **embutido** corre como o uid da app e não consegue sequer ABRIR `/data` (EACCES) —
+// e qualquer anexo morria com "unable to persist the prompt image batch", uma mensagem que
+// não diz nada sobre a causa (é a mesma de quando faltava o sharp, patch 9).
+// No Android os antepassados acima da área da app não são nossos: não os conseguir abrir não
+// pode derrubar a operação. Ver base de conhecimento 88.
+const durableFile = HOME + "/@deepseek-ai/dsh-attachment-local/lib/index.js";
+if (fs.existsSync(durableFile)) {
+  let src = fs.readFileSync(durableFile, "utf8");
+  const dmarker = "cachalote: fsync tolerante";
+  const openAnchor = "\tconst handle = await open(path, constants.O_RDONLY);";
+  const tolerant = [
+    "\t/* " + dmarker + " — acima da área da app o uid não abre o directório (EACCES) e isso */",
+    "\t/* não é erro nosso: não pode impedir a gravação do anexo. Ver knowledge-android 88. */",
+    "\tlet handle;",
+    "\ttry {",
+    "\t\thandle = await open(path, constants.O_RDONLY);",
+    "\t} catch (error) {",
+    "\t\tif (error?.code === \"EACCES\" || error?.code === \"EPERM\" || error?.code === \"ENOENT\") return;",
+    "\t\tthrow error;",
+    "\t}",
+  ].join("\n");
+  if (src.includes(dmarker)) {
+    report.push("attachment-local (fsync): já patcheado (nada a fazer)");
+  } else if (!src.includes(openAnchor)) {
+    report.push("attachment-local (fsync): AVISO — âncora não encontrada; versão mudou?");
+  } else {
+    src = src.replace(openAnchor, tolerant);
+    fs.writeFileSync(durableFile, src);
+    report.push("attachment-local (fsync): tolera directórios que o uid da app não pode abrir");
+  }
+} else {
+  report.push("attachment-local (fsync): AVISO — ficheiro não encontrado");
+}
+
 /* ---------- verificação final: nenhum .node na árvore ---------- */
 let natives = [];
 (function walk(dir) {

@@ -50,7 +50,7 @@ daemon/              daemon Node que supervisiona o motor (root ou Shizuku) + CL
 kernel-plugins/      plugin do kernel que expõe as capacidades Android ao agente
 tools/               pipeline: extrair kernel, aplicar patches, empacotar, instalar, testar
 config/              camada de patch do perfil do DSH (o que liga/desliga no motor)
-docs/                base de conhecimento Android (87 armadilhas) e capturas de ecrã
+docs/                base de conhecimento Android (88 armadilhas) e capturas de ecrã
 PLANO.md / STATUS.md plano, decisões, riscos e o que está verificado (com provas)
 ```
 

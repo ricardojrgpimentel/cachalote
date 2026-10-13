@@ -177,9 +177,31 @@ class DaemonController(private val context: Context) {
         )
     }
 
-    suspend fun prompt(sessionId: String, text: String): JSONObject {
+    /**
+     * Envia um prompt. A imagem é opcional.
+     *
+     * O bloco `image` é o mesmo que o `android_see` usa para mostrar o ecrã ao modelo (o motor
+     * anuncia `promptCapabilities.image: true` — patch 9, leitura de imagens em JS puro, e o
+     * modelo declarado com `inputModalities` de imagem). A diferença é quem escolhe a imagem:
+     * ali é a captura do ecrã, aqui é o utilizador.
+     */
+    suspend fun prompt(
+        sessionId: String,
+        text: String,
+        image: ByteArray? = null,
+        imageMime: String = "image/png",
+    ): JSONObject {
         ensureAcp()
-        val blocks = org.json.JSONArray().put(JSONObject().put("type", "text").put("text", text))
+        val blocks = org.json.JSONArray()
+        if (text.isNotBlank()) blocks.put(JSONObject().put("type", "text").put("text", text))
+        if (image != null && image.isNotEmpty()) {
+            blocks.put(
+                JSONObject()
+                    .put("type", "image")
+                    .put("data", android.util.Base64.encodeToString(image, android.util.Base64.NO_WRAP))
+                    .put("mimeType", imageMime),
+            )
+        }
         return client.callForResult(
             "session/prompt",
             JSONObject().put("sessionId", sessionId).put("prompt", blocks),

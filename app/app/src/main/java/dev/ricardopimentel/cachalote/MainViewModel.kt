@@ -43,6 +43,16 @@ data class ChatLine(
     val done: Boolean = false,
 )
 
+/**
+ * Imagem anexada pelo utilizador, à espera de ir no próximo prompt.
+ *
+ * Não é guardada no estado da sessão (só o nome vai para o transcript): o que fica em disco é
+ * o registo da conversa, não os bytes escolhidos.
+ */
+class PendingImage(val bytes: ByteArray, val mime: String, val name: String) {
+    val kb: Int get() = (bytes.size + 1023) / 1024
+}
+
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val controller = DaemonController(app)
@@ -65,6 +75,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var showSessions by mutableStateOf(false)
     var configPicker by mutableStateOf<ConfigOption?>(null)
     var reconnecting by mutableStateOf(false)
+    var pendingImage by mutableStateOf<PendingImage?>(null)
     var audit by mutableStateOf<List<String>>(emptyList())
     var embedTest by mutableStateOf("(não testado)")
 
@@ -345,7 +356,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun send(text: String) = run("prompt") {
-        if (text.isBlank()) return@run
+        val img = pendingImage
+        if (text.isBlank() && img == null) return@run
         var sid = sessionId
         if (sid.isNullOrBlank()) {
             val res = controller.newSession()
@@ -353,17 +365,45 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             sessionId = sid
             applyConfigOptions(res)
         }
-        transcript.add(ChatLine("user", text))
+        val shown = when {
+            img == null -> text
+            text.isBlank() -> "[imagem: ${img.name}]"
+            else -> "$text  [imagem: ${img.name}]"
+        }
+        transcript.add(ChatLine("user", shown))
+        pendingImage = null
         loaded = true
         saveState()
         // Só regressa no fim do turno; as falhas ficam no transcript (não apenas na faixa
         // de erro), para se perceber o que aconteceu ao turno.
         try {
-            controller.prompt(sid!!, text)
+            controller.prompt(sid!!, text, img?.bytes, img?.mime ?: "image/png")
         } catch (t: Throwable) {
             transcript.add(ChatLine("error", "turno falhou: ${t.message ?: t::class.java.simpleName}"))
         }
     }
+
+    // ---------------------------------------------------------------- anexos
+
+    /** Lê a imagem escolhida pelo utilizador e guarda-a para o próximo prompt. */
+    fun attachImage(uri: android.net.Uri) = run("anexar imagem") {
+        val cr = getApplication<Application>().contentResolver
+        val mime = cr.getType(uri) ?: "image/png"
+        // O `lastPathSegment` do photo picker é um id numérico; o nome legível está na coluna
+        // DISPLAY_NAME da MediaStore.
+        val name = runCatching {
+            cr.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+            ?: "imagem"
+        val bytes = cr.openInputStream(uri)?.use { it.readBytes() }
+            ?: error("não consegui ler a imagem escolhida")
+        pendingImage = PendingImage(bytes, mime, name)
+    }
+
+    fun clearImage() { pendingImage = null }
 
     // ---------------------------------------------------------------- eventos ACP
 

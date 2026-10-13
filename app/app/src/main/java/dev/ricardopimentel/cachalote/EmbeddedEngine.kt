@@ -185,6 +185,17 @@ class EmbeddedEngine(private val ctx: Context) {
         sandbox: danger-full-access
         approval: never
     defaultPreset: workspace-write
+# O modelo tem de declarar que aceita imagens, senão o motor anuncia
+# `promptCapabilities.image: false` e recusa QUALQUER prompt com imagem inline
+# ("inline image prompts were not advertised by this connection") — tanto as capturas do
+# `android_see` como as imagens que o utilizador anexa no chat. O perfil do daemon já o
+# fazia (config/cachalote.patch.yml); o modo embutido gerava o seu próprio patch e não.
+- id: llm-deepseek
+  config:
+    models:
+      - id: deepseek-v4-flash
+        name: DeepSeek-V4-Flash
+        inputModalities: ["text", "image"]
 """.trimIndent() + "\n"
         if (!file.isFile || file.readText() != content) file.writeText(content)
         return file

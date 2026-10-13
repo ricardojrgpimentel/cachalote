@@ -901,3 +901,24 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   `initialize OK: deepseek-harness-acp 0.0.1 | imagem=true`. O `client-smoke.cjs` não serve aí
   (fala pelo socket AF_UNIX, que o `shell` não pode criar): usar `tools/tcp-acp-probe.cjs`.
 - **Origem:** **[LOCAL]** (STATUS §21).
+
+### 88. O motor **embutido** não grava anexos: o `fsync` dos antepassados até `/` é privilégio de root
+- **Sintoma:** uma imagem enviada no prompt (ou uma captura do `android_see`) falha com
+  `Internal error: unable to persist the prompt image batch` — a **mesma** mensagem de quando
+  faltava o `sharp` (armadilha 80), o que manda para o sítio errado. No modo daemon (root)
+  tudo funciona; no modo embutido (uid da app) nunca grava nada.
+- **Causa:** o `dsh-attachment-local` prova a durabilidade do caminho fazendo `fsync` de
+  **todos** os directórios antepassados, de `$DSH_HOME` até à **raiz do sistema**
+  (`ensureDurableHome` → `ensureDurableDirectory(home, parse(home).root)`). O `syncDirectory`
+  abre cada um com `O_RDONLY` e faz `fsync`. Como root, abrir `/data` é trivial. Como o uid da
+  app, `/data` é `771 root:system` — nem se abre: `EACCES` logo no primeiro antepassado que
+  não é nosso, e a excepção sobe como "não consegui persistir".
+- **Correcção:** **patch 10** ao `dsh-attachment-local` — `syncDirectory` tolera
+  `EACCES`/`EPERM`/`ENOENT` e segue. Acima da área da app os directórios não são nossos; não os
+  poder abrir não pode impedir a gravação (a durabilidade que interessa é a de dentro da nossa
+  árvore, essa continua a ser sincronizada).
+- **Como se confirmou:** o turno deixou de falhar na persistência e passou a falhar só no
+  modelo (`no API key`), que é o esperado num emulador sem chave; e o objecto apareceu em
+  `files/dsh-home/attachments/v1/objects/6c/6c03b438…` com o **mesmo sha256** do ficheiro de
+  origem.
+- **Origem:** **[LOCAL]** (STATUS §23).

@@ -2,7 +2,9 @@ package dev.ricardopimentel.cachalote
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -739,10 +741,30 @@ private fun ChatScreen(vm: MainViewModel) {
         }
 
         Divider()
+        // Imagem anexada pelo utilizador: fica à espera do próximo prompt (o motor já aceita
+        // blocos `image` — é o mesmo caminho que o `android_see` usa para mostrar o ecrã).
+        vm.pendingImage?.let { img ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "imagem: ${img.name} · ${img.kb} KB",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { vm.clearImage() }) { Text("Remover") }
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth().padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) vm.attachImage(uri)
+            }
+            TextButton(onClick = { picker.launch("image/*") }, enabled = !vm.busy) { Text("Anexar") }
+            Spacer(Modifier.width(4.dp))
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
@@ -751,14 +773,15 @@ private fun ChatScreen(vm: MainViewModel) {
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = {
-                    val t = input; input = ""; if (t.isNotBlank()) vm.send(t)
+                    val t = input
+                    if (t.isNotBlank() || vm.pendingImage != null) { input = ""; vm.send(t) }
                 }),
             )
             Spacer(Modifier.width(8.dp))
             Column {
                 Button(
                     onClick = { val t = input; input = ""; vm.send(t) },
-                    enabled = !vm.busy && input.isNotBlank(),
+                    enabled = !vm.busy && (input.isNotBlank() || vm.pendingImage != null),
                 ) { Text("Enviar") }
                 if (vm.busy) {
                     TextButton(onClick = { vm.cancelTurn() }) { Text("Parar") }

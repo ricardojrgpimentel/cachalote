@@ -164,7 +164,7 @@ daemon/cachalote.service.sh   arranque no boot (Magisk service.d)
 config/cachalote.patch.yml    camada de patch do perfil (o que desactivamos e inserimos)
 tools/extract-kernel.cjs      app.asar → árvore JS do kernel (com trim)
 tools/patch-android.cjs       os 6 patches Android
-docs/knowledge-android.md     87 armadilhas do Android, com sintoma/causa/solução
+docs/knowledge-android.md     88 armadilhas do Android, com sintoma/causa/solução
 research/                     relatórios de investigação (superfície SDK/ACP, Bun vs Node)
 ```
 
@@ -402,7 +402,7 @@ religar, e o teste de capacidades religa-o automaticamente.
   telefone + registo de auditoria. O que resta é dar ao `bash` uma área permitida configurável
   na UI (hoje é `CACHALOTE_ALLOWED_ROOTS` no ambiente do motor).
 - **Documentação**: [`PLANO.md`](PLANO.md), [`STATUS.md`](STATUS.md) (esta página),
-  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **87 armadilhas**,
+  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **88 armadilhas**,
   [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) e [`LICENSE`](LICENSE).
 
 
@@ -788,3 +788,58 @@ compressão). O comentário no `prepare-kernel-zip.sh` fala em "~140 MB" — iss
 a árvore do `app.asar` (110 MB); a do **npm** é 383 MB. Para distribuição isto não serve como
 está: o caminho é o download do kernel na primeira execução (que o `--push` já suporta), e não
 o asset. Fica anotado no roadmap.
+
+---
+
+## 23. Anexar imagem ao prompt (item 3) e a robustez da reconexão (item 2)
+
+### 23.1 O que ficou feito do item 2
+
+O laço de reconexão tinha três problemas, todos visíveis a olho nu no emulador:
+
+| Problema | Consequência | Correção |
+|---|---|---|
+| Exigia `loaded` (haver sessão) para reconectar | matar o motor antes de existir sessão deixava a app **"desligada" para sempre** (30 s sem nada a acontecer) | o transporte é supervisionado sempre; retomar a sessão é um extra |
+| Esperava sempre 5 s, sem recuo | com o daemon em baixo, batia à porta para sempre ao mesmo ritmo | recuo exponencial 1s→2s→4s… máx 30s, reiniciado no primeiro sucesso |
+| `session is already active` tratado como falha | 295 resumes recusados no log do motor, sem nada errado | reconhecido como sucesso; as opções de modelo/esforço voltam a ser aplicadas na reconexão |
+
+Medido no emulador, matando o motor pelo `run-as`: **antes** 30 s "desligado" e sem processo
+novo; **depois** motor novo em menos de 3 s e a app outra vez "ligado".
+
+### 23.2 Item 3 — anexar imagem ao prompt (feito; voz por fazer)
+
+O motor já aceitava imagens (o `android_see` prova-o desde §18), mas **a app não deixava
+anexar**. Agora deixa: botão **Anexar** no chat, o picker do sistema, uma linha a dizer
+`imagem: <nome> · <KB> KB` com **Remover**, e o **Enviar** fica activo só com a imagem (sem
+texto). O bloco enviado é o mesmo que o `android_see` usa (`{type:"image", data, mimeType}`).
+
+Pelo caminho apareceram dois problemas, ambos reais:
+
+1. **O modelo tinha de ser declarado com modalidade de imagem.** O perfil do daemon já o fazia
+   (`config/cachalote.patch.yml`, desde §18), mas o modo **embutido** gera o seu próprio
+   `cordis.patch.yml` — e não o declarava. Resultado:
+   `Inline image prompts were not advertised by this connection`, ou seja, o motor recusava
+   *qualquer* prompt com imagem. Corrigido no `EmbeddedEngine.ensureProfilePatch()`.
+2. **O motor embutido não conseguia gravar anexos nenhuns** (patch 10, armadilha 88): o
+   armazém de anexos faz `fsync` de todos os directórios antepassados até `/`, e o uid da app
+   não pode abrir `/data`. Como daemon (root) funcionava; como app, nunca. A mensagem era
+   `unable to persist the prompt image batch` — a mesma de quando faltava o `sharp`, que
+   apontava para o sítio errado.
+
+**Prova no emulador (motor embutido, x86_64, sem root):** a imagem foi aceite, persistida em
+`files/dsh-home/attachments/v1/objects/6c/6c03b438…` com o **mesmo sha256** do ficheiro de
+origem, o registo da sessão tem o bloco de imagem no turno, e o turno chegou ao modelo —
+falhando apenas em `no API key`, que é o esperado num emulador sem chave.
+
+**Voz: por fazer.** Fica como a outra metade do item 3.
+
+### 23.3 Item 4 — SEA + snapshot V8: o que é preciso, e porque não foi feito
+
+O D6b já avisava que isto é maior do que parece, e confirmei-o ao ler o código: o blob de
+snapshot é específico de **arch + sistema + versão de Node**, logo tem de ser construído **no
+próprio aarch64 Android** (não serve construí-lo no computador); o builder recusa módulos de
+utilizador extra, o que obriga a empacotar o núcleo fixo num único entry com **esbuild**; o
+`dsh/lib/bin.js` é ESM e precisa de um **wrapper CJS**; e os plugins têm de ficar de fora para
+não partir o `require`/`import()` dinâmico do cordis. É um trabalho com várias fases, e não
+algo que se faça bem em cima do resto — fica para uma sessão própria, com o emulador (que
+agora funciona) como banco de ensaio antes do telefone.
