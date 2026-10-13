@@ -573,3 +573,40 @@ runtime para simular uma máquina nova):
 
 O `--skip-daemon`/`--skip-app` existem de propósito: dá para preparar só as árvores, e é o que
 uso quando não quero mexer no telemóvel.
+
+
+---
+
+## 20. Nota de passagem (estado em 2026-10-13, telemóvel offline)
+
+Tudo o que está descrito acima foi verificado **no S10+** enquanto ele esteve ligado. O
+repositório está em `main`, empurrado, sem alterações pendentes.
+
+### O que ficou por verificar (precisa do telemóvel)
+
+1. **`android_see` pelo agente, ponta a ponta.** O caminho *imagem → anexo → modelo* está
+   provado directamente (o modelo leu **512** de uma captura enviada só como imagem e o objecto
+   ficou em `attachments/v1/objects/`). Falta a corrida em que é o **agente** a chamar a
+   ferramenta: as tentativas foram interrompidas pelos diálogos da guarda de caminhos (o agente
+   tentava `bash` para trazer a calculadora para a frente) e pela automação da UI. O código da
+   ferramenta usa exactamente o mesmo `saveImage` que já funciona.
+2. **`bootstrap.sh` completo** (passos 4 e 5: daemon + app). O teste real foi feito com
+   `--skip-daemon --skip-app`; a árvore do kernel veio do npm com todos os patches e o runtime
+   do Termux saiu com o `sha256` idêntico ao do telemóvel.
+3. **Árvore nova no dispositivo.** O daemon ainda corre a árvore derivada do `app.asar` do
+   desktop (21 066 ficheiros na do npm, 10 222 na do desktop) — mesmos patches, mas vale a pena
+   reinstalar a partir do npm para provar o caminho que o bootstrap usa.
+4. **Teste de UI, passo "token obtido"**: é o único passo que falha de vez em quando (a app
+   reabre noutro separador e o botão fica fora do ecrã); precisa de rolar antes de tocar.
+
+### O que continua no roadmap (sem pressa)
+
+| Item | Nota |
+|---|---|
+| **vscreen** (ecrã virtual) | decisão LGPL em aberto; não incluí nada do Operit |
+| **SEA + snapshot V8** (D6b) | ganho de arranque; risco de partir o porto |
+| **Kernel na APK** | feito (`--bundle` + verificação sha256); em produção, asset ou download |
+| **LMK sob pressão** | FGS + supervisão feitos, nunca testado com o telemóvel sem memória |
+| **CI** | não há `.github/`; o teste F0 por versão de kernel é o candidato natural |
+| **Arranque do Shizuku no boot** | o Shizuku tem a opção; o modo Shizuku precisa que ele esteja a correr |
+| **Voz, visão em vídeo, `session/close` na UI** | por fazer |
