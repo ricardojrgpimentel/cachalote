@@ -406,3 +406,20 @@ religar, e o teste de capacidades religa-o automaticamente.
 - **Documentação**: [`PLANO.md`](PLANO.md), [`STATUS.md`](STATUS.md) (esta página),
   [`docs/knowledge-android.md`](docs/knowledge-android.md) com **65 armadilhas**,
   [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) e [`LICENSE`](LICENSE).
+
+
+---
+
+## 14. Nota sobre os testes e a chave
+
+Os testes que conduzem o **agente** (passo 6 do `app-ui-test` e o passo 2 do
+`app-capabilities-test`) precisam de uma chave válida: sem ela o turno falha com
+`Authentication Fails` e o passo não passa — é o comportamento correcto, não uma avaria.
+
+Estado depois desta ronda: **`app-ui-test` 9/9** (a chave de teste é guardada e reposta, e o
+`.env` fica como estava) e **`app-capabilities-test` 4/5**, com o passo em falta a ser
+exactamente o que precisa da chave. Depois de repores a chave, corre outra vez:
+
+```sh
+./daemon/set-key.sh --verify && ./tools/app-capabilities-test.sh --full
+```
