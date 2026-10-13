@@ -76,20 +76,19 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "ERRO: falta '$1' ($2)"; exit
 
 # ---------------------------------------------------------------- JDK e SDK
 detect_java() {
-  local sdk="${1:-${ANDROID_HOME:-}}"
+  local sdk="${1:-${ANDROID_HOME:-}}" c
   if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then echo "$JAVA_HOME"; return; fi
-  for candidate in "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
-                   "$HOME/Android/Sdk/jbr" "/usr/lib/jvm/java-21-openjdk-amd64" \
-                   /usr/lib/jvm/*/bin/java; do
-    candidate="${candidate%/bin/java}"
-    [ -x "$candidate/bin/java" ] && { echo "$candidate"; return; }
-  done
-  # Um SDK gerido por ferramentas traz o JDK ao lado (ex.: ~/.local/share/montra-android/
-  # jdk-21.*): não vale a pena obrigar a instalar um JDK que já lá está.
-  local c
-  for c in "$sdk"/jdk-* "$sdk"/jbr; do
+  # Os JDKs que os SDKs de Android trazem (Android Studio, montra) são os que o AGP espera —
+  # vêm PRIMEIRO. Um `/usr/lib/jvm/*/bin/java` genérico apanha o JDK do sistema, que numa
+  # máquina actualizada pode ser o 26; o AGP 8.x não o suporta e o build morre com um erro
+  # que não diz nada de útil ("What went wrong: 26.0.2.1").
+  for c in "$sdk"/jbr "$sdk"/jdk-* \
+           "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+           "$HOME/Android/Sdk/jbr" \
+           /usr/lib/jvm/java-21-openjdk /usr/lib/jvm/java-17-openjdk; do
     [ -x "$c/bin/java" ] && { echo "$c"; return; }
   done
+  return 1
 }
 detect_sdk() {
   if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ]; then echo "$ANDROID_HOME"; return; fi

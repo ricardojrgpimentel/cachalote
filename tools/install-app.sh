@@ -18,11 +18,12 @@ export ANDROID_USER_HOME="$WS/.work/android-home"
 # O JDK: respeitar o que vier do ambiente (o bootstrap detecta-o e passa-o) e só procurar
 # sozinho se não vier nada. O caminho do Android Studio é o **do macOS** e estava fixo aqui —
 # no Linux sobrepunha-se ao JAVA_HOME do bootstrap e o build morria sem explicação.
+# Os JDKs que os SDKs trazem vêm primeiro: um JDK do sistema demasiado novo (26) faz o AGP
+# falhar com um erro que não aponta para a causa.
 if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME:-}/bin/java" ]; then
-  for c in "$HOME/Android/Sdk/jbr" "${ANDROID_HOME:-}/jdk-"* "${ANDROID_HOME:-}/jbr" \
+  for c in "${ANDROID_HOME:-}/jbr" "${ANDROID_HOME:-}/jdk-"* "$HOME/Android/Sdk/jbr" \
            "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
-           /usr/lib/jvm/*/bin/java; do
-    c="${c%/bin/java}"
+           /usr/lib/jvm/java-21-openjdk /usr/lib/jvm/java-17-openjdk; do
     [ -x "$c/bin/java" ] && { JAVA_HOME="$c"; break; }
   done
 fi
