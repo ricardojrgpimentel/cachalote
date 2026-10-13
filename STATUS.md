@@ -360,3 +360,35 @@ não pedem nada). Implementado como **patch 7** ao `dsh-tool-bash`.
   link até ao `nativeLibraryDir`. Runtime embutido: **89 MB**.
 - Falta empacotar a árvore do kernel (145 MB) na APK e o modo de motor em processo para fechar
   o flavor; a parte tecnicamente incerta está resolvida.
+
+
+---
+
+## 13. Verificação com reinício real (o que faltava provar)
+
+Reiniciei o S10+ e verifiquei a cadeia completa de arranque:
+
+| Verificação | Resultado |
+|---|---|
+| `sys.boot_completed` | `1` |
+| **Daemon arrancou sozinho** (Magisk `service.d`) | ✅ `daemon: a correr (pid 9001)` — pid baixo = arrancou cedo |
+| Motor + handshake | ✅ `OK deepseek-harness-acp 0.0.1` |
+| Chave do utilizador | ✅ intacta (53 bytes, modo 600) |
+| Acessibilidade | ✅ religou sozinha (com a nuance do item 65: pode demorar até o sistema religar o serviço ao processo novo) |
+| App | ✅ liga-se sozinha ao daemon e o cartão de primeiros passos desaparece quando está tudo pronto |
+
+Também ficou registado que **`force-stop` e reinstalação desligam o serviço de acessibilidade**
+(comportamento do Android) — o cartão de primeiros passos detecta e oferece o botão para
+religar, e o teste de capacidades religa-o automaticamente.
+
+### Onde está o projecto
+
+- **Estado**: tudo o que o plano pedia está feito e verificado no dispositivo, excepto o
+  flavor Shizuku e o empacotamento do kernel no flavor sem root (o núcleo técnico deste
+  último está provado: `libnode.so` executa com targetSdk 35).
+- **Segurança**: allow-list de capacidades + guarda de caminhos no `bash` com aprovação no
+  telefone + registo de auditoria. O que resta é dar ao `bash` uma área permitida configurável
+  na UI (hoje é `CACHALOTE_ALLOWED_ROOTS` no ambiente do motor).
+- **Documentação**: [`PLANO.md`](PLANO.md), [`STATUS.md`](STATUS.md) (esta página),
+  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **65 armadilhas**,
+  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) e [`LICENSE`](LICENSE).

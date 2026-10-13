@@ -584,3 +584,16 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Solução:** o estado vive no **ViewModel** (`accessibilityOn`) e é refrescado por um laço
   do `viewModelScope` — independente do ciclo de composição. A UI só lê.
 - **Origem:** **[LOCAL]**.
+
+### 65. Depois de um reboot, o serviço de acessibilidade pode demorar a ligar ao processo novo
+- **Observação:** logo após reiniciar, `dumpsys accessibility` já mostra o serviço *bound* e a
+  definição intacta, mas a app (processo arrancado depois) ainda reportava
+  `accessibility: false`; minutos depois, e sem intervenção, passou a `true`.
+- **Causa:** o sistema religa o serviço ao processo do app de forma assíncrona; entre o
+  arranque do processo e o `onServiceConnected` há uma janela.
+- **Solução:** o estado da acessibilidade é lido por um laço do ViewModel (2 s) e a UI mostra
+  o item como pendente com o botão "Abrir Acessibilidade" enquanto não estiver ligado — não se
+  assume nada no arranque.
+- **Verificado no reboot real:** daemon arrancou sozinho (pid baixo, `handshake OK`), chave
+  intacta (53 bytes, 0600) e a acessibilidade voltou a ligar sozinha.
+- **Origem:** **[LOCAL]**.

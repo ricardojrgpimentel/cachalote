@@ -471,7 +471,7 @@ private fun StatusScreen(vm: MainViewModel) {
                 Text("root: " + when (vm.rootOk) { true -> "concedido"; false -> "negado"; null -> "?" })
                 Text("token: ${vm.tokenState}")
                 Text(
-                    "diagnóstico: pid ${android.os.Process.myPid()} · a11y ${vm.accessibilityOn}",
+                    "diagnóstico: pid ${android.os.Process.myPid()} · a11y ${vm.accessibilityOn} · ticks ${vm.a11yTicks} · direto ${CachaloteAccessibilityService.isEnabled()}",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text("motor: ${vm.agentInfo.ifBlank { "(handshake ainda não feito)" }}")

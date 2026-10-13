@@ -70,6 +70,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Acessibilidade ligada? Vem do próprio serviço; refrescado por um laço do ViewModel. */
     var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
+    var a11yTicks by mutableStateOf(0)
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
 
     private val store = SessionStore(app)
@@ -140,6 +141,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             while (true) {
                 accessibilityOn = CachaloteAccessibilityService.isEnabled()
+                a11yTicks += 1
                 kotlinx.coroutines.delay(2_000)
             }
         }
