@@ -856,3 +856,41 @@ Verificado no emulador: o botão existe, lança o reconhecedor **real** do siste
 (`com.google.android.tts/…GoogleTTSActivity`), que abre a ouvir, e ao fechar o diálogo a app
 volta intacta. O reconhecimento em si não dá para exercitar num emulador headless, que não tem
 microfone — o que se prova é o caminho: intenção lançada, resultado tratado, texto inserido.
+
+### 23.5 Item 4 — o ponto de partida, medido
+
+Antes de optimizar seja o que for, fiz o instrumento e a medida — sem isso não se sabe se uma
+mudança ganhou ou apenas mexeu. `tools/engine-startup-bench.cjs` mede o arranque a frio (do
+`spawn` do motor até à resposta ao `initialize` do ACP), com o `initialize` escrito mal o
+processo arranca, para que o arranque do Node e a composição do kernel entrem na conta.
+
+**Baseline no emulador (x86_64, Android 16), kernel do npm, 5 corridas:**
+
+```
+1: 1382 ms   (primeira, caches frias)
+2:  927 ms   3: 913 ms   4: 886 ms   5: 901 ms
+== min 886 ms · mediana 913 ms ==
+```
+
+Os 187 ms do D6b são de outra máquina, não deste emulador — o que interessa é que agora há um
+número repetível **aqui**, que é contra o que qualquer optimização será comparada.
+
+**Primeira hipótese testada, e o resultado foi negativo.** O D6b sugere `NODE_COMPILE_CACHE`,
+mas só *depois* de empacotar. Testei-o antes, para saber quanto valia sozinho:
+
+```
+== min 984 ms · mediana 1046 ms ==   (pior do que os 913 ms sem cache)
+24 KB escritos — a cache não agarra o kernel
+```
+
+Ou seja: ligar a cache ao kernel **como ele está** não só não ajuda como piora ligeiramente, e
+escreve 24 KB de um kernel de 214 MB. Isto confirma a ordem que o D6b indica (empacotar
+primeiro, cache depois) e poupa-nos de a ligar às cegas a achar que ganhámos algo.
+
+**O que falta, e porque não foi começado.** O passo seguinte é empacotar o núcleo fixo com
+**esbuild** num único entry (o `bin.js` é ESM, precisa de wrapper CJS; os plugins ficam
+externos para não partir o `require`/`import()` dinâmico do cordis) e só depois o snapshot
+V8/SEA — que tem de ser construído **no próprio aarch64** (o blob é específico de
+arch+sistema+versão de Node). São fases encadeadas, cada uma com o seu teste; fazem-se mal
+enxertadas no fim de uma sessão longa. O esbuild também ainda não está instalado neste
+ambiente (e o `npx` não consegue escrever fora do workspace).
