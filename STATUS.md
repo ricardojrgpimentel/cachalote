@@ -934,3 +934,43 @@ Isto é uma unidade de trabalho própria, com o instrumento já feito para a med
 
 **Artefactos:** `tools/engine-startup-bench.cjs` (a medida) e o esbuild instalado em
 `.work/tools` (fora do repositório). O emulador ficou limpo dos ficheiros de teste.
+
+### 23.7 Item 4 — o snapshot V8: onde é que ele pára hoje
+
+Tentei o snapshot no emulador (x86_64, Node 24.18.0), que é onde o D6b diz que ele tem de ser
+construído. O padrão parecia simples — o `runCli` é exportado e o `bin.js` só o corre quando
+`import.meta.main`, logo um entry próprio podia importar (aquecer o grafo, que é o que o
+snapshot captura) e só chamar o CLI em execução:
+
+```js
+import { runCli } from "./bin-bundle.mjs";
+if (!process.env.CACHALOTE_SNAPSHOT_BUILD) await runCli();
+```
+
+**Resultado:**
+
+```
+SyntaxError: Cannot use import statement outside a module
+    at minimalRunCjs (node:internal/main/mksnapshot:207:16)
+```
+
+O `--build-snapshot` corre o entry como **CJS** (`minimalRunCjs`). Ou seja: o snapshot exige um
+entry CJS, e um entry CJS só pode chegar ao bundle ESM por `import()` **dinâmico** — e um
+`import()` dinâmico lançado no construtor pode não estar concluído quando o snapshot é tirado,
+porque o módulo CJS termina de forma síncrona. É o mesmo muro ESM/CJS do §23.6, agora do lado
+do construtor.
+
+**O que fica para a próxima sessão, por ordem, com o bloqueio de cada passo já medido:**
+
+1. **Empacotar** o núcleo com esbuild (feito: 2,4 MB em 41 ms a partir de 214 MB; tem de viver
+   dentro da árvore — os *profile bundles* resolvem-se dinamicamente).
+2. **Wrapper CJS** que faça `import()` do bundle e espere por ele, com um caminho de
+   "só aquecer" para a construção do snapshot. É aqui que está a dificuldade real, não no
+   esbuild.
+3. **Snapshot** a partir desse entry CJS, construído no dispositivo alvo (x86_64 no emulador,
+   aarch64 no telefone — o blob não é portátil).
+4. **Medir** com `tools/engine-startup-bench.cjs`, contra o baseline de **913 ms** que fica
+   registado.
+
+Nada disto é misterioso; é encadeado. E enquanto não estiver feito, é honesto dizer que o
+arranque a frio **continua nos ~900 ms**, não nos 31 ms que o D6b projectou.

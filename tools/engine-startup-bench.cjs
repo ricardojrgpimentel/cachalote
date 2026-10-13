@@ -48,7 +48,10 @@ function envForEngine() {
 function once() {
   return new Promise((resolve, reject) => {
     const t0 = Date.now();
-    const proc = spawn(NODE, ["--expose-internals", BINJS, "--profile", "acp"], {
+    const proc = spawn(NODE, [
+      ...(process.env.CACHALOTE_NODE_ARGS ? process.env.CACHALOTE_NODE_ARGS.split(/\s+/).filter(Boolean) : []),
+      "--expose-internals", BINJS, "--profile", "acp",
+    ], {
       env: envForEngine(),
       cwd: path.join(BASE, "home"),
       stdio: ["pipe", "pipe", "ignore"],
