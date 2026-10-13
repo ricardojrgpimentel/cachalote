@@ -597,3 +597,17 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Verificado no reboot real:** daemon arrancou sozinho (pid baixo, `handshake OK`), chave
   intacta (53 bytes, 0600) e a acessibilidade voltou a ligar sozinha.
 - **Origem:** **[LOCAL]**.
+
+### 66. A flag do singleton do serviço pode discordar do que o serviço faz
+- **Sintoma:** a UI mostrava "acessibilidade ligada" como pendente (`isEnabled()` → `false`)
+  **enquanto** um `android_screen` real devolvia elementos — no mesmo processo, com o mesmo
+  `dumpsys accessibility` a dizer `Bound services:{Service[label=Cachalote…]}`.
+- **Diagnóstico:** instrumentei com PID e contador; confirmou-se o mesmo processo (ex.: 25789)
+  a responder `accessibility: true` pelo canal e `false` na composição, com o contador do laço
+  congelado — a composição não estava a acompanhar as actualizações de estado.
+- **Solução:** ler o estado pela **mesma via que o agente usa** (`HostCapabilities.status()`,
+  que é o que o `android_status` devolve) e fazê-lo no `refreshStatus` (arranque e botão
+  *Atualizar*/*Verificar*), em vez de depender de um laço de estado dentro da composição.
+- **Lição:** para "o agente consegue mesmo fazer X?", a resposta tem de vir do caminho do
+  agente — não de uma flag paralela que pode divergir.
+- **Origem:** **[LOCAL]**.

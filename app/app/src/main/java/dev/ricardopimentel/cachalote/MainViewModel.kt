@@ -68,7 +68,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var audit by mutableStateOf<List<String>>(emptyList())
     var embedTest by mutableStateOf("(não testado)")
 
-    /** Acessibilidade ligada? Vem do próprio serviço; refrescado por um laço do ViewModel. */
+    /**
+     * Acessibilidade ligada? Lido pela MESMA via que o agente usa (`caps.status`), e não pelo
+     * singleton do serviço: verificado no dispositivo que a flag do singleton pode dizer
+     * `false` enquanto `android_screen` funciona (o valor tem de ser o que o agente vê).
+     */
     var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
     var a11yTicks by mutableStateOf(0)
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
@@ -136,15 +140,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { refreshStatus() }
             runCatching { run("chave") { refreshKeyStatus() } }
         refreshCapabilities()
-        // O serviço de acessibilidade liga/desliga fora do nosso controlo (Definições do
-        // sistema, force-stop): manter o estado fresco sem depender de efeitos da UI.
-        viewModelScope.launch {
-            while (true) {
-                accessibilityOn = CachaloteAccessibilityService.isEnabled()
-                a11yTicks += 1
-                kotlinx.coroutines.delay(2_000)
-            }
-        }
         }
         viewModelScope.launch {
             controller.client.events.collect { onEvent(it) }
@@ -161,6 +156,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshStatus() = run("estado") {
         rootOk = controller.hasRoot()
+        // A acessibilidade lê-se pela mesma via que o agente usa (a flag do singleton pode
+        // discordar do que o serviço realmente faz — ver knowledge 66).
+        accessibilityOn = runCatching {
+            caps.execute("status", JSONObject()).optBoolean("accessibility")
+        }.getOrElse { CachaloteAccessibilityService.isEnabled() }
+        a11yTicks += 1
         daemonInstalled = controller.daemonInstalled()
         if (daemonInstalled != true) {
             error = "o daemon não está instalado em ${controller.base} — corre daemon/install.sh no computador"

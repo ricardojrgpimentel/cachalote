@@ -426,7 +426,10 @@ private fun OnboardingCard(vm: MainViewModel) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B2A44)),
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Primeiros passos — faltam $missing", fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Primeiros passos — faltam $missing", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { vm.refreshStatus(); vm.refreshCapabilities() }, enabled = !vm.busy) { Text("Verificar") }
+            }
             checks.forEach { (label, done, action) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (done) "✓" else "•", modifier = Modifier.width(20.dp))

@@ -66,6 +66,7 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
         CAPABILITIES.forEach { if (prefs.isCapabilityAllowed(it)) allowed.put(it) }
         return JSONObject()
             .put("app", "cachalote")
+            .put("pid", android.os.Process.myPid())
             .put("accessibility", svc != null)
             .put("notifications", notificationsGranted())
             .put("allowed", allowed)
