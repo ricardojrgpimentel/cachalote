@@ -85,6 +85,8 @@ class MainActivity : ComponentActivity() {
         ) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
+        // Serviço em primeiro plano: sem ele o Android pode matar a app a meio de um turno.
+        CachaloteAgentService.start(this)
         setContent { CachaloteApp() }
     }
 }
@@ -380,6 +382,7 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
 
 @Composable
 private fun StatusScreen(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -409,6 +412,19 @@ private fun StatusScreen(vm: MainViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text("Obter token (root)") }
             OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text("Reiniciar motor") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (CachaloteAgentService.running) "serviço de agente: ligado"
+                else "serviço de agente: desligado",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedButton(onClick = {
+                val ctx2 = ctx
+                if (CachaloteAgentService.running) CachaloteAgentService.stop(ctx2)
+                else CachaloteAgentService.start(ctx2)
+            }) { Text(if (CachaloteAgentService.running) "Desligar" else "Ligar") }
         }
         Text(
             "O daemon corre como root e o sandbox do Android não é imposto: quem trava comandos " +

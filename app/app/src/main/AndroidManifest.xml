@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- O agente pode publicar notificações (android_notify). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Serviço em primeiro plano: mantém a ligação ao motor durante turnos longos. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:allowBackup="false"
@@ -23,6 +26,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Mantém a app (e o socket) vivos enquanto o agente trabalha. -->
+        <service
+            android:name=".CachaloteAgentService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Mantém a ligação ao motor do agente Cachalote para tarefas longas" />
+        </service>
 
         <!--
           Serviço de acessibilidade: as capacidades "olhos e dedos" do agente.

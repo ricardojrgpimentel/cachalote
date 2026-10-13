@@ -1,0 +1,78 @@
+package dev.ricardopimentel.cachalote
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.IBinder
+
+/**
+ * Serviço em primeiro plano: mantém a app viva (e portanto a ligação ao daemon e as
+ * capacidades Android disponíveis para o agente) durante turnos longos, com o ecrã
+ * apagado e a app em segundo plano.
+ *
+ * Sem isto, o Android pode matar o processo a meio de uma tarefa: o agente perde as
+ * "mãos" a meio e o turno fica pendurado. O serviço de acessibilidade ajuda, mas não
+ * é garantido — e este é explícito.
+ *
+ * Tipo `specialUse` de propósito: não é sincronização de dados nem media; é "manter uma
+ * ligação de agente", que é exactamente o caso de uso documentado para `specialUse`.
+ * (O `dataSync` tem limite de ~6 h por 24 h no Android 15+.)
+ */
+class CachaloteAgentService : Service() {
+
+    companion object {
+        const val CHANNEL_ID = "cachalote_agent_service"
+        const val NOTIF_ID = 42
+        @Volatile
+        var running = false
+            private set
+
+        fun start(context: Context) {
+            val intent = Intent(context, CachaloteAgentService::class.java)
+            if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+        }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, CachaloteAgentService::class.java))
+        }
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        running = true
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Agente ligado", NotificationManager.IMPORTANCE_LOW)
+                    .apply { description = "Mantém a ligação ao motor enquanto o agente trabalha" },
+            )
+        }
+        val open = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notif: Notification = (if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this))
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle("Cachalote ligado ao motor")
+            .setContentText("O agente pode continuar a trabalhar com o ecrã apagado")
+            .setContentIntent(open)
+            .setOngoing(true)
+            .setPriority(Notification.PRIORITY_LOW)
+            .build()
+        startForeground(NOTIF_ID, notif)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+
+    override fun onDestroy() {
+        running = false
+        super.onDestroy()
+    }
+}

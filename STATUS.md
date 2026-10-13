@@ -5,6 +5,9 @@
 >
 > **F2 entregue**: app Android nativa com ecrã da chave (colas a chave no telemóvel) e
 > conversa com o agente. Ver §9.
+>
+> **F3 entregue**: o agente **opera o telefone** — notificações, ler o ecrã, tocar, escrever,
+> teclas e captura — com allow-list de capacidades e registo. Ver §10.
 
 ---
 
@@ -212,3 +215,65 @@ resposta do modelo que aparece no transcript.
 3. **Compilar neste Mac** exige `GRADLE_USER_HOME` e `ANDROID_USER_HOME` **dentro do
    workspace** (a política de ficheiros do harness bloqueia `~/.gradle` e `~/.android`), e o
    JDK é o do Android Studio (`Contents/jbr`).
+
+
+---
+
+## 10. F3 — o agente opera o telefone (feito e verificado)
+
+### Arquitectura do canal reverso
+
+```
+ferramenta no kernel (android_screen, android_tap, …)
+   │  TCP 127.0.0.1:39731, cliente "tool", token
+   ▼
+daemon (ponte)  ──►  pedido host.call (id string "host-N")  ──►  app
+   ▲                                                              │
+   └──────────────── resposta {result|error} ◄────────────────────┘
+```
+
+### Ferramentas que o modelo passa a ter
+
+| Ferramenta | O que faz | Precisa de |
+|---|---|---|
+| `android_status` | diz o que a app pode fazer (acessibilidade, capacidades autorizadas) | — |
+| `android_notify` | publica uma notificação no telefone | permissão de notificações |
+| `android_screen` | lê o ecrã como lista de elementos (texto, descrição, limites, clicável/editável) | acessibilidade |
+| `android_tap` | toca por texto, descrição ou coordenadas | acessibilidade |
+| `android_type` | escreve no campo focado (com Enter opcional) | acessibilidade |
+| `android_key` | back / home / recents / enter / gaveta de notificações | acessibilidade |
+| `android_see` | captura o ecrã para PNG e devolve o caminho | acessibilidade (Android 11+) |
+
+### Prova ponta-a-ponta (agente real, no S10+)
+
+```
+1) android_status  → {"accessibility": true, "notifications": true,
+                      "allowed": ["notify","screen","tap","type","key","screenshot"]}
+2) bash            → am start -n com.android.calculator2/.Calculator   (abriu a app)
+3) android_screen  → 36 elementos: √ π ^ ! DEG sin cos tan … 7 8 9 × … AC ( ) % ÷
+4) android_tap     → {"ok": true, "clicked": "7"}
+5) android_screen  → o visor (formula) passou de "Sem fórmula" para "7"
+```
+
+Verificação independente (fora do agente): `formula = "7"` na calculadora. Repetível com
+[`tools/app-capabilities-test.sh`](tools/app-capabilities-test.sh) `--full` → **6/6 passos**.
+
+### A barreira de segurança (o que substitui o sandbox que o Android não tem)
+
+- **Allow-list por capacidade** no separador **Poderes**: `notify` nasce autorizada; o resto é
+  opt-in, com botões de autorizar/negar todas. O agente pede, a app recusa com uma mensagem
+  clara e o modelo percebe.
+- **Registo de auditoria**: cada pedido (capacidade + parâmetros, 160 chars) fica visível na
+  app, com botão de limpar.
+- **Serviço em primeiro plano** (`specialUse`): o agente sobrevive a turnos longos com o ecrã
+  apagado — verificado 95 s com `appConnected: true` e `isForeground=true`.
+
+### Comandos novos
+
+```sh
+./tools/app-capabilities-test.sh          # 5 passos: FGS, acessibilidade, status, notificação
+./tools/app-capabilities-test.sh --full   # + interacção real (calculadora)
+adb shell su -c '/data/adb/cachalote/bin/cachalote status'          # estado do daemon
+adb shell su -c 'LD_LIBRARY_PATH=/data/adb/cachalote/runtime/lib \
+  /data/adb/cachalote/runtime/bin/node /data/adb/cachalote/ctl.cjs host.status'   # app ligada?
+```

@@ -440,3 +440,62 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **O que fazer (F3):** a barreira tem de ser nossa — impor allowlist de caminhos e auditoria
   na ponte `host.*`, ou (no flavor sem privilégios) deixar o sandbox do Android ser o limite.
 - **Origem:** **[LOCAL]** (teste ponta-a-ponta com o agente real).
+
+---
+
+## P. F3: capacidades Android, canal reverso e sobrevivência
+
+### 53. Um plugin posto à mão na árvore **não é resolvido por nome** pelo loader
+- **Sintoma:** `tool-cachalote (@deepseek-ai/dsh-tool-cachalote): failed to import` — sem mais
+  detalhe (o loader só diz isto quando `entry.fiber === undefined`, ou seja quando o *import*
+  falhou).
+- **Diagnóstico:** `import("@deepseek-ai/dsh-tool-cachalote")` a partir de
+  `.../kernel/dsh/` funciona, e `import.meta.resolve` resolve para o ficheiro certo. Mas o
+  loader importa com o `bareModuleBaseUrl` do **perfil** (não da árvore do kernel), e a nossa
+  pasta não está nesse caminho de resolução.
+- **Solução:** no `cordis.patch.yml`, referir o plugin por **caminho absoluto** —
+  `name: '/data/adb/cachalote/kernel/dsh/node_modules/@deepseek-ai/dsh-tool-cachalote/lib/index.js'`.
+  O loader trata `isAbsolute(name)` com `pathToFileURL`, e as dependências do plugin resolvem
+  a partir da localização do ficheiro.
+- **Bónus:** as `peerDependencies` têm de casar com o que está instalado; copiar as de um
+  plugin shipped resolve o problema (`"@deepseek-ai/dsh-tools": "0.2.0-rc.2"`,
+  `"@deepseek-ai/cordis": "~4.0.4"`).
+- **Origem:** **[LOCAL]**.
+
+### 54. Canal reverso: o motor pede, a app executa
+- **Desenho:** ferramenta (plugin no kernel) → daemon (`cachalote.host.call`, cliente TCP com
+  papel `tool`) → daemon → app (`host.call`, pedido com id **string** `host-N`) → app executa
+  → responde → daemon → plugin. Ver §D11 do plano.
+- **Porque ids string:** os pedidos que o daemon faz à app não podem colidir com os ids
+  numéricos que a app e o servidor ACP usam nas suas próprias chamadas. `host-1`, `host-2`…
+  são inconfundíveis.
+- **Porque papel no auth:** a app e o plugin ligam-se ao **mesmo** porto TCP com o mesmo
+  token; só o cliente que se identifica como `app` recebe os pedidos `host.call`.
+- **Resultado verificado:** o agente correu `android_status`, lançou a calculadora por bash,
+  leu 36 elementos do ecrã, tocou no botão `7` e confirmou `formula = "7"`.
+- **Origem:** **[LOCAL]**.
+
+### 55. Ligar o serviço de acessibilidade: `settings put` e a reinstalação
+- **Observação:** `settings put secure enabled_accessibility_services <pkg>/<pkg>.<Serviço>` +
+  `accessibility_enabled 1` funciona — mas **uma reinstalação do APK desliga o serviço** (o
+  Android revalida os serviços de acessibilidade no update). O caminho do utilizador é
+  Definições → Acessibilidade; a app deve guiar (botão que abre esse ecrã) e mostrar o estado.
+- **Verificação:** `dumpsys accessibility` → `Bound services:{Service[label=Cachalote, …]}`.
+- **Origem:** **[LOCAL]**.
+
+### 56. Manter o agente vivo: `specialUse`, não `dataSync`
+- **Problema:** a meio de um turno longo, com o ecrã apagado, o Android mata o processo — e o
+  agente perde as "mãos" (a ligação ao daemon e as capacidades) a meio da tarefa.
+- **Solução:** serviço em primeiro plano com `foregroundServiceType="specialUse"`
+  (+ `FOREGROUND_SERVICE_SPECIAL_USE`). O `dataSync` tem limite de ~6 h/24 h no Android 15+ e
+  não descreve o caso; `specialUse` é o tipo documentado para "manter uma ligação de agente".
+- **Verificado:** 95 s com o ecrã bloqueado → `appConnected: true`, `isForeground=true
+  foregroundId=42 types=0x40000000`, acessibilidade ainda `Bound`.
+- **Nota:** o serviço de acessibilidade, por si só, já ajuda a manter o processo vivo, mas não
+  é garantido — o FGS é explícito.
+- **Origem:** **[LOCAL]**.
+
+### 57. `ACTION_IME_ENTER` é uma `AccessibilityAction`
+- **Sintoma:** `unresolved reference 'ACTION_IME_ENTER'` no Kotlin com compileSdk 35.
+- **Solução:** `AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id`.
+- **Origem:** **[LOCAL]**.

@@ -258,11 +258,11 @@ handshake:  OK deepseek-harness-acp 0.0.1
 Gradle + Kotlin + Compose. Módulos `:app`, `:rpc`, `:caps`. Cliente do protocolo com streaming, lista/criação de sessões, aprovações, escolha de modelo, histórico local leve.
 - **Saída:** conversa completa pela UI própria, com streaming e uso de ferramentas visível.
 
-### F3 — Capacidades Android (3–5 dias)
+### F3 — Capacidades Android (3–5 dias) — ✅ **feito** (ver STATUS.md §10)
 Ponte reversa `host.*`; `AccessibilityService` (ler árvore, tap/type/scroll, screenshot), notificações, share sheet, SAF/ficheiros, arranque/paragem/diagnóstico do daemon na UI, ferramentas do modelo correspondentes.
 - **Saída:** “abre a app X e faz Y” e “tira screenshot e descreve” sem tocar no ecrã.
 
-### F4 — Modo completo, plugins e extras (2–4 dias)
+### F4 — Modo completo, plugins e extras (2–4 dias) — ⏳ por fazer (ver §11 do STATUS)
 Perfil `web` no daemon + WebView na app (paridade), gestão de plugins (pnpm), browser tool, virtual display **se** valer a pena (decisão LGPL em D8).
 - **Saída:** paridade funcional com o DSH desktop.
 
