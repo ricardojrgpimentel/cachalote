@@ -402,3 +402,41 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   ⚠ O erro inicial aponta para a biblioteca nativa, mas a causa real é a permissão de escrita
   no `.lock` — ler o `--stacktrace` até ao fim poupa muito tempo.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## O. F3: aprovações, teclado e a verdade incómoda do sandbox
+
+### 50. Um pedido do motor é um frame com `id` **e** `method`
+- **Sintoma:** o turno fica pendurado quando o agente pede autorização; nenhum erro visível.
+- **Causa:** o cliente tratava **qualquer** frame com `id` como resposta a uma chamada sua
+  (`pending.remove(id)`) — e um `session/request_permission` tem `id` **e** `method`. Era
+  descartado em silêncio, e o motor ficava à espera de resposta.
+- **Solução:** distinguir os três casos: `id+method` = **pedido** (responder com
+  `{result:{outcome:{outcome:"selected",optionId}}}` ou `{outcome:{outcome:"cancelled"}}`);
+  `id` só = resposta; sem `id` = notificação.
+- **Origem:** **[LOCAL]** (implementado e testado).
+
+### 51. Compose por baixo do teclado (e o Enter que não envia)
+- **Sintoma:** com o teclado aberto, o botão *Enviar* fica inalcançável — os toques caem no
+  teclado; e premir Enter não faz nada.
+- **Causa:** sem tratar os insets do IME (o `adjustResize` do manifest não chega em Compose
+  com edge-to-edge) e sem `KeyboardActions`.
+- **Solução:** `WindowCompat.setDecorFitsSystemWindows(window, false)` + `Modifier.imePadding()`
+  no `Scaffold`, e `KeyboardOptions(imeAction = ImeAction.Send)` +
+  `KeyboardActions(onSend = …)` no campo.
+- **Origem:** **[LOCAL]**.
+
+### 52. ⚠ No Android as aprovações de `bash` **não disparam** (consequência de D10)
+- **Observação:** pedi ao agente para executar `touch /sdcard/…` (fora do workspace). Com o
+  preset `workspace-write` e `approval: ask`, **não houve pedido de autorização** — o comando
+  correu e devolveu "Comando executado com sucesso".
+- **Porquê:** o fluxo de aprovação do DSH é accionado pelo *escalonamento*: o comando falha
+  porque o sandbox o impede (Landlock), e só então o `tool-bash` pede autorização para um modo
+  mais largo. **No Android não há sandbox a falhar**, logo nunca há escalonamento nem pedido.
+- **Consequência prática:** enquanto o motor correr como root, "workspace-write" é uma
+  declaração sem força — a UI de aprovação existe (item 50) e serve para os casos em que o
+  motor pede, mas **não é a barreira** para escrita fora do workspace.
+- **O que fazer (F3):** a barreira tem de ser nossa — impor allowlist de caminhos e auditoria
+  na ponte `host.*`, ou (no flavor sem privilégios) deixar o sandbox do Android ser o limite.
+- **Origem:** **[LOCAL]** (teste ponta-a-ponta com o agente real).

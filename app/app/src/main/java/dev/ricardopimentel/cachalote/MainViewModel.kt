@@ -10,6 +10,14 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
+/** Pedido de aprovação vindo do motor (ACP `session/request_permission`). */
+data class PendingApproval(
+    val requestId: Int,
+    val title: String,
+    val detail: String,
+    val options: List<Pair<String, String>>, // optionId -> nome visível
+)
+
 data class ChatLine(
     val role: String,          // user | assistant | thought | tool | error | system
     val text: String,
@@ -32,6 +40,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var agentInfo by mutableStateOf("")
     var sessionId by mutableStateOf<String?>(null)
     var connected by mutableStateOf(false)
+    var approval by mutableStateOf<PendingApproval?>(null)
 
     val transcript = mutableStateListOf<ChatLine>()
 
@@ -53,6 +62,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             controller.client.events.collect { onEvent(it) }
+        }
+        viewModelScope.launch {
+            controller.client.requests.collect { onRequest(it) }
         }
         viewModelScope.launch {
             controller.client.connected.collect { connected = it }
@@ -172,6 +184,54 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /** Pedido do motor: hoje só o de aprovação, que exige resposta do utilizador. */
+    private fun onRequest(obj: JSONObject) {
+        if (obj.optString("method") != "session/request_permission") {
+            // Desconhecido mas com id: responder "cancelled" para não pendurar o turno.
+            viewModelScope.launch {
+                runCatching { controller.client.respond(obj.optInt("id"), JSONObject().put("outcome", "cancelled")) }
+            }
+            return
+        }
+        val params = obj.optJSONObject("params") ?: return
+        val tool = params.optJSONObject("toolCall")
+        val opts = params.optJSONArray("options")
+        val list = ArrayList<Pair<String, String>>()
+        if (opts != null) {
+            for (i in 0 until opts.length()) {
+                val o = opts.optJSONObject(i) ?: continue
+                list.add(o.optString("optionId") to o.optString("name", o.optString("kind")))
+            }
+        }
+        approval = PendingApproval(
+            requestId = obj.optInt("id"),
+            title = tool?.optString("title") ?: "o agente pede autorização",
+            detail = tool?.opt("rawInput")?.toString()?.take(600) ?: "",
+            options = list,
+        )
+        transcript.add(ChatLine("system", "o agente pede autorização: " + (tool?.optString("title") ?: "?")))
+    }
+
+    /** Resposta ao pedido de aprovação. `optionId` nulo = cancelar o turno. */
+    fun answerApproval(optionId: String?) = run("aprovação") {
+        val req = approval ?: return@run
+        approval = null
+        val outcome = if (optionId == null) {
+            JSONObject().put("outcome", "cancelled")
+        } else {
+            JSONObject().put("outcome", JSONObject().put("outcome", "selected").put("optionId", optionId))
+        }
+        controller.client.respond(req.requestId, outcome)
+        transcript.add(ChatLine("system", if (optionId == null) "pedido recusado" else "autorizado"))
+    }
+
+    /** Interrompe o turno em curso (ACP `session/cancel`). */
+    fun cancelTurn() = run("cancelar") {
+        val sid = sessionId ?: return@run
+        controller.client.notify("session/cancel", JSONObject().put("sessionId", sid))
+        transcript.add(ChatLine("system", "turno cancelado"))
     }
 
     private fun textOf(update: JSONObject): String =

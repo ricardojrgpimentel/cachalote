@@ -56,6 +56,10 @@ class CachaloteClient {
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
 
+    /** Pedidos que vêm DO motor (ex.: `session/request_permission`): o cliente tem de responder. */
+    private val _requests = MutableSharedFlow<JSONObject>(extraBufferCapacity = 64)
+    val requests: SharedFlow<JSONObject> = _requests
+
     suspend fun connect(port: Int, token: String, timeoutMs: Int = 15_000): JSONObject =
         withContext(Dispatchers.IO) {
             disconnect()
@@ -97,6 +101,26 @@ class CachaloteClient {
         }
     }
 
+    /** Responde a um pedido do motor (o `id` vem no pedido). */
+    suspend fun respond(id: Int, result: JSONObject) = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val w = writer ?: error("sem ligação ao daemon")
+            w.write(JSONObject().put("jsonrpc", "2.0").put("id", id).put("result", result).toString())
+            w.write("\n")
+            w.flush()
+        }
+    }
+
+    /** Envia uma notificação ao motor (ex.: `session/cancel`). */
+    suspend fun notify(method: String, params: JSONObject = JSONObject()) = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            val w = writer ?: error("sem ligação ao daemon")
+            w.write(JSONObject().put("jsonrpc", "2.0").put("method", method).put("params", params).toString())
+            w.write("\n")
+            w.flush()
+        }
+    }
+
     /** Como [call], mas devolve o `result` e transforma `error` em excepção. */
     suspend fun callForResult(
         method: String,
@@ -120,10 +144,13 @@ class CachaloteClient {
                     if (line.isBlank()) continue
                     val obj = runCatching { JSONObject(line) }.getOrNull() ?: continue
                     val hasId = obj.has("id") && !obj.isNull("id")
-                    if (hasId) {
-                        pending.remove(obj.optInt("id", -1))?.complete(obj)
-                    } else {
-                        _events.tryEmit(obj)
+                    when {
+                        // ⚠ Um frame com id E method é um PEDIDO do motor, não uma resposta.
+                        // Tratá-lo como resposta (como fazíamos) descartava os pedidos de
+                        // aprovação em silêncio e o turno ficava pendurado.
+                        hasId && obj.has("method") -> _requests.tryEmit(obj)
+                        hasId -> pending.remove(obj.optInt("id", -1))?.complete(obj)
+                        else -> _events.tryEmit(obj)
                     }
                 }
             }

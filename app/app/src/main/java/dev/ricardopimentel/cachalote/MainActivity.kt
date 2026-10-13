@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,10 +23,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,12 +62,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Sem isto, o Compose desenha por baixo do teclado e o botão Enviar fica
+        // inalcançável com o teclado aberto (apanhado em teste de UI).
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent { CachaloteApp() }
     }
 }
@@ -85,6 +93,7 @@ fun CachaloteApp() {
             LaunchedEffect(Unit) { vm.refreshStatus() }
 
             Scaffold(
+                modifier = Modifier.imePadding(),
                 bottomBar = {
                     NavigationBar {
                         NavigationBarItem(
@@ -110,6 +119,7 @@ fun CachaloteApp() {
             ) { pad ->
                 Column(modifier = Modifier.padding(pad).fillMaxSize()) {
                     Header(vm, busy = vm.busy)
+                    vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     if (vm.error.isNotBlank()) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -145,6 +155,44 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
         }
         if (busy) CircularProgressIndicator(modifier = Modifier.width(22.dp).height(22.dp), strokeWidth = 2.dp)
     }
+}
+
+/**
+ * O motor pede autorização antes de uma operação sensível (ACP `session/request_permission`).
+ * As opções vêm do motor (permitir uma vez / sempre / recusar); mostramo-las tal como vêm.
+ */
+@Composable
+private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
+    AlertDialog(
+        onDismissRequest = { vm.answerApproval(null) },
+        title = { Text("Autorização") },
+        text = {
+            Column {
+                Text(ap.title, fontWeight = FontWeight.SemiBold)
+                if (ap.detail.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        ap.detail,
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ap.options.forEach { (optionId, name) ->
+                    Button(onClick = { vm.answerApproval(optionId) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(name)
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { vm.answerApproval(null) }) { Text("Recusar o turno") }
+        },
+    )
 }
 
 @Composable
@@ -316,12 +364,21 @@ private fun ChatScreen(vm: MainViewModel) {
                 placeholder = { Text("Escreve uma tarefa para o agente") },
                 modifier = Modifier.weight(1f),
                 maxLines = 4,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = {
+                    val t = input; input = ""; if (t.isNotBlank()) vm.send(t)
+                }),
             )
             Spacer(Modifier.width(8.dp))
-            Button(
-                onClick = { val t = input; input = ""; vm.send(t) },
-                enabled = !vm.busy && input.isNotBlank(),
-            ) { Text("Enviar") }
+            Column {
+                Button(
+                    onClick = { val t = input; input = ""; vm.send(t) },
+                    enabled = !vm.busy && input.isNotBlank(),
+                ) { Text("Enviar") }
+                if (vm.busy) {
+                    TextButton(onClick = { vm.cancelTurn() }) { Text("Parar") }
+                }
+            }
         }
     }
 }
