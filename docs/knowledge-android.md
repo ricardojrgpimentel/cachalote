@@ -315,3 +315,90 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Custo:** precisa de root (Magisk) ou Shizuku; e a app passa a ser um *cliente* (socket), não
   o dono do motor.
 - **Origem:** decisão nossa (D2), verificada no dispositivo.
+
+---
+
+## M. App ↔ daemon: o que o SELinux permite (e como se contorna)
+
+### 44. Uma app normal **não** se consegue ligar ao socket AF_UNIX em `/data/adb`
+- **Sintoma:** a app tenta `connect()` ao socket do daemon e recebe `EACCES`/timeout, mesmo
+  com o ficheiro legível.
+- **Causa:** o SELinux rotula `/data/adb` (e tudo lá dentro) como **`adb_data_file`**, dono
+  root, modo 0600. Não existe regra que permita `untrusted_app` escrever/ligar-se a esse tipo
+  — e o mesmo vale para `shell_data_file`, onde `untrusted_app_all` só tem `read/getattr` de
+  ficheiros, não `unix_stream_socket connectto`.
+- **Solução adoptada:** o daemon abre **também** um canal **TCP em 127.0.0.1** autenticado por
+  **token de 128 bits** (`home/app.token`, 0600, root). A app obtém o token uma vez por
+  `su -c 'cachalote app-token'` e guarda-o nas suas prefs privadas. Verificado no S10+.
+- **Alternativas:** socket dentro do directório privado da app (o daemon criaria e faria
+  `chown` para o uid da app — exige o daemon saber o pacote); ou `su -c` por operação.
+- **Origem:** **[LOCAL]** (política do dispositivo + teste real).
+
+### 45. Como um cliente dirige o agente por ACP (receita verificada)
+- **Handshake:** `initialize` `{protocolVersion: 1, clientCapabilities: {}, clientInfo: {...}}`
+  → `{protocolVersion, agentInfo:{name:"deepseek-harness-acp",version:"0.0.1"}, agentCapabilities, authMethods: []}`.
+  **Não** pede autenticação (`authMethods: []`) — a credencial do modelo vem do ambiente/ficheiro.
+- **Sessão:** `session/new` `{cwd, mcpServers: []}` → `{sessionId, configOptions:[…]}`.
+  O `sessionId` é escolhido pelo servidor; guarda-o para os turnos seguintes.
+- **Turno:** `session/prompt` `{sessionId, prompt:[{type:"text",text:"…"}]}`. A resposta
+  **só chega no fim do turno** (`{stopReason}`) — o texto vem pelas notificações.
+- **Streaming:** notificações `session/update` com
+  `params.update.sessionUpdate` ∈ `agent_message_chunk` (`content.text`),
+  `agent_thought_chunk`, `tool_call` (`title`, `toolCallId`, `status`, `rawInput`),
+  `tool_call_update`, `usage_update`, `config_option_update`. O cliente deve **filtrar por
+  `params.sessionId`**. O pensamento vem como `content.type = "reasoning"` → chunk separado.
+- **Cancelamento:** `session/cancel` (notificação) — o ACP traz o ciclo de vida completo
+  (`session/list`, `session/resume`, `session/close`, `session/set_config_option`), ao
+  contrário do perfil `sdk`, que só tem `initialize`, `session/prompt` e `shutdown`.
+- **Origem:** **[LOCAL]** (execução real) + código do `dsh-acp` 0.2.0-rc.2.
+
+### 46. Compilar APK neste Mac: JDK e Gradle
+- **JDK:** o do Android Studio serve — `/Applications/Android Studio.app/Contents/jbr/Contents/Home`
+  (OpenJDK 21). Não há Java no PATH do sistema.
+- **Gradle:** existe `gradle-8.12-all` em cache em `~/.gradle/wrapper/dists/` (usar esse).
+  ⚠ Uma distribuição 8.13 descarregada à mão falhou com
+  `Could not initialize native services / Failed to load native library 'libnative-platform.dylib'`,
+  apesar de o ficheiro existir — usar a distribuição em cache ou `-Dorg.gradle.native=false`.
+- **SDK:** `~/Library/Android/sdk` (build-tools 34/36, platforms 35/36). `app/local.properties`
+  leva `sdk.dir` e **não** é versionado.
+- **Origem:** **[LOCAL]**.
+
+---
+
+## N. F2: app nativa — o que morde
+
+### 47. O motor lê as credenciais **no arranque**
+- **Sintoma:** a chave é gravada em `home/.env` (confirmado, modo 600) mas o turno seguinte
+  ainda responde `llm-deepseek: no API key for provider route "deepseek-official"`.
+- **Causa:** o serviço de credenciais resolve as chaves quando o perfil arranca; uma alteração
+  ao ficheiro com o motor a correr **não** chega ao turno (apesar de o `dsh-credentials-local`
+  falar em *hot-publish*, a escrita por `rename` não foi apanhada neste perfil).
+- **Solução:** reiniciar o motor depois de alterar credenciais. No daemon, o
+  `cachalote.credentials.set`/`remove` **agenda** o restart (700 ms depois, para a resposta ao
+  cliente sair primeiro). Sem isto, o utilizador grava a chave e continua sem resposta.
+- **Confirmação:** depois do restart, o mesmo prompt devolve
+  `Authentication Fails, Your api key: ****7890 is invalid (request_id: …)` — ou seja, a chave
+  chegou à API.
+- **Origem:** **[LOCAL]** (teste de UI ponta-a-ponta).
+
+### 48. `NetworkOnMainThreadException` ao falar com o daemon
+- **Sintoma:** `prompt: NetworkOnMainThreadException` (ou em qualquer operação) no ecrã da app.
+- **Causa:** o cliente fazia `socket.write()` no dispatcher de chamada, que no
+  `viewModelScope` é o **Main**.
+- **Solução:** todo o `call()` corre em `Dispatchers.IO` (`withContext`), incluindo a escrita do
+  frame e a espera da resposta. Regra: nenhum acesso a socket fora do IO.
+- **Origem:** **[LOCAL]**.
+
+### 49. Compilar APK dentro de um sandbox de ficheiros
+- **Sintoma:** `Could not initialize native services / Failed to load native library
+  'libnative-platform.dylib'` seguido de, mais fundo,
+  `FileNotFoundException: ~/.gradle/native/…/libnative-platform.dylib.lock (Operation not permitted)`;
+  e depois `Unable to create debug keystore in ~/.android because it is not writable`.
+- **Causa:** o harness só deixa escrever dentro do workspace; o Gradle e o AGP querem escrever
+  em `~/.gradle` e `~/.android`.
+- **Solução:** `GRADLE_USER_HOME=<workspace>/.work/gradle-home` e
+  `ANDROID_USER_HOME=<workspace>/.work/android-home` (o keystore de debug passa a ser criado
+  lá dentro). JDK: o do Android Studio (`/Applications/Android Studio.app/Contents/jbr/Contents/Home`).
+  ⚠ O erro inicial aponta para a biblioteca nativa, mas a causa real é a permissão de escrita
+  no `.lock` — ler o `--stacktrace` até ao fim poupa muito tempo.
+- **Origem:** **[LOCAL]**.

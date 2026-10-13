@@ -6,3 +6,9 @@ repo/
 # nunca versionar segredos
 .env
 *.credentials.yaml
+
+# build Android
+app/.gradle/
+app/build/
+app/app/build/
+app/local.properties

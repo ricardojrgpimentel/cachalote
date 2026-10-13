@@ -32,10 +32,10 @@ start)
   mkdir -p "$BASE/run" "$BASE/logs" "$BASE/tmp"
   export CACHALOTE_BASE="$BASE"
   # setsid/nohup: desligar do shell que invoca o su
-  nohup "$NODE" "$BASE/bridge.cjs" >>"$BASE/logs/daemon.log" 2>&1 &
+  nohup "$NODE" "$BASE/bridge.cjs" >>"$BASE/logs/daemon-console.log" 2>&1 &
   echo $! > "$PIDFILE"
   sleep 2
-  if alive; then echo "arrancado (pid $(pid_of))"; else echo "FALHOU — ver $BASE/logs/daemon.log"; tail -n 20 "$BASE/logs/daemon.log"; exit 1; fi
+  if alive; then echo "arrancado (pid $(pid_of))"; else echo "FALHOU — ver $BASE/logs/daemon.log"; tail -n 20 "$BASE/logs/daemon.log" "$BASE/logs/daemon-console.log"; exit 1; fi
   ;;
 stop)
   if ! alive; then echo "não está a correr"; rm -f "$PIDFILE"; exit 0; fi
@@ -69,6 +69,22 @@ status)
   fi
   ;;
 logs) tail -n "${2:-80}" "$BASE/logs/daemon.log"; echo "--- engine ---"; tail -n "${2:-40}" "$BASE/logs/engine.log" ;;
+app-token)
+  # Provisionamento do app: imprime o token do canal TCP (a app guarda-o no Keystore).
+  # --rotate gera um novo (invalida o antigo).
+  if [ "${2:-}" = "--rotate" ]; then rm -f "$BASE/home/app.token"; fi
+  # O bridge cria/le o token; se o daemon estiver parado, gera aqui um equivalente
+  # (o bridge aceita o ficheiro como está, desde que tenha >= 32 caracteres).
+  if [ ! -s "$BASE/home/app.token" ]; then
+    "$NODE" -e 'const c=require("node:crypto"),f=require("node:fs");f.writeFileSync(process.argv[1],c.randomBytes(16).toString("hex")+"\n",{mode:0o600});' "$BASE/home/app.token"
+  fi
+  chmod 600 "$BASE/home/app.token" 2>/dev/null
+  cat "$BASE/home/app.token"
+  ;;
+app-info)
+  TOK="$("$0" app-token)"
+  printf '{"port":%s,"token":"%s","base":"%s","profile":"%s"}\n' "${CACHALOTE_PORT:-39731}" "$TOK" "$BASE" "${CACHALOTE_PROFILE:-acp}"
+  ;;
 env) cat "$BASE/home/.env" 2>/dev/null | sed -E 's/^(.*=.{0,4}).*/\1****/' || echo "(sem $BASE/home/.env)" ;;
-*) echo "uso: cachalote start|stop|restart|status|logs [n]|env"; exit 2 ;;
+*) echo "uso: cachalote start|stop|restart|status|logs [n]|env|app-token [--rotate]|app-info"; exit 2 ;;
 esac

@@ -2,32 +2,46 @@
 /*
  * bridge.cjs — corre NO TELEMÓVEL. É o coração do daemon:
  *
- *   motor DSH (stdio NDJSON)  ←→  este processo  ←→  socket AF_UNIX (0600)  ←→  app
+ *   motor DSH (stdio NDJSON)  ←→  este processo  ←→  { AF_UNIX 0600, TCP 127.0.0.1+token }  ←→  app
  *
  * Porque uma ponte em vez de apontar o motor directamente ao socket:
  *   · o app pode desligar/reconectar sem matar o motor (o motor é caro: 10 k+ ficheiros);
  *   · o daemon supervisiona o motor e reinicia-o se ele morrer;
- *   · um único socket serve os dois sentidos, incluindo a futura ponte `host.*`
- *     para as capacidades Android (acessibilidade, notificações, overlay);
- *   · o stderr do motor fica num log em vez de se perder.
+ *   · serve os dois sentidos: o app fala ACP e também as operações do próprio daemon
+ *     (`cachalote.*`: estado, credenciais, restart) — o motor nunca vê essas chamadas;
+ *   · o stderr do motor fica num log.
  *
- * Protocolo no socket: exactamente o mesmo do motor — JSON-RPC 2.0, um objecto
- * por linha ('\n'). O cliente não precisa de saber que existe uma ponte.
+ * Dois transportes, porque a app Android NÃO consegue usar o socket em /data/adb:
+ *   · AF_UNIX  $BASE/run/cachalote.sock  (0600, root) — para o CLI/adb e para testes;
+ *   · TCP     127.0.0.1:$CACHALOTE_PORT (por omissão 39731) — para o app, autenticado
+ *     por token de 128 bits lido de $BASE/home/app.token (0600, root). O SELinux rotula
+ *     /data/adb como `adb_data_file` e não há regra que deixe `untrusted_app` lá chegar,
+ *     por isso o loopback com token é o caminho viável (ver D11 do plano).
+ *
+ * Protocolo: JSON-RPC 2.0, um objecto por linha ('\n'), igual ao do motor.
+ * Num socket TCP, o PRIMEIRO frame tem de ser
+ *   {"jsonrpc":"2.0","id":0,"method":"cachalote.auth","params":{"token":"…"}}
+ * antes de qualquer outro método.
  */
 const net = require("node:net");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { spawn } = require("node:child_process");
 
 const BASE = process.env.CACHALOTE_BASE || "/data/adb/cachalote";
 const SOCK = process.env.CACHALOTE_SOCK || path.join(BASE, "run", "cachalote.sock");
+const PORT = Number(process.env.CACHALOTE_PORT || 39731);
 const PROFILE = process.env.CACHALOTE_PROFILE || "acp";
 const LOGDIR = path.join(BASE, "logs");
 const ENGINE_LOG = path.join(LOGDIR, "engine.log");
 const DAEMON_LOG = path.join(LOGDIR, "daemon.log");
+const ENV_FILE = path.join(BASE, "home", ".env");
+const TOKEN_FILE = path.join(BASE, "home", "app.token");
 const BINJS = path.join(BASE, "kernel", "dsh", "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js");
 const NODE = path.join(BASE, "runtime", "bin", "node");
 const MAX_LOG = 8 * 1024 * 1024;
+const VERSION = "0.2.0-f2";
 
 fs.mkdirSync(LOGDIR, { recursive: true });
 fs.mkdirSync(path.dirname(SOCK), { recursive: true });
@@ -42,11 +56,53 @@ const rotate = (file) => {
   try { if (fs.statSync(file).size > MAX_LOG) fs.renameSync(file, file + ".1"); } catch {}
 };
 
+/* ---------------- token do app ---------------- */
+function loadToken() {
+  try {
+    const t = fs.readFileSync(TOKEN_FILE, "utf8").trim();
+    if (t.length >= 32) return t;
+  } catch {}
+  const t = crypto.randomBytes(16).toString("hex");
+  fs.mkdirSync(path.dirname(TOKEN_FILE), { recursive: true });
+  fs.writeFileSync(TOKEN_FILE, t + "\n", { mode: 0o600 });
+  try { fs.chmodSync(TOKEN_FILE, 0o600); } catch {}
+  log("token do app criado em " + TOKEN_FILE);
+  return t;
+}
+let TOKEN = loadToken();
+
+/* ---------------- credenciais ---------------- */
+function readEnv() {
+  try { return fs.readFileSync(ENV_FILE, "utf8"); } catch { return ""; }
+}
+function credentialState(name) {
+  const line = readEnv().split("\n").find((l) => l.startsWith(name + "="));
+  let updatedAt = null;
+  try { updatedAt = fs.statSync(ENV_FILE).mtime.toISOString(); } catch {}
+  return { name, present: !!line && line.length > name.length + 1, length: line ? line.length - name.length - 1 : 0, updatedAt, file: ENV_FILE };
+}
+function setCredential(name, value) {
+  if (!/^[A-Z][A-Z0-9_]*$/.test(name)) throw new Error("nome de variável inválido");
+  if (typeof value !== "string" || value.trim().length < 8) throw new Error("valor demasiado curto");
+  if (/[\r\n]/.test(value)) throw new Error("o valor não pode ter quebras de linha");
+  const kept = readEnv().split("\n").filter((l) => l.trim() && !l.startsWith(name + "="));
+  kept.push(`${name}=${value.trim()}`);
+  fs.mkdirSync(path.dirname(ENV_FILE), { recursive: true });
+  const tmp = ENV_FILE + ".tmp";
+  fs.writeFileSync(tmp, kept.join("\n") + "\n", { mode: 0o600 });
+  fs.chmodSync(tmp, 0o600);
+  fs.renameSync(tmp, ENV_FILE);   // rename: o SELinux do Android nega link()
+  try { fs.chmodSync(ENV_FILE, 0o600); } catch {}
+  log(`credencial ${name} gravada (${value.trim().length} caracteres) em ${ENV_FILE}`);
+  return credentialState(name);
+}
+
 /* ---------------- motor ---------------- */
 let engine = null;
 let stopping = false;
 let restarts = 0;
 let clients = new Set();
+let startedAt = Date.now();
 
 function startEngine() {
   rotate(ENGINE_LOG);
@@ -64,11 +120,8 @@ function startEngine() {
 
   log(`a arrancar motor: perfil=${PROFILE} node=${NODE}`);
   engine = spawn(NODE, ["--expose-internals", BINJS, "--profile", PROFILE], {
-    env,
-    cwd: path.join(BASE, "home"),
-    stdio: ["pipe", "pipe", "pipe"],
+    env, cwd: path.join(BASE, "home"), stdio: ["pipe", "pipe", "pipe"],
   });
-
   const engineOut = fs.createWriteStream(ENGINE_LOG, { flags: "a" });
   engine.stdout.on("data", (b) => {
     engineOut.write(b);
@@ -90,16 +143,59 @@ function startEngine() {
   });
 }
 
-/* ---------------- clientes ---------------- */
-const server = net.createServer((socket) => {
-  // "o último cliente ganha": o app é o único cliente previsto. Um cliente novo
-  // (ex.: app reaberta) substitui o antigo em vez de ficar em fila.
-  for (const c of clients) { if (c !== socket) { log("a substituir cliente antigo"); try { c.destroy(); } catch {} } }
-  clients.clear();
-  clients.add(socket);
-  log("cliente ligado");
+/** Reinicia o motor (com atraso curto, para a resposta ao cliente sair primeiro). */
+function scheduleEngineRestart(why) {
+  log(`a reiniciar o motor: ${why}`);
+  setTimeout(() => { try { engine?.kill("SIGTERM"); } catch {} }, 700);
+}
 
+/* ---------------- operações do daemon (não vão ao motor) ---------------- */
+function control(method, params) {
+  switch (method) {
+    case "cachalote.status":
+      return {
+        daemon: true, version: VERSION, pid: process.pid, profile: PROFILE,
+        engine: !!engine, engineRestarts: restarts,
+        uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+        socket: SOCK, port: PORT, base: BASE,
+      };
+    case "cachalote.credentials.status":
+      return credentialState(params?.name || "DEEPSEEK_API_KEY");
+    case "cachalote.credentials.set": {
+      const state = setCredential(params?.name || "DEEPSEEK_API_KEY", params?.value);
+      // O motor lê as credenciais no ARRANQUE: gravar o .env com ele a correr não
+      // chega (verificado — o turno seguinte ainda dizia "no API key"). Reinicia-se.
+      scheduleEngineRestart("credencial alterada");
+      return { ...state, engineRestart: "agendado" };
+    }
+    case "cachalote.credentials.remove": {
+      const name = params?.name || "DEEPSEEK_API_KEY";
+      const kept = readEnv().split("\n").filter((l) => l.trim() && !l.startsWith(name + "="));
+      fs.writeFileSync(ENV_FILE, kept.join("\n") + (kept.length ? "\n" : ""), { mode: 0o600 });
+      scheduleEngineRestart("credencial removida");
+      return { ...credentialState(name), engineRestart: "agendado" };
+    }
+    case "cachalote.credentials.effective":
+      // Confirma que o motor tem mesmo a chave: pergunta ao serviço de credenciais
+      // através de um turno trivial seria caro; aqui só dizemos o que está no ficheiro.
+      return credentialState(params?.name || "DEEPSEEK_API_KEY");
+    case "cachalote.engine.restart":
+      scheduleEngineRestart("pedido explícito");
+      return { ok: true, note: "motor a reiniciar" };
+    default:
+      return undefined;
+  }
+}
+
+/* ---------------- ligações ---------------- */
+function attach(socket, { requireAuth }) {
+  let authed = !requireAuth;
+  let registered = false;
   let buffer = "";
+
+  const reply = (id, result, error) =>
+    socket.write(JSON.stringify(error ? { jsonrpc: "2.0", id, error } : { jsonrpc: "2.0", id, result }) + "\n");
+
   socket.on("data", (chunk) => {
     buffer += chunk.toString();
     let nl;
@@ -107,35 +203,76 @@ const server = net.createServer((socket) => {
       const line = buffer.slice(0, nl + 1);
       buffer = buffer.slice(nl + 1);
       if (!line.trim()) continue;
-      if (engine?.stdin?.writable) {
-        engine.stdin.write(line);
-      } else {
-        // Motor em baixo: responder com um erro JSON-RPC em vez de deixar pendurado.
-        let id = null;
-        try { id = JSON.parse(line).id ?? null; } catch {}
-        socket.write(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32000, message: "cachalote: o motor não está a correr" } }) + "\n");
+
+      let msg = null;
+      try { msg = JSON.parse(line); } catch {
+        reply(null, null, { code: -32700, message: "cachalote: frame não é JSON" });
+        continue;
       }
+
+      // autenticação (só TCP)
+      if (msg.method === "cachalote.auth") {
+        const okToken = typeof msg.params?.token === "string" && msg.params.token.length === TOKEN.length &&
+          crypto.timingSafeEqual(Buffer.from(msg.params.token), Buffer.from(TOKEN));
+        if (okToken) { authed = true; log("app autenticado no TCP"); reply(msg.id, { ok: true, version: VERSION }); }
+        else { log("token inválido — a fechar ligação"); reply(msg.id, null, { code: -32001, message: "token inválido" }); try { socket.destroy(); } catch {} }
+        continue;
+      }
+      if (!authed) {
+        reply(msg.id, null, { code: -32001, message: "cachalote: falta autenticação (cachalote.auth)" });
+        try { socket.destroy(); } catch {}
+        continue;
+      }
+
+      // operações do daemon
+      if (typeof msg.method === "string" && msg.method.startsWith("cachalote.")) {
+        try {
+          const result = control(msg.method, msg.params);
+          if (result === undefined) reply(msg.id, null, { code: -32601, message: "método de daemon desconhecido: " + msg.method });
+          else reply(msg.id, result);
+        } catch (e) {
+          reply(msg.id, null, { code: -32603, message: String(e?.message || e) });
+        }
+        continue;
+      }
+
+      // tudo o resto é ACP: passa ao motor (um cliente ACP de cada vez)
+      if (!registered) {
+        for (const c of clients) { if (c !== socket) { log("a substituir o cliente ACP anterior"); try { c.destroy(); } catch {} } }
+        clients.clear();
+        clients.add(socket);
+        registered = true;
+        log("cliente ACP ligado (" + (requireAuth ? "tcp" : "unix") + ")");
+      }
+      if (engine?.stdin?.writable) engine.stdin.write(line);
+      else reply(msg.id ?? null, null, { code: -32000, message: "cachalote: o motor não está a correr" });
     }
   });
-  const bye = () => { clients.delete(socket); log("cliente desligado"); };
+
+  const bye = () => { if (registered) { clients.delete(socket); log("cliente ACP desligado"); } };
   socket.on("close", bye);
   socket.on("error", (e) => { log("erro de socket: " + e.message); bye(); });
-});
+}
 
-server.on("error", (e) => { log("ERRO no servidor: " + e.message); process.exit(1); });
-
+const unixServer = net.createServer((s) => attach(s, { requireAuth: false }));
+unixServer.on("error", (e) => { log("ERRO no servidor unix: " + e.message); process.exit(1); });
 try { fs.unlinkSync(SOCK); } catch {}
-server.listen(SOCK, () => {
+unixServer.listen(SOCK, () => {
   try { fs.chmodSync(SOCK, 0o600); } catch {}
-  log(`à escuta em ${SOCK} (modo 0600), pid ${process.pid}`);
+  log(`AF_UNIX à escuta em ${SOCK} (0600), pid ${process.pid}`);
   startEngine();
 });
+
+const tcpServer = net.createServer((s) => attach(s, { requireAuth: true }));
+tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message));
+tcpServer.listen(PORT, "127.0.0.1", () => log(`TCP à escuta em 127.0.0.1:${PORT} (token obrigatório)`));
 
 function shutdown(why) {
   if (stopping) return;
   stopping = true;
   log("a terminar: " + why);
-  try { server.close(); } catch {}
+  try { unixServer.close(); } catch {}
+  try { tcpServer.close(); } catch {}
   try { engine?.kill("SIGTERM"); } catch {}
   setTimeout(() => { try { engine?.kill("SIGKILL"); } catch {} process.exit(0); }, 3000);
 }

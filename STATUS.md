@@ -2,6 +2,9 @@
 
 > Relatório para revisão. Tudo o que está marcado ✅ foi **verificado no Samsung
 > Galaxy S10+ (SM-G975F, LineageOS 23.2 / Android 16, Magisk)** — as provas estão citadas.
+>
+> **F2 entregue**: app Android nativa com ecrã da chave (colas a chave no telemóvel) e
+> conversa com o agente. Ver §9.
 
 ---
 
@@ -124,7 +127,7 @@ auditar; (b) no flavor sem privilégios, deixar o próprio sandbox da app Androi
 
 | Fase | Trabalho | Notas |
 |---|---|---|
-| **F2** | App Android nativo (Kotlin + Compose) como cliente do socket: chat, sessões, streaming de `session/update`, permissões (`session/request_permission`), ecrã da chave | o protocolo já está provado; o cliente de referência em JS é `daemon/client-smoke.cjs` |
+| ~~**F2**~~ | ~~App Android nativo~~ — ✅ **feito**, ver §9 | falta responder a `session/request_permission` (aprovações) na UI |
 | **F3** | Ponte `host.*` (o mesmo socket, sentido inverso) + `AccessibilityService`, notificações, overlay, ficheiros, e as ferramentas do modelo (`android_screen/tap/type/see`) | é aqui que se ganha o "AI que opera o telefone" |
 | **F4** | Perfil `web` + WebView (paridade total), gestão de plugins, browser tool | |
 | **F5** | Flavors (root/Shizuku/sem privilégios), onboarding de permissões, actualização assinada | |
@@ -149,3 +152,63 @@ tools/patch-android.cjs       os 6 patches Android
 docs/knowledge-android.md     40+ armadilhas do Android, com sintoma/causa/solução
 research/                     relatórios de investigação (superfície SDK/ACP, Bun vs Node)
 ```
+
+
+---
+
+## 9. F2 — a app Android nativa (feito e verificado)
+
+App em **Kotlin + Compose** (`app/`), package `dev.ricardopimentel.cachalote`, três ecrãs:
+
+| Ecrã | O que faz |
+|---|---|
+| **Estado** | estado do daemon/motor (`cachalote.status`), root concedido?, token obtido?, botões *Ligar daemon*, *Obter token (root)*, *Reiniciar motor* |
+| **Chave** | campo para **colar a API key no telemóvel**; a app envia-a ao daemon (`cachalote.credentials.set`), que a escreve em `home/.env` com **modo 600** — a app **não** a guarda |
+| **Conversa** | *Nova sessão* (ACP `session/new`), campo de prompt, e o transcript com streaming: `agent_message_chunk`, `agent_thought_chunk`, `tool_call`/`tool_call_update` |
+
+Como a app fala com o daemon (ver D11): **TCP 127.0.0.1:39731 autenticado por token**
+(o SELinux não deixa `untrusted_app` chegar ao socket AF_UNIX em `/data/adb`). O token é
+obtido **uma vez** com `su -c 'cachalote app-token'` (o Magisk guarda a autorização) e fica
+nas prefs privadas da app.
+
+### Verificação automática (9/9 passos) — `tools/app-ui-test.sh`
+
+O teste instala a app, pré-autoriza o root no Magisk, e conduz a UI por `uiautomator`/`input`:
+
+```
+== 1. app instalada e aberta ................. OK
+== 2. estado do daemon ....................... OK   ("daemon": true, …)
+== 3. obter token (root) ..................... OK
+== 4. ecrã da chave: colar e guardar ......... OK
+== 5. confirmar no daemon .................... OK   (.env com a chave de teste, modo 600)
+== 6. conversa: nova sessão + prompt ......... OK   (sessão criada; prompt enviado)
+== 7. limpeza ................................ OK   (.env vazio, modo 600)
+== resumo: 9 passos OK, 0 falhas ==
+```
+
+E a prova mais forte, no log do motor depois de a chave ser escrita **pelo ecrã da app**:
+
+```
+Authentication Fails, Your api key: ****7890 is invalid (request_id: 1304d558-…)
+```
+
+Ou seja: **a chave colada no telemóvel chegou à API DeepSeek.** Com uma chave válida, é a
+resposta do modelo que aparece no transcript.
+
+### Comandos
+
+```sh
+./tools/install-app.sh          # compila + instala + pré-autoriza root + abre a app
+./tools/app-ui-test.sh          # teste de UI completo (usa uma chave de teste e limpa-a)
+```
+
+### Notas de implementação que custaram sangue
+
+1. **Nada de I/O de socket no thread principal** — dava `NetworkOnMainThreadException`
+   (apanhado pelo teste). Todo o `call()` corre em `Dispatchers.IO`.
+2. **O motor lê as credenciais no arranque**: gravar o `.env` com o motor a correr não
+   bastava (o turno seguinte ainda dizia *"no API key"*). Agora o daemon **reinicia o motor
+   automaticamente** ao gravar/remover a chave (`cachalote.credentials.set` → `engineRestart: agendado`).
+3. **Compilar neste Mac** exige `GRADLE_USER_HOME` e `ANDROID_USER_HOME` **dentro do
+   workspace** (a política de ficheiros do harness bloqueia `~/.gradle` e `~/.android`), e o
+   JDK é o do Android Studio (`Contents/jbr`).

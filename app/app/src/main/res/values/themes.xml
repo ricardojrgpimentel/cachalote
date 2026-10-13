@@ -1,0 +1,4 @@
+<resources>
+    <!-- O desenho é todo em Compose; o tema XML só evita a ActionBar. -->
+    <style name="Theme.Cachalote" parent="android:Theme.Material.NoActionBar" />
+</resources>

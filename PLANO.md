@@ -98,6 +98,34 @@ Declarar `danger-full-access` seria pior (a política deixaria de pedir aprovaç
 - Mitigação imediata já em vigor: o preset por omissão é `workspace-write` **com
   `approval: ask`** (nunca `never`), e cada comando fica registado no log do motor.
 
+### D11 — App ↔ daemon: **TCP 127.0.0.1 + token** (o AF_UNIX não serve à app)
+A app Android **não consegue** ligar-se ao socket AF_UNIX em `/data/adb/cachalote/run/`:
+o SELinux rotula `/data/adb` como `adb_data_file` (root, 0600) e **não existe regra** que
+deixe `untrusted_app` lá chegar — confirmei na política do dispositivo:
+`allow untrusted_app_all adb_data_file` não aparece; e para `shell_data_file` só há
+`read/getattr` de ficheiros, não `unix_stream_socket connectto`.
+
+Solução adoptada (verificada no dispositivo):
+
+| | |
+|---|---|
+| AF_UNIX `run/cachalote.sock` (0600) | CLI/adb, `cachalote status`, testes |
+| **TCP `127.0.0.1:39731` + token de 128 bits** | a app |
+
+- O token vive em `home/app.token` (0600, root) e é obtido pela app com **um** `su -c
+  cachalote app-token` (o Magisk guarda a autorização; `--rotate` gera outro). Fica nas
+  prefs privadas da app. A app **nunca** guarda a API key.
+- O primeiro frame de uma ligação TCP é `cachalote.auth`; sem ele, qualquer outro método é
+  recusado e a ligação fechada. Comparação do token com `timingSafeEqual`.
+- O daemon serve operações próprias na mesma ligação (`cachalote.status`,
+  `cachalote.credentials.set/status/remove`, `cachalote.engine.restart`); o motor nunca as vê.
+- Só um cliente ACP de cada vez (o motor fala por stdio); um cliente novo substitui o antigo.
+  As chamadas `cachalote.*` **não** ocupam esse lugar, para o `cachalote status` do adb não
+  expulsar a app.
+- Alternativas avaliadas e rejeitadas por agora: socket AF_UNIX dentro do directório privado
+  da app (obrigaria o daemon a chown/criar em `/data/user/0/<pkg>/` e a descobrir o pacote) e
+  `su -c` por operação (um processo privilegiado por pedido).
+
 ---
 
 ## 2. Bun vs Node (resposta à tua pergunta)
@@ -226,7 +254,7 @@ handshake:  OK deepseek-harness-acp 0.0.1
 - **Transporte:** ponte própria `daemon/bridge.cjs` (stdio ↔ AF_UNIX) em vez de apontar o motor directamente ao socket. Motivo: reconexão do app sem matar o motor, supervisão com backoff, um só socket para os dois sentidos (incluindo a futura ponte `host.*`), e o stderr do motor num log. O ACP aceita `config.stream` e o SDK aceita `input`/`output`, portanto a alternativa sem ponte existe (verificada ao vivo com TCP pelo subagente) — fica como plano B.
 - **Chave:** `daemon/set-key.sh` grava `home/.env` com modo 600. Verificado com chave de teste: o erro passou de *"no API key"* para **`Authentication Fails, Your api key: ****0000 is invalid (request_id: …)`** — a chave chegou mesmo à API.
 
-### F2 — App nativo mínimo (3–5 dias)
+### F2 — App nativo mínimo (3–5 dias) — ✅ **feito** (ver STATUS.md §9)
 Gradle + Kotlin + Compose. Módulos `:app`, `:rpc`, `:caps`. Cliente do protocolo com streaming, lista/criação de sessões, aprovações, escolha de modelo, histórico local leve.
 - **Saída:** conversa completa pela UI própria, com streaming e uso de ferramentas visível.
 
