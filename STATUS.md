@@ -1,18 +1,16 @@
 # Cachalote — estado do projecto
 
-> ## ⚠ ACÇÃO NECESSÁRIA (1 minuto)
+> ## Estado (S10+ ligado por USB)
 >
-> **A chave do provedor tem de ser introduzida outra vez.** Durante o diagnóstico do ecrã da
-> chave escrevi uma chave de teste directamente na app e **substituí a tua chave real**, que não
-> tinha cópia no dispositivo (o daemon só registava o comprimento). O `.env` está agora vazio,
-> modo 600. Repõe com:
+> O projecto está **verde no dispositivo**: `./tools/app-ui-test.sh` **9/9** e
+> `./tools/app-capabilities-test.sh --full` **9/9**, com a chave do provedor **intacta**
+> (53 bytes, modo 600) e a funcionar. O aviso antigo de "acção necessária" para repor a chave
+> **caducou** — a chave foi reposta e há cópia de segurança em `home/.env.manual-bak`.
 >
-> ```sh
-> cd /Users/ricardopimentel/Documents/dshm && ./daemon/set-key.sh --verify
-> ```
->
-> (ou na app: separador **Chave** → colar → Guardar). O `--verify` confirma no fim com um turno
-> real. Regras para não voltar a acontecer: [`docs/knowledge-android.md`](docs/knowledge-android.md) #67.
+> **§21 é o trabalho desta ronda**, e inclui uma regressão silenciosa que valeu a pena
+> encontrar: o plugin `tool-cachalote` **não estava a carregar** (um `{}` sem `type` num schema
+> fazia o compilador do kernel recusá-lo), pelo que o agente estava **sem nenhuma** ferramenta
+> android_* — e nenhum teste se queixava. Corrigido, com teste de regressão e CI.
 
 > Relatório para revisão. Tudo o que está marcado ✅ foi **verificado no Samsung
 > Galaxy S10+ (SM-G975F, LineageOS 23.2 / Android 16, Magisk)** — as provas estão citadas.
@@ -166,7 +164,7 @@ daemon/cachalote.service.sh   arranque no boot (Magisk service.d)
 config/cachalote.patch.yml    camada de patch do perfil (o que desactivamos e inserimos)
 tools/extract-kernel.cjs      app.asar → árvore JS do kernel (com trim)
 tools/patch-android.cjs       os 6 patches Android
-docs/knowledge-android.md     40+ armadilhas do Android, com sintoma/causa/solução
+docs/knowledge-android.md     86 armadilhas do Android, com sintoma/causa/solução
 research/                     relatórios de investigação (superfície SDK/ACP, Bun vs Node)
 ```
 
@@ -404,7 +402,7 @@ religar, e o teste de capacidades religa-o automaticamente.
   telefone + registo de auditoria. O que resta é dar ao `bash` uma área permitida configurável
   na UI (hoje é `CACHALOTE_ALLOWED_ROOTS` no ambiente do motor).
 - **Documentação**: [`PLANO.md`](PLANO.md), [`STATUS.md`](STATUS.md) (esta página),
-  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **65 armadilhas**,
+  [`docs/knowledge-android.md`](docs/knowledge-android.md) com **86 armadilhas**,
   [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) e [`LICENSE`](LICENSE).
 
 
@@ -582,22 +580,22 @@ uso quando não quero mexer no telemóvel.
 Tudo o que está descrito acima foi verificado **no S10+** enquanto ele esteve ligado. O
 repositório está em `main`, empurrado, sem alterações pendentes.
 
-### O que ficou por verificar (precisa do telemóvel)
+### O que ficou por verificar (precisa do telemóvel) — actualizado em §21
 
-1. **`android_see` pelo agente, ponta a ponta.** O caminho *imagem → anexo → modelo* está
-   provado directamente (o modelo leu **512** de uma captura enviada só como imagem e o objecto
-   ficou em `attachments/v1/objects/`). Falta a corrida em que é o **agente** a chamar a
-   ferramenta: as tentativas foram interrompidas pelos diálogos da guarda de caminhos (o agente
-   tentava `bash` para trazer a calculadora para a frente) e pela automação da UI. O código da
-   ferramenta usa exactamente o mesmo `saveImage` que já funciona.
+1. ~~**`android_see` pelo agente, ponta a ponta.**~~ ✅ **feito em §21**: o agente chama a
+   ferramenta, a captura vira anexo e o modelo lê o número da imagem (com o prompt a não o
+   dizer). Passou a ser o passo 5 do `app-capabilities-test.sh --full`.
 2. **`bootstrap.sh` completo** (passos 4 e 5: daemon + app). O teste real foi feito com
    `--skip-daemon --skip-app`; a árvore do kernel veio do npm com todos os patches e o runtime
-   do Termux saiu com o `sha256` idêntico ao do telemóvel.
+   do Termux saiu com o `sha256` idêntico ao do telemóvel. **Continua por fazer.**
 3. **Árvore nova no dispositivo.** O daemon ainda corre a árvore derivada do `app.asar` do
    desktop (21 066 ficheiros na do npm, 10 222 na do desktop) — mesmos patches, mas vale a pena
-   reinstalar a partir do npm para provar o caminho que o bootstrap usa.
-4. **Teste de UI, passo "token obtido"**: é o único passo que falha de vez em quando (a app
-   reabre noutro separador e o botão fica fora do ecrã); precisa de rolar antes de tocar.
+   reinstalar a partir do npm para provar o caminho que o bootstrap usa. **Continua por fazer.**
+   Nota de §21: o plugin instalado era **byte a byte** igual ao do repositório, o que permitiu
+   corrigir só o ficheiro do plugin sem reinstalar a árvore.
+4. ~~**Teste de UI, passo "token obtido"**~~ ✅ **feito em §21** (garantir o separador Estado +
+   verificar com nova tentativa). O passo 7 ("remover chave") também era intermitente — e a
+   causa era outra, mais interessante: um `BACK` a mais fechava a app. Ver §21.
 
 ### O que continua no roadmap (sem pressa)
 
@@ -607,6 +605,115 @@ repositório está em `main`, empurrado, sem alterações pendentes.
 | **SEA + snapshot V8** (D6b) | ganho de arranque; risco de partir o porto |
 | **Kernel na APK** | feito (`--bundle` + verificação sha256); em produção, asset ou download |
 | **LMK sob pressão** | FGS + supervisão feitos, nunca testado com o telemóvel sem memória |
-| **CI** | não há `.github/`; o teste F0 por versão de kernel é o candidato natural |
+| ~~**CI**~~ | ✅ **feito em §21**: `.github/workflows/ci.yml` (regressão do schema do plugin + sintaxe) |
 | **Arranque do Shizuku no boot** | o Shizuku tem a opção; o modo Shizuku precisa que ele esteja a correr |
 | **Voz, visão em vídeo, `session/close` na UI** | por fazer |
+| **Ligação app↔daemon aos solavancos** | §21: a app reconecta em ciclo depois de o motor reiniciar (a chave grava → motor reinicia); um pedido nesse intervalo falha com "a ligação ao motor caiu". Vale a pena tornar a reconexão mais calma. |
+
+---
+
+## 21. Ronda com o telemóvel ligado: a regressão silenciosa e o fecho do §20
+
+### 21.1 O que apareceu primeiro: o plugin estava morto
+
+Ao inventariar o dispositivo, o log do daemon trazia isto desde o arranque do motor:
+
+```
+[motor] dsh: warning: 1 entry did not activate | tool-cachalote
+  (…/dsh-tool-cachalote/lib/index.js): JsonSchemaError: unsupported JSON schema:
+  schema.properties.attachmentRef.type must be string/number/integer/boolean/null/array/object/json,
+  or use oneOf
+```
+
+- **Causa:** `kernel-plugins/cachalote-tools/lib/index.js` declarava `attachmentRef: {}` — um
+  nó **sem `type`** — no schema de saída do `android_see`. O compilador de schema do kernel
+  recusa esse nó, o `defineTool` lança, e o plugin **inteiro** não activa. O agente ficava
+  **sem nenhuma ferramenta `android_*`**: sem `android_status`, sem tocar, sem ver o ecrã.
+- **Quando entrou:** com o trabalho de visão de §18 (o `attachmentRef` nasceu aí).
+- **Porque é que nada se queixou:** um plugin que não activa só deixa um `warning` no log; os
+  testes de UI não verificavam a existência das ferramentas. O `app-capabilities-test` passava
+  por acaso nas partes que não precisavam delas… até deixar de passar.
+- **Correcção:** `attachmentRef: { type: "json" }` — o nó "só-anotação" do subconjunto de
+  schema do kernel (usado por exemplo em `dsh-mcp-resources`). `type: "object"` obrigaria a
+  declarar `additionalProperties` explicitamente.
+
+**Prova.** Reprodução local, com o `dsh-tools` real e o mesmo erro exacto:
+
+```
+FALHA: plugin "tool-cachalote" não carregou: JsonSchemaError: unsupported JSON schema:
+       schema.properties.attachmentRef.type must be string/…, or use oneOf
+```
+
+Depois da correcção, no mesmo harness: `7 ferramentas → android_status, android_notify,
+android_screen, android_tap, android_type, android_key, android_see`.
+
+No dispositivo: o ficheiro instalado era **byte a byte igual** ao do repositório antes do
+patch (`sha256 e40b59fe…`), o que permitiu corrigir só o ficheiro (nos dois sítios onde o
+`patch-android.cjs` o instala) e reiniciar o motor — sem reinstalar a árvore toda. O aviso
+`did not activate` desapareceu do log de arranque, e o `app-capabilities-test --full` passou
+a correr o passo que pergunta o estado ao agente (`android_status`), que antes era impossível.
+
+### 21.2 `android_see` ponta-a-ponta (fecha o §20.1)
+
+O passo 5 do `app-capabilities-test.sh --full` põe a calculadora a mostrar **512**, escreve um
+prompt que **não diz o número** e proíbe as outras ferramentas. No registo da sessão:
+
+```
+ferramentas: android_see
+blocos de imagem no resultado: 1
+resposta final: 512
+OK    o agente chamou android_see e o modelo leu 512 da imagem
+```
+
+Ou seja: o agente chamou a ferramenta, a app capturou o ecrã, o PNG virou **anexo do harness**
+(objecto novo em `attachments/v1/objects/`) e o modelo **leu os pixais** — o prompt nunca
+revelou o número. É o caminho que §18 deu como provado "à mão" e §20.1 deixou pendente.
+
+Dois caminhos falsos que vale a pena registar, porque vão repetir-se:
+
+1. **Captura a meio da transição de janela.** Conduzir o agente pelo ecrã da app obriga a
+   alternar app→calculadora. Com dois `adb shell` separados, a transição começa tarde e a
+   captura apanha a animação; o visor da calculadora é alinhado à **direita** e sai cortado —
+   o modelo via os botões e um traço. Correcção: o toque em **Enviar** e o trazer da
+   calculadora para a frente vão na **mesma invocação** de shell.
+2. **Cliente ACP externo não serve.** O daemon tem **um** lugar de cliente ACP e a app
+   retoma-o ~1 s depois de outro cliente se ligar (`"a substituir o cliente ACP anterior"`);
+   nesse intervalo a app fica também sem canal de capacidades e o `android_see` falha com
+   `"a app não está ligada ao daemon"`. Esperar antes de enviar o prompt piora: a app já
+   retomou o lugar e o cliente externo deixa de receber respostas. Conclusão: **quem conduz é
+   a app**; a verificação é feita no registo da sessão (autoritativo), não no stream ACP.
+
+### 21.3 Os passos intermitentes dos testes (fecha o §20.4)
+
+| Passo | Causa real | Correção |
+|---|---|---|
+| **3. "obter token"** | A app guarda o separador em que estava (`rememberSaveable`, que sobrevive à recriação): se a corrida anterior acabou no separador Chave, o botão "Obter token (root)" — que vive no **Estado** — não aparece, e rolar não chega. | Seleccionar o separador **Estado** e só depois procurar o botão, com verificação e nova tentativa. |
+| **7. "remover chave"** | O toque **chegava** ao botão (confirma-se na captura de ecrã): a app respondia `"remover chave: a ligação ao motor caiu"`. O culpado era um `hide_kb` que aqui tinha sido posto: quando o `dumpsys input_method` diz que o teclado está aberto mas já não está, o `BACK` **fecha a app** — e a app passava a reconectar em ciclo. | Tirar o `hide_kb` deste passo (não se escreve nada nele) e fazer o `hide_kb` **repor a app à frente** depois do `BACK`. |
+| **1. "interruptores visíveis"** | O separador Poderes é uma lista longa e o "Autorizar todas" pode ficar abaixo da dobra. | Insistir com um scroll entre tentativas. |
+
+O passo 7 é um bom exemplo de porque vale a pena olhar para a captura de ecrã que o teste
+guarda: a mensagem de erro da app estava lá, e sem ela a falha parecia um toque perdido.
+
+### 21.4 Rede de segurança para não repetir isto
+
+- **`tools/plugin-schema-test.sh`** — carrega o plugin contra o `dsh-tools` **real** e exige
+  as 7 ferramentas. Verificado nos dois sentidos: com o bug reintroduzido **falha** com o erro
+  exacto do kernel; com a correcção passa. É o teste que faltava para apanhar a classe de bug
+  mais perigosa deste projecto: falha de schema que desliga funcionalidade **em silêncio**.
+- **`.github/workflows/ci.yml`** — o candidato natural que o §20 apontava: corre a regressão do
+  schema (a instalar o kernel do npm) e a sintaxe de todos os scripts (`bash -n`, `node --check`).
+  Não substitui os testes de dispositivo; apanha o que se pode apanhar sem ele.
+
+### 21.5 Estado no fim desta ronda
+
+| Verificação | Resultado |
+|---|---|
+| `./tools/app-ui-test.sh` | **9/9** |
+| `./tools/app-capabilities-test.sh --full` | **9/9** (inclui o passo 5, novo) |
+| Plugin `tool-cachalote` a activar | ✅ 7 ferramentas, sem `did not activate` |
+| `./tools/plugin-schema-test.sh` | ✅ (e falha se o bug voltar) |
+| Chave do provedor | intacta (53 bytes, modo 600), turnos reais a responder |
+| CI | `bash -n` + `node --check` + regressão do schema, todos verdes localmente |
+
+O que fica em aberto desta ronda: os pontos 2 e 3 do §20 (bootstrap completo e reinstalar a
+árvore a partir do npm) e a reconexão app↔daemon aos solavancos, agora registada no roadmap.

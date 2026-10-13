@@ -799,3 +799,76 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **`awk`/`pipefail`:** o `awk ... exit` fecha o pipe antes do fim e o `pipefail` mata o script
   (exit 141, sem mensagem). Passar o índice por **ficheiro**, não por pipe.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## V. Kernel DSH: schema das ferramentas e plugins que não activam
+
+### 82. Um `{}` sem `type` num schema de ferramenta **desliga o plugin inteiro**
+- **Sintoma:** o agente fica **sem nenhuma** ferramenta do plugin (`android_status`,
+  `android_tap`, …) e o único sinal é, no arranque do motor:
+  `dsh: warning: 1 entry did not activate | tool-cachalote (…): JsonSchemaError: unsupported
+  JSON schema: schema.properties.attachmentRef.type must be string/number/integer/boolean/null/
+  array/object/json, or use oneOf`. Nada falha ruidosamente: a app, o daemon e o handshake ACP
+  ficam todos bons.
+- **Causa:** o `defineTool` valida o schema **no registo** e lança. Como o `apply` do plugin
+  registra todas as ferramentas no mesmo `ctx`, a excepção na primeira derruba **todas** — não
+  é só a ferramenta com o schema errado.
+- **Conjunto de schema do kernel:** cada nó tem de declarar `type` (um nó só-anotação é
+  `type: "json"`). Atenção ao caso simétrico: `type: "object"` **obriga** a declarar
+  `additionalProperties: true|false` explicitamente, senão também é recusado. Para uma
+  referência opaca (ex.: o objecto devolvido por `attachments.saveImage`), `type: "json"` é o
+  correcto.
+- **Prevenção:** não vale confiar nos testes de UI — eles passam sem as ferramentas. Correr
+  `tools/plugin-schema-test.sh`, que carrega o plugin contra o `dsh-tools` real e exige as 7
+  ferramentas; e olhar para o log de arranque à procura de `did not activate`.
+- **Origem:** **[LOCAL]** (regressão de §18, corrigida e verificada em §21 do STATUS).
+
+### 83. `android_see`: a captura apanha a transição de janela (e o visor é alinhado à direita)
+- **Sintoma:** a imagem chega ao modelo, mas o modelo "não vê" o número; o raciocínio dele
+  descreve os botões e "uma área escura com um traço". A captura foi tirada a meio da animação
+  app→outra app: a janela que entra está parcialmente fora do ecrã e o que sai ainda ocupa uma
+  faixa. O visor da calculadora é alinhado à **direita**, por isso é a primeira coisa a ser
+  cortada.
+- **Causa:** dois `adb shell` separados (tocar em "Enviar" + trazer a outra app para a frente)
+  somam dois round-trips adb; a transição começa depois de o modelo já estar a decidir.
+- **Correção:** o toque e o `am start` da app que se quer capturar vão na **mesma** invocação
+  de shell (`input tap X Y; am start -n pkg/.Act`), e a captura apanha o ecrã já assente.
+- **Origem:** **[LOCAL]** (STATUS §21).
+
+### 84. O daemon tem **um** lugar de cliente ACP — a app retoma-o sempre
+- **Sintoma:** um cliente ACP externo (um script, o `client-smoke`) liga-se, cria sessão e
+  envia o prompt, mas deixa de receber `session/update` a meio do turno; e as ferramentas que
+  passam pela app falham com `"a app não está ligada ao daemon"`.
+- **Causa:** o daemon aceita **um** cliente ACP. Ao ligar-se outro, o daemon desliga a app
+  (`"app desligada do daemon"`); a app volta a ligar-se e a retomar o lugar ~1 s depois
+  (`"a substituir o cliente ACP anterior"`). Nesse intervalo a app está também sem o canal
+  `host.*`, e o cliente externo deixa de ver o turno.
+- **Consequência prática:** conduzir o agente por um cliente externo e usar as capacidades
+  Android ao mesmo tempo é uma corrida. Para testar, **conduzir pela app** e verificar no
+  registo da sessão (`$DSH_HOME/sessions/…/session.v4.jsonl.zstd`), que é autoritativo e não
+  depende de quem está ligado.
+- **Nota:** acrescentar uma espera antes de enviar o prompt **não** resolve — quando o turno
+  começa, a app já retomou o lugar e o cliente externo já não recebe respostas.
+- **Origem:** **[LOCAL]** (STATUS §21).
+
+### 85. A app guarda o separador e **retoma a mesma sessão** entre corridas
+- **Sintoma (testes de UI):** um passo falha "de vez em quando" a encontrar um botão que existe
+  noutro separador; e o registo de uma sessão tem turnos de corridas anteriores misturados com
+  os de agora (ferramentas e erros que não são desta corrida).
+- **Causa:** o índice do separador é `rememberSaveable` e sobrevive à recriação da actividade;
+  e a app faz `session/resume`, reaproveitando o mesmo registo de sessão.
+- **Correção (testes):** seleccionar o separador antes de procurar o botão do separador; e, ao
+  analisar o registo, olhar **só para o último turno** (do último `turn/start` em diante).
+- **Origem:** **[LOCAL]** (STATUS §21).
+
+### 86. `input keyevent 4` (BACK) para esconder o teclado pode **fechar a app**
+- **Sintoma:** a app aparece "desligada", a ligação ao daemon entra em ciclo de reconexão, e um
+  pedido que devia ser trivial falha com `"a ligação ao motor caiu"`; nas capturas de ecrã vê-se
+  o cartão de erro da app, e não um toque perdido.
+- **Causa:** o teste manda BACK quando o `dumpsys input_method` diz `mInputShown=true`. Esse
+  estado pode estar desactualizado; sem teclado, o BACK **fecha a actividade**.
+- **Correção:** mandar BACK só quando há mesmo teclado **e** confirmar a seguir que a app
+  continua em primeiro plano (trazendo-a de volta se não estiver). Em passos onde não se escreve
+  nada, simplesmente não chamar o `hide_kb`.
+- **Origem:** **[LOCAL]** (STATUS §21).

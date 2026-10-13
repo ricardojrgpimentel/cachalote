@@ -64,11 +64,19 @@ else
 fi
 
 echo "== 1. autorizar todas as capacidades na app (separador Poderes) =="
-T "Poderes" || true
-T "Autorizar todas" || true
-sleep 1
-L
-python3 "$WS/tools/ui.py" "$UI" find "screenshot" >/dev/null 2>&1 && check 0 "interruptores visíveis" || check 1 "interruptores visíveis"
+# O separador Poderes é uma lista longa: o "Autorizar todas" pode ficar abaixo da dobra,
+# por isso insistimos com um scroll entre tentativas.
+FOUND=1
+for _ in 1 2 3; do
+  T "Poderes" || true
+  T "Autorizar todas" || true
+  sleep 1
+  L
+  if python3 "$WS/tools/ui.py" "$UI" find "screenshot" >/dev/null 2>&1; then FOUND=0; break; fi
+  "${ADB[@]}" shell input swipe 720 2000 720 1100 200 >/dev/null 2>&1
+  sleep 1
+done
+check "$FOUND" "interruptores visíveis"
 
 echo "== 2. o agente pergunta o estado das capacidades (canal reverso) =="
 ask "usa a ferramenta android_status e responde apenas com o JSON que ela devolve, sem comentarios"
@@ -105,6 +113,132 @@ for n in t.getroot().iter('node'):
 raise SystemExit(1)
 PY
   then check 0 "a calculadora mostra 7 (o agente tocou no botão)"; else fail "a calculadora mostra 7 (o agente tocou no botão)"; fi
+fi
+
+if [ "$FULL" = 1 ]; then
+  # Este é o passo que o STATUS §20.1 deixou por verificar: em §18 provou-se o caminho
+  # "imagem → anexo → modelo" a enviar a imagem à mão, mas nunca com o AGENTE a chamar a
+  # ferramenta (as tentativas morriam na guarda de caminhos do bash e na automação da UI).
+  echo "== 5. visão real: o agente chama android_see e lê os pixais =="
+  # Põe-se um número no visor SEM o dizer ao modelo: só se acerta vendo a imagem.
+  # O ecrã fica na calculadora durante todo o turno (o cliente ACP não mexe na UI), para a
+  # captura não apanhar uma transição de janela — foi o que estragou a 1.ª tentativa desta
+  # verificação: a captura saiu a meio da animação, com o visor (alinhado à direita) cortado.
+  SEE_NUM=512
+  TEX() { L; local c; c="$(python3 "$WS/tools/ui.py" "$UI" find-exact "$1" 2>/dev/null)" || return 1; set -- $c; "${ADB[@]}" shell input tap "$1" "$2" >/dev/null 2>&1; sleep 0.5; }
+
+  "${ADB[@]}" shell "am force-stop com.android.calculator2" >/dev/null 2>&1
+  "${ADB[@]}" shell "am start -n com.android.calculator2/.Calculator" >/dev/null 2>&1
+  sleep 4
+  for d in 5 1 2; do TEX "$d" || echo "   (não encontrei o botão '$d')"; done
+  sleep 2
+  L
+  if python3 - "$UI" "$SEE_NUM" <<'PY'
+import sys, xml.etree.ElementTree as ET
+want = sys.argv[2]
+t = ET.parse(sys.argv[1])
+for n in t.getroot().iter('node'):
+    if 'formula' in (n.get('resource-id') or '') and (n.get('text') or '') == want:
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+  then pass "o visor da calculadora mostra $SEE_NUM (o prompt não o diz)"
+  else fail "o visor da calculadora mostra $SEE_NUM (o prompt não o diz)"; fi
+
+  # Conduzir o agente pelo ecrã da app (é a app que tem as capacidades e o lugar de cliente
+  # ACP; um cliente ACP externo desaloja-a e o android_see falha com "a app não está ligada").
+  # O prompt escreve-se com a app à frente; o número tem de estar no ecrã quando a captura
+  # acontecer, por isso o toque em "Enviar" e o trazer da calculadora para a frente vão na
+  # MESMA invocação de shell: dois round-trips adb separados atrasam a transição o suficiente
+  # para a captura sair a meio da animação (a janela deslizante corta o visor à direita).
+  "${ADB[@]}" shell "am start -n $ACT" >/dev/null 2>&1
+  sleep 3
+  T "Conversa" || true
+  L; python3 "$WS/tools/ui.py" "$UI" find "Escreve uma tarefa" >/dev/null 2>&1 || T "Nova sessão"
+  T "Escreve uma tarefa" || true
+  "${ADB[@]}" shell "input text 'usa a ferramenta android_see para VER o ecra e responde apenas com o numero que esta no visor. Nao uses o bash nem o android_screen nem outra ferramenta'" >/dev/null 2>&1
+  sleep 1
+  L
+  EC="$(python3 "$WS/tools/ui.py" "$UI" find-exact "Enviar" 2>/dev/null)"
+  if [ -n "$EC" ]; then
+    set -- $EC
+    "${ADB[@]}" shell "input tap $1 $2; am start -n com.android.calculator2/.Calculator" >/dev/null 2>&1
+    pass "prompt enviado (toque + calculadora para a frente na mesma invocação)"
+  else
+    fail "botão Enviar encontrado"
+  fi
+  sleep 50
+
+  # Verificação no registo da sessão do motor: é autoritativo e não depende do stream da app.
+  SFILE="$("${ADB[@]}" shell "su -c 'ls -t /data/adb/cachalote/home/sessions/*/*/session.v4.jsonl.zstd 2>/dev/null | head -1'" | tr -d '\r')"
+  "${ADB[@]}" exec-out "su -c 'cat ${SFILE:-/nonexistent}'" > "$WS/.work/see-session.zst" 2>/dev/null
+  if zstd -dc "$WS/.work/see-session.zst" > "$WS/.work/see-session.jsonl" 2>/dev/null; then
+    if python3 - "$WS/.work/see-session.jsonl" "$SEE_NUM" <<'PY'
+import json, sys
+path, want = sys.argv[1], sys.argv[2]
+# A app RETOMA a mesma sessão entre corridas (a destilada do app-ui-test fica no mesmo
+# registo), por isso há que olhar só para o ÚLTIMO turno — senão apanhamos ferramentas e
+# erros de corridas anteriores.
+turns, cur = [], None
+for line in open(path, encoding="utf-8", errors="replace"):
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        o = json.loads(line)
+    except Exception:
+        continue
+    t, d = o.get("type"), o.get("data") or {}
+    if t == "turn/start":
+        cur = {"tools": [], "texts": [], "images": 0, "err": None}
+        turns.append(cur)
+        continue
+    if cur is None:
+        continue
+    if t == "tool/call":
+        cur["tools"].append(d.get("name"))
+    elif t == "tool/result":
+        for c in ((d.get("message") or {}).get("content") or []):
+            if c.get("type") == "image" and c.get("attachment"):
+                cur["images"] += 1
+    elif t == "assistant/message":
+        for c in ((d.get("message") or {}).get("content") or []):
+            if c.get("type") == "text" and c.get("text"):
+                cur["texts"].append(c["text"])
+    elif t == "turn/end":
+        r = d.get("reason") or {}
+        if r.get("kind") == "error":
+            cur["err"] = (r.get("error") or {}).get("message")
+if not turns:
+    print("   FALHA não encontrei nenhum turno no registo da sessão")
+    raise SystemExit(1)
+last = turns[-1]
+tools, images, err = last["tools"], last["images"], last["err"]
+final = " ".join(last["texts"]).strip()
+print(f"   turnos no registo: {len(turns)} (o teste olha para o último)")
+print(f"   ferramentas: {', '.join(str(x) for x in tools) or '(nenhuma)'}")
+print(f"   blocos de imagem no resultado: {images}")
+print(f"   resposta final: {final[:200] or '(nenhuma)'}")
+if err:
+    print(f"   turno terminou com erro: {err}")
+problems = []
+if not tools or any(t != "android_see" for t in tools):
+    problems.append(f"android_see devia ser a única ferramenta (chamadas: {tools})")
+if images < 1:
+    problems.append("o resultado não trouxe bloco de imagem com anexo")
+if err:
+    problems.append(f"o turno terminou com erro: {err}")
+if want not in final:
+    problems.append(f"a resposta final não contém {want}")
+for p in problems:
+    print("   FALHA " + p)
+raise SystemExit(1 if problems else 0)
+PY
+    then pass "o agente chamou android_see e o modelo leu $SEE_NUM da imagem"
+    else fail "o agente chamou android_see e o modelo leu $SEE_NUM da imagem"; fi
+  else
+    fail "registo da sessão legível (zstd)"
+  fi
 fi
 
 echo

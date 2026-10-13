@@ -50,7 +50,7 @@ daemon/              daemon Node que supervisiona o motor (root ou Shizuku) + CL
 kernel-plugins/      plugin do kernel que expõe as capacidades Android ao agente
 tools/               pipeline: extrair kernel, aplicar patches, empacotar, instalar, testar
 config/              camada de patch do perfil do DSH (o que liga/desliga no motor)
-docs/                base de conhecimento Android (79 armadilhas) e capturas de ecrã
+docs/                base de conhecimento Android (86 armadilhas) e capturas de ecrã
 PLANO.md / STATUS.md plano, decisões, riscos e o que está verificado (com provas)
 ```
 
@@ -82,8 +82,15 @@ Testes repetíveis (protegem a tua chave: guardam e repõem o `.env`):
 
 ```sh
 ./tools/app-ui-test.sh            # 9 passos: daemon, token, chave, conversa
-./tools/app-capabilities-test.sh --full   # capacidades + interacção real
+./tools/app-capabilities-test.sh --full   # capacidades + interacção real + o agente a VER o ecrã
+./tools/plugin-schema-test.sh     # sem telemóvel: o plugin do kernel carrega? (regressão)
 ```
+
+O `plugin-schema-test.sh` existe por uma razão concreta: um `{}` sem `type` num schema de
+ferramenta faz o kernel recusar o plugin **inteiro** e o agente fica sem nenhuma ferramenta
+`android_*` — em silêncio, com um único `warning` no log. Apanha isso antes de chegar ao
+telemóvel. Ver [`STATUS.md`](STATUS.md) §21 e
+[`docs/knowledge-android.md`](docs/knowledge-android.md) #82.
 
 ### Modo sem root (embutido)
 

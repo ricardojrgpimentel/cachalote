@@ -42,10 +42,13 @@ dump() {
   [ -s "$UI" ]
 }
 # BACK só quando há teclado: sem ele, o BACK fecha a app (foi o que fazia o teste falhar).
+# Depois do BACK confirmamos que a app continua à frente: se o `dumpsys` estava desactualizado
+# e já não havia teclado, o BACK fechou a app e temos de a trazer de volta.
 hide_kb() {
   if "${ADB[@]}" shell "dumpsys input_method | grep -q 'mInputShown=true'" 2>/dev/null; then
     "${ADB[@]}" shell input keyevent 4 >/dev/null 2>&1
     sleep 0.6
+    foreground_app || true
   fi
 }
 
@@ -123,8 +126,19 @@ has "daemon" && check 0 "estado do daemon visível" || check 1 "estado do daemon
 python3 "$WS/tools/ui.py" "$UI" find "daemon" >/dev/null 2>&1 && echo "   (info: $(python3 "$WS/tools/ui.py" "$UI" list | grep -i '"daemon"' | head -1 | cut -c1-90))"
 
 echo "== 3. obter token (root) =="
-tap_text "Obter token" || true
-sleep 5; dump
+# Duas causas para a falha intermitente deste passo:
+#  (a) a app pode reabrir noutro separador — o índice do separador é `rememberSaveable` e o
+#      estado guardado sobrevive à recriação da actividade, e rolar nunca chega ao botão;
+#  (b) logo a seguir ao arranque o botão pode ainda estar abaixo da dobra.
+# Por isso: garantir o separador Estado e só depois procurar o botão, verificando o resultado.
+ensure_token_tab() { foreground_app || true; sleep 1; tap_exact "Estado" || true; }
+ensure_token_tab
+for attempt in 1 2 3; do
+  tap_text "Obter token" || true
+  sleep 5; dump
+  has "obtido" && break
+  ensure_token_tab
+done
 has "obtido" && check 0 "token obtido" || check 1 "token obtido"
 
 echo "== 4. ecrã da chave: colar e guardar =="
@@ -216,13 +230,34 @@ fi
 
 echo "== 7. limpeza =="
 if [ "$KEEP" = 0 ]; then
-  tap_exact "Chave" || true
-  sleep 1; dump
-  tap_text "Remover chave" || true
-  sleep 2
-  RESTA="$("${ADB[@]}" shell "su -c 'grep -c DEEPSEEK_API_KEY $BASE/home/.env 2>/dev/null'" 2>/dev/null | tr -d '\r\n ')"
-  RESTA="${RESTA:-0}"
-  [ "$RESTA" = "0" ] && check 0 "chave de teste removida (o .env ficou vazio, modo 600)" || check 1 "chave de teste removida (linhas: $RESTA)"
+  RESTA=1
+  # Este passo falhava de vez em quando com "remover chave: a ligação ao motor caiu": o toque
+  # chegava ao botão (vê-se na captura de ecrã), mas a app estava sem ligação ao daemon.
+  # A causa era o `hide_kb` que aqui estava: se o `dumpsys input_method` diz que o teclado
+  # está aberto quando já não está, o BACK fecha a APP (é o aviso que está no topo deste
+  # ficheiro), e a app passava a reconectar em ciclo. Não se escreve nada neste passo, logo
+  # não há teclado nenhum para esconder — o `hide_kb` sai daqui.
+  # (A chave real do utilizador está a salvo em .env.bak e é reposta pelo trap no fim.)
+  for attempt in 1 2 3; do
+    tap_exact "Chave" || true
+    sleep 1; dump
+    tap_text "Remover chave" || true
+    for i in $(seq 1 6); do
+      sleep 2
+      RESTA="$("${ADB[@]}" shell "su -c 'grep -c DEEPSEEK_API_KEY $BASE/home/.env 2>/dev/null'" 2>/dev/null | tr -d '\r\n ')"
+      RESTA="${RESTA:-0}"
+      [ "$RESTA" = "0" ] && break 2
+    done
+    echo "   (a chave de teste ainda lá está — a repetir a remoção)"
+  done
+  if [ "$RESTA" = "0" ]; then
+    check 0 "chave de teste removida (o .env ficou vazio, modo 600)"
+  else
+    check 1 "chave de teste removida (linhas: $RESTA)"
+    # Diagnóstico: a app mostra o motivo num cartão vermelho (ex.: "a ligação ao motor caiu").
+    dump
+    echo "   (o que a app diz: $(python3 "$WS/tools/ui.py" "$UI" list | grep -iE 'remover|caiu|erro|falh' | head -3 | tr '\n' ' ' | cut -c1-200))"
+  fi
 else
   echo "   (--keep-key: a chave de teste ficou no dispositivo)"
 fi

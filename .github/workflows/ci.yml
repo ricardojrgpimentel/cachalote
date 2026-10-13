@@ -1,0 +1,54 @@
+name: CI
+
+# Não há testes que precisem de telemóvel aqui: o que se verifica no CI é exactamente aquilo
+# que se pode verificar sem dispositivo — e que já falhou em silêncio uma vez (ver §21 do
+# STATUS: um `{}` sem `type` no schema do plugin desligou as sete ferramentas android_* sem
+# que nenhum teste de UI se queixasse).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  plugin-schema:
+    name: schema do plugin (regressão §21)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # O plugin compila contra o `dsh-tools` do kernel a sério; buscamo-lo à mesma versão
+      # que o tools/bootstrap.sh usa por omissão.
+      - name: Obter o kernel do npm
+        run: |
+          mkdir -p .work/dsh-install
+          npm install --silent --no-audit --no-fund \
+            --prefix .work/dsh-install "@deepseek-ai/dsh@0.2.0-rc.2"
+
+      - name: Regressão do schema do plugin
+        run: ./tools/plugin-schema-test.sh
+
+  scripts:
+    name: sintaxe dos scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: bash -n em todos os scripts
+        run: |
+          set -e
+          for f in tools/*.sh daemon/*.sh; do
+            echo "bash -n $f"
+            bash -n "$f"
+          done
+      - name: node --check nos ficheiros JS
+        run: |
+          set -e
+          for f in tools/*.mjs tools/*.cjs daemon/*.cjs; do
+            echo "node --check $f"
+            node --check "$f"
+          done

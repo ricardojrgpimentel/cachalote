@@ -223,7 +223,11 @@ function apply(ctx) {
           height: { type: "integer" },
           mediaType: { type: "string" },
           attached: { type: "boolean" },
-          attachmentRef: {},
+          // Referência opaca do harness (o objecto devolvido por `attachments.saveImage`).
+          // `type: "json"` é o nó "só-anotação" do subconjunto de schema do kernel: um `{}`
+          // sem `type` é recusado pelo compilador e derrubava o plugin INTEIRO (ficávamos
+          // sem nenhuma ferramenta android_*). Não usar `object` sem `additionalProperties`.
+          attachmentRef: { type: "json" },
           hint: { type: "string" },
         },
       },
