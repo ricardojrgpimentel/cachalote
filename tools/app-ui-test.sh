@@ -16,6 +16,7 @@ ACT="$PKG/.MainActivity"
 BASE="/data/adb/cachalote"
 DUMMY="sk-dummy-app-ui-1234567890"
 KEEP=0
+VAR="DEEPSEEK_API_KEY"
 UI="$WS/.work/ui.xml"
 
 while [ $# -gt 0 ]; do
@@ -50,6 +51,24 @@ tap_text() {
   sleep 1.2
 }
 has() { python3 "$WS/tools/ui.py" "$UI" exists "$1" 2>/dev/null; }
+
+# ⚠ SEGURANÇA: este teste grava (e remove) uma chave de teste no daemon. Se já existir
+# uma chave real, guardamo-la e repomo-la no fim — nunca deixar o utilizador sem chave.
+HAD_KEY=0
+if "${ADB[@]}" shell "su -c 'grep -q \"^$VAR=\" $BASE/home/.env'" 2>/dev/null; then
+  HAD_KEY=1
+  "${ADB[@]}" shell "su -c 'cp -f $BASE/home/.env $BASE/home/.env.bak && chmod 600 $BASE/home/.env.bak'"
+  echo "(chave existente guardada em $BASE/home/.env.bak — será reposta no fim)"
+fi
+restore_key() {
+  if [ "$HAD_KEY" = 1 ]; then
+    echo "== a repor a chave que já existia =="
+    "${ADB[@]}" shell "su -c 'cp -f $BASE/home/.env.bak $BASE/home/.env; chmod 600 $BASE/home/.env; rm -f $BASE/home/.env.bak; $BASE/bin/cachalote restart >/dev/null 2>&1'"
+    N=$("${ADB[@]}" shell "su -c 'grep -c \"^$VAR=\" $BASE/home/.env'" 2>/dev/null | tr -d '\r\n ')
+    [ "${N:-0}" = "1" ] && echo "   OK  chave reposta e motor reiniciado" || echo "   FALHA  não consegui repor a chave (ver $BASE/home/.env.bak)"
+  fi
+}
+trap restore_key EXIT
 
 echo "== 1. app instalada e aberta =="
 "${ADB[@]}" shell "am force-stop $PKG; am start -n $ACT" >/dev/null 2>&1
