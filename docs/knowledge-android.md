@@ -698,3 +698,56 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Default seguro:** sem o ficheiro, a área permitida é só o workspace da sessão + `$DSH_HOME`
   (o teste deixou-o assim).
 - **Origem:** **[LOCAL]**.
+
+---
+
+## S. Modo Shizuku (daemon como shell, sem root)
+
+### 75. `/data/local/tmp` nega o socket AF_UNIX ao domínio `shell`
+- **Sintoma:** `ERRO no servidor unix: listen EACCES: permission denied /data/local/tmp/cachalote/run/cachalote.sock`
+  e o daemon a morrer (o handler fazia `process.exit(1)`).
+- **Causa:** `/data/local/tmp` é `shell_data_file`; criar um socket unix lá não é permitido ao
+  domínio que o cria. Por isso é que a app fala **TCP** (foi D11) — o socket unix é só um extra
+  para o CLI/adb.
+- **Solução:** o socket unix passou a ser **opcional** (aviso no log, daemon continua só com TCP).
+- **Bónus:** dois daemons no mesmo telefone precisam de portas diferentes — o porto passou a ser
+  escrito em `$BASE/home/port` pelo `install.sh` (root 39731, `/data/local/tmp` 39733).
+- **Origem:** **[LOCAL]**.
+
+### 76. Shizuku: `newProcess` é API oculta; o *user service* exige o provider e chave de versão
+- **Sintoma 1:** nada funciona e o Shizuku regista
+  `E Service: provider is null <package>.shizuku` → o `ShizukuProvider` **não estava no
+  manifest** (o meu patch falhou em silêncio). Sem provider, `Shizuku.pingBinder()` é sempre false.
+- **Sintoma 2:** com provider, `bindUserService` nunca ligava e o servidor registava
+  `UserServiceRecord: Service record … is not started in 30000 ms` — o registo do serviço estava
+  em cache a apontar para o caminho da APK anterior (reinstalações). A chave do registo é o
+  `version(...)`: passar o `versionCode` da app invalida-o.
+- **Decisão:** o `newProcess` (que os exemplos usam) existe no artefacto mas é **`private`**;
+  chama-se por **reflexão** (`setAccessible(true)`). É bem mais simples do que o user service e
+  foi o que ficou. Se um dia a assinatura mudar, o user service é a alternativa.
+- **Origem:** **[LOCAL]**.
+
+### 77. `install.sh --base` tem de reescrever **todos** os caminhos gravados
+- **Sintoma:** daemon instalado em `/data/local/tmp` mas a arrancar o de `/data/adb`; e o motor
+  sem as nossas ferramentas (`failed to import`), porque o `cordis.patch.yml` apontava o plugin
+  para a árvore do install root.
+- **Causa:** `bin/cachalote`, `bridge.cjs`, `home/cordis.patch.yml` e `bin/client-smoke.cjs` têm
+  o base/path gravado dentro do ficheiro.
+- **Solução:** o `install.sh` faz `sed` do base antigo para o novo em todos eles (com as aspas
+  escapadas dentro do bloco `su -c`).
+- **Origem:** **[LOCAL]**.
+
+### 78. O plugin precisa de saber **qual** daemon
+- **Sintoma:** capacidades falham com `token inválido` no modo Shizuku.
+- **Causa:** o plugin do kernel usa `CACHALOTE_PORT` (por omissão 39731) — ou seja, falava com o
+  daemon **root** enquanto corria no daemon do Shizuku (39733).
+- **Solução:** a ponte passa `CACHALOTE_PORT` (o seu) e `CACHALOTE_TOKEN_FILE` ao motor.
+- **Origem:** **[LOCAL]**.
+
+### 79. O handshake ACP tem de tolerar o motor a reiniciar
+- **Sintoma:** ao mudar de motor, a app falhava com `cachalote: o motor não está a correr` — e um
+  segundo depois o mesmo pedido funcionava.
+- **Causa:** o daemon responde isso enquanto está a (re)arrancar o motor (acontece ao gravar a
+  chave, ao reiniciar e ao arrancar).
+- **Solução:** `ensureAcp()` tenta 4 vezes com 2 s de intervalo (e reconecta se a ligação caiu).
+- **Origem:** **[LOCAL]**.

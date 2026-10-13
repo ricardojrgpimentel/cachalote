@@ -19,7 +19,7 @@ import java.io.File
  */
 class DaemonController(private val context: Context) {
 
-    enum class Mode { DAEMON, EMBEDDED }
+    enum class Mode { DAEMON, SHIZUKU, EMBEDDED }
 
     val client = CachaloteClient()
     private val prefs = Prefs(context)
@@ -27,6 +27,10 @@ class DaemonController(private val context: Context) {
     private val caps = HostCapabilities(context, prefs)
     private var hostServer: HostServer? = null
     private var acpReady = false
+
+    /** O daemon do modo root vive em /data/adb; o do Shizuku, em /data/local/tmp. */
+    private val daemonBase: String
+        get() = if (prefs.mode == "shizuku") ShizukuBridge.DAEMON_BASE else prefs.base
 
     var base: String
         get() = prefs.base
@@ -36,6 +40,10 @@ class DaemonController(private val context: Context) {
         get() = prefs.port
         set(v) { prefs.port = v }
 
+    /** Porto efectivo do canal: o daemon shell usa o dele (ficheiro `home/port`). */
+    private suspend fun effectivePort(): Int =
+        if (mode == Mode.SHIZUKU) ShizukuBridge.daemonPort(prefs.port) else prefs.port
+
     /**
      * Directório de trabalho das sessões. No modo embutido tem de ser um caminho que a app
      * consegue ler/escrever (o motor corre com o uid da app); o do daemon é root-only.
@@ -44,9 +52,17 @@ class DaemonController(private val context: Context) {
         get() = if (mode == Mode.EMBEDDED) File(engine.home, "ws").absolutePath else prefs.workspace
 
     var mode: Mode
-        get() = if (prefs.mode == "embedded") Mode.EMBEDDED else Mode.DAEMON
+        get() = when (prefs.mode) {
+            "embedded" -> Mode.EMBEDDED
+            "shizuku" -> Mode.SHIZUKU
+            else -> Mode.DAEMON
+        }
         set(v) {
-            prefs.mode = if (v == Mode.EMBEDDED) "embedded" else "daemon"
+            prefs.mode = when (v) {
+                Mode.EMBEDDED -> "embedded"
+                Mode.SHIZUKU -> "shizuku"
+                Mode.DAEMON -> "daemon"
+            }
             client.disconnect()
             acpReady = false
         }
@@ -54,12 +70,21 @@ class DaemonController(private val context: Context) {
     // ---------------------------------------------------------------- ligação
 
     suspend fun ensureToken(rotate: Boolean = false): String {
-        val cached = prefs.token
+        // O token é POR MODO: o daemon root e o daemon Shizuku são processos distintos (e
+        // portos distintos), logo um token em cache do outro dá "token inválido".
+        val cached = if (mode == Mode.SHIZUKU) prefs.tokenShizuku else prefs.token
         if (!rotate && !cached.isNullOrBlank() && cached.length >= 32) return cached
-        val out = RootShell.run("${prefs.base}/bin/cachalote app-token" + if (rotate) " --rotate" else "").getOrThrow()
-        val token = out.lines().map { it.trim() }.lastOrNull { it.length >= 32 }
-            ?: error("o daemon não devolveu token (saída: ${out.take(200)})")
-        prefs.token = token
+        val token = when (mode) {
+            Mode.SHIZUKU -> ShizukuBridge.token(rotate)
+            Mode.EMBEDDED -> error("o modo embutido não usa token")
+            Mode.DAEMON -> {
+                val out = RootShell.run("$daemonBase/bin/cachalote app-token" + if (rotate) " --rotate" else "")
+                    .getOrThrow()
+                out.lines().map { it.trim() }.lastOrNull { it.length >= 32 }
+                    ?: error("o daemon não devolveu token (saída: ${out.take(200)})")
+            }
+        }
+        if (mode == Mode.SHIZUKU) prefs.tokenShizuku = token else prefs.token = token
         return token
     }
 
@@ -67,6 +92,7 @@ class DaemonController(private val context: Context) {
         acpReady = false
         return when (mode) {
             Mode.DAEMON -> client.connectTcp(prefs.port, ensureToken())
+            Mode.SHIZUKU -> client.connectTcp(effectivePort(), ensureToken())
             Mode.EMBEDDED -> {
                 if (!engine.isPrepared()) engine.prepare()
                 val streams = if (engine.running) engine.restart(prefs.allowedRoots) else engine.start(prefs.allowedRoots)
@@ -84,19 +110,38 @@ class DaemonController(private val context: Context) {
         return true
     }
 
-    /** Handshake obrigatório do ACP antes de criar sessões. */
+    /**
+     * Handshake obrigatório do ACP antes de criar sessões.
+     *
+     * O daemon pode estar a meio de um reinício do motor (acontece ao gravar a chave ou ao
+     * arrancar o motor): nesse instante ele responde "o motor não está a correr". Isso é
+     * transitório, por isso tentamos algumas vezes em vez de falhar o modo logo à primeira.
+     */
     suspend fun ensureAcp(): JSONObject {
         ensureConnected()
         if (acpReady) return JSONObject()
-        val res = client.callForResult(
-            "initialize",
-            JSONObject()
-                .put("protocolVersion", 1)
-                .put("clientCapabilities", JSONObject())
-                .put("clientInfo", JSONObject().put("name", "cachalote-android").put("version", "0.3.0")),
-        )
-        acpReady = true
-        return res
+        var last: Throwable? = null
+        for (attempt in 1..4) {
+            try {
+                val res = client.callForResult(
+                    "initialize",
+                    JSONObject()
+                        .put("protocolVersion", 1)
+                        .put("clientCapabilities", JSONObject())
+                        .put("clientInfo", JSONObject().put("name", "cachalote-android").put("version", "0.3.0")),
+                    timeoutMs = 20_000,
+                )
+                acpReady = true
+                return res
+            } catch (e: Throwable) {
+                last = e
+                if (attempt < 4) {
+                    kotlinx.coroutines.delay(2_000)
+                    if (!client.connected.value) connect()
+                }
+            }
+        }
+        throw (last ?: IllegalStateException("o motor não respondeu"))
     }
 
     suspend fun newSession(): JSONObject {
@@ -145,7 +190,7 @@ class DaemonController(private val context: Context) {
     // ---------------------------------------------------------------- estado / credenciais
 
     suspend fun status(): JSONObject = when (mode) {
-        Mode.DAEMON -> {
+        Mode.DAEMON, Mode.SHIZUKU -> {
             ensureConnected()
             client.callForResult("cachalote.status")
         }
@@ -162,6 +207,11 @@ class DaemonController(private val context: Context) {
     private val embeddedEnv: File get() = File(engine.home, ".env")
 
     suspend fun keyStatus(name: String = "DEEPSEEK_API_KEY"): JSONObject {
+        if (mode == Mode.SHIZUKU) {
+            val present = runCatching { ShizukuBridge.keyStatus(name) }.getOrDefault("ausente").contains("presente")
+            return JSONObject().put("name", name).put("present", present)
+                .put("file", ShizukuBridge.DAEMON_BASE + "/home/.env")
+        }
         if (mode == Mode.EMBEDDED) {
             val line = runCatching { embeddedEnv.readLines().first { it.startsWith("$name=") } }.getOrNull()
             return JSONObject()
@@ -175,6 +225,12 @@ class DaemonController(private val context: Context) {
     }
 
     suspend fun setKey(value: String, name: String = "DEEPSEEK_API_KEY"): JSONObject {
+        if (mode == Mode.SHIZUKU) {
+            require(value.trim().length >= 8) { "valor demasiado curto" }
+            ShizukuBridge.setKey(name, value.trim())
+            acpReady = false
+            return keyStatus(name)
+        }
         if (mode == Mode.EMBEDDED) {
             require(value.trim().length >= 8) { "valor demasiado curto" }
             engine.home.mkdirs()
@@ -189,6 +245,11 @@ class DaemonController(private val context: Context) {
     }
 
     suspend fun removeKey(name: String = "DEEPSEEK_API_KEY"): JSONObject {
+        if (mode == Mode.SHIZUKU) {
+            ShizukuBridge.removeKey(name)
+            acpReady = false
+            return keyStatus(name)
+        }
         if (mode == Mode.EMBEDDED) {
             val kept = runCatching { embeddedEnv.readLines() }.getOrDefault(emptyList())
                 .filter { it.isNotBlank() && !it.startsWith("$name=") }
@@ -201,6 +262,13 @@ class DaemonController(private val context: Context) {
     }
 
     suspend fun restartEngine(): JSONObject = when (mode) {
+        Mode.SHIZUKU -> {
+            ShizukuBridge.run("$daemonBase/bin/cachalote engine.restart 2>/dev/null || $daemonBase/bin/cachalote restart", 90)
+            client.disconnect()
+            acpReady = false
+            ensureAcp()
+            JSONObject().put("ok", true).put("shizuku", true)
+        }
         Mode.EMBEDDED -> {
             restartEmbedded()
             JSONObject().put("ok", true).put("embedded", true)
@@ -221,13 +289,28 @@ class DaemonController(private val context: Context) {
 
     // ---------------------------------------------------------------- daemon (root/Shizuku)
 
-    suspend fun startDaemon(): String = RootShell.run("${prefs.base}/bin/cachalote start", 45).getOrThrow()
+    suspend fun startDaemon(): String = when (mode) {
+        Mode.SHIZUKU -> ShizukuBridge.startDaemon()
+        else -> RootShell.run("$daemonBase/bin/cachalote start", 45).getOrThrow()
+    }
 
-    suspend fun stopDaemon(): String = RootShell.run("${prefs.base}/bin/cachalote stop").getOrThrow()
+    suspend fun stopDaemon(): String = when (mode) {
+        Mode.SHIZUKU -> ShizukuBridge.stopDaemon()
+        else -> RootShell.run("$daemonBase/bin/cachalote stop").getOrThrow()
+    }
 
-    suspend fun daemonInstalled(): Boolean = RootShell.daemonInstalled()
+    suspend fun daemonInstalled(): Boolean = when (mode) {
+        Mode.SHIZUKU -> ShizukuBridge.daemonInstalled()
+        else -> RootShell.daemonInstalled()
+    }
 
     suspend fun hasRoot(): Boolean = RootShell.hasRoot()
+
+    // ---------------------------------------------------------------- shizuku
+
+    fun shizukuAvailable(): Boolean = ShizukuBridge.available()
+
+    fun shizukuHasPermission(): Boolean = ShizukuBridge.hasPermission()
 
     /** Áreas permitidas (uma por linha) — lidas pelo daemon e pelo motor embutido. */
     var allowedRoots: String
@@ -241,6 +324,15 @@ class DaemonController(private val context: Context) {
             Mode.EMBEDDED -> {
                 restartEmbedded()
                 JSONObject().put("ok", true).put("mode", "embedded").put("roots", roots)
+            }
+            Mode.SHIZUKU -> {
+                val b64 = android.util.Base64.encodeToString(roots.toByteArray(), android.util.Base64.NO_WRAP)
+                ShizukuBridge.run(
+                    "cd ${ShizukuBridge.DAEMON_BASE} && printf '%s' '$b64' | base64 -d > home/allowed-roots && chmod 600 home/allowed-roots",
+                    60,
+                )
+                restartEngine()
+                JSONObject().put("ok", true).put("mode", "shizuku").put("roots", roots)
             }
             Mode.DAEMON -> {
                 val b64 = android.util.Base64.encodeToString(roots.toByteArray(), android.util.Base64.NO_WRAP)

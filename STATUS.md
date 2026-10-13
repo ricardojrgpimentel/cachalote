@@ -484,3 +484,42 @@ permitidas e corre **dentro** delas sem perguntar.
 
 Estado final do dispositivo: modo **daemon** (root, autostart no boot, guarda activa), chave
 intacta, acessibilidade ligada, e `app-ui-test` **9/9** + `app-capabilities-test` **5/5**.
+
+
+---
+
+## 17. Modo Shizuku — feito e verificado
+
+Terceiro motor, para telefones **sem root**: a app usa o **Shizuku** para arrancar o daemon como
+shell. Instalei o Shizuku (13.6.0) no S10+ a teu pedido e testei tudo.
+
+| Peça | Como |
+|---|---|
+| Ligação | `ShizukuProvider` no manifest (sem ele `pingBinder` é false) + `Shizuku.checkSelfPermission/requestPermission` |
+| Execução | `Shizuku.newProcess` por **reflexão** (é API oculta; existe no artefacto mas é `private`) |
+| Daemon | `daemon/install.sh --base /data/local/tmp/cachalote --no-root` — o shell não escreve em `/data/adb` |
+| Porto | 39733 (o daemon root fica no 39731) — dois daemons no mesmo telefone, cada um no seu porto |
+| Chave | `cachalote key-set` (valor por **stdin**, nunca em argv) |
+| Token | por modo (o do daemon root não serve) |
+| Interruptor | app → **Estado → Motor → Shizuku**, com botão "Autorizar no Shizuku" |
+
+### Provas no dispositivo
+
+- estado no ecrã Estado: `base: /data/local/tmp/cachalote`, `port: 39733`, `engine: true`, sem erros;
+- turno real com `bash`:
+  `uid=0(root) gid=0(root) groups=0(root) context=u:r:magisk:s0`
+  — **uid 0 porque arranquei o servidor do Shizuku por root** neste telefone (botão "Iniciar (para
+  dispositivos com root)"). Num telefone **sem root** o servidor do Shizuku corre como
+  `shell` (uid 2000) e o mesmo código dá `uid=2000(shell)`: muda o uid, não o caminho;
+- `app-capabilities-test.sh` **5/5 em modo Shizuku** (canal reverso e notificação a funcionar).
+
+### Os três motores, lado a lado
+
+| Motor | Onde corre o daemon | uid do `bash` | Arranca no boot | Quando usar |
+|---|---|---|---|---|
+| **root** | `/data/adb/cachalote` | 0 (root, com guarda de caminhos) | ✅ Magisk `service.d` | telefone com root (o teu caso) |
+| **Shizuku** | `/data/local/tmp/cachalote` | 0 ou 2000 (o do Shizuku) | ❌ (o Shizuku tem de estar a correr) | telefone sem root, com Shizuku |
+| **embutido** | dentro da app | uid da app (sandbox do Android) | ✅ com a app | qualquer telefone, sem nada instalado |
+
+O Shizuku ficou instalado no telemóvel (podes desinstalá-lo quando quiseres: o modo root e o
+embutido não dependem dele).

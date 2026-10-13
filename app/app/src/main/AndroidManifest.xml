@@ -8,6 +8,8 @@
     <!-- Serviço em primeiro plano: mantém a ligação ao motor durante turnos longos. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Shizuku: correr o daemon como shell sem root (o servidor do Shizuku autoriza o app). -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <application
         android:allowBackup="false"
@@ -62,5 +64,19 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!--
+          Shizuku (modo "shell" sem root). O provider é OBRIGATÓRIO: é por ele que o servidor
+          do Shizuku entrega o binder à app — sem ele, `Shizuku.pingBinder()` devolve false e o
+          Shizuku regista "provider is null <package>.shizuku". O service corre no processo do
+          Shizuku e dá os comandos com o uid dele (ver ShizukuShellService).
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

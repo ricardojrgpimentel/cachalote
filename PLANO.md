@@ -266,7 +266,7 @@ Ponte reversa `host.*`; `AccessibilityService` (ler árvore, tap/type/scroll, sc
 Perfil `web` no daemon + WebView na app (paridade), gestão de plugins (pnpm), browser tool, virtual display **se** valer a pena (decisão LGPL em D8).
 - **Saída:** paridade funcional com o DSH desktop.
 
-### F5 — Empacotamento (2–3 dias) — ✅ **feito no essencial**: APK de release assinada e **modo sem root completo** (motor embutido, capacidades próprias, verificado — STATUS §15). Falta só o flavor Shizuku.
+### F5 — Empacotamento (2–3 dias) — ✅ **feito no essencial**: APK de release assinada e **modo sem root completo** (motor embutido, capacidades próprias, verificado — STATUS §15). Flavor Shizuku **feito e verificado** (STATUS §17): três motores (root, Shizuku, embutido).
 Flavors (`root`/`shizuku`/`in-app`), onboarding de permissões, actualização do kernel com payload assinado, docs, atribuições.
 - **Saída:** instalação limpa num segundo dispositivo.
 

@@ -14,6 +14,9 @@ set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="/data/adb/cachalote"
+# Porto do canal TCP. O daemon root usa 39731; um daemon noutro sítio (ex.: /data/local/tmp
+# para o Shizuku) usa 39733 para poderem coexistir.
+PORT=""
 STAGE="/data/local/tmp/cachalote-stage"
 DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
 APP="/Applications/DeepSeek Harness.app"
@@ -28,6 +31,7 @@ REBUILD=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) BASE="$2"; shift 2 ;;
+    --port) PORT="$2"; shift 2 ;;
     --device) DEV="$2"; shift 2 ;;
     --no-root) WITH_ROOT=0; shift ;;
     --autostart) AUTOSTART=1; shift ;;
@@ -68,7 +72,8 @@ printf '#!/system/bin/sh\nexec /system/bin/sh "$@"\n' > "$WS/.work/bash-shim"
 "${ADB[@]}" push "$WS/config/cachalote.patch.yml" "$STAGE/cachalote.patch.yml" >/dev/null
 echo "encenado"
 
-say "4/6 instalar em $BASE"
+[ -n "$PORT" ] || { if [ "$BASE" = "/data/adb/cachalote" ]; then PORT=39731; else PORT=39733; fi; }
+say "4/6 instalar em $BASE (porto $PORT)"
 SH "set -e
   mkdir -p '$BASE/home/ws' '$BASE/run' '$BASE/logs' '$BASE/tmp' '$BASE/bin' '$BASE/runtime/bin' '$BASE/runtime/lib'
   rm -rf '$BASE/dsh' '$BASE/kernel'
@@ -81,11 +86,17 @@ SH "set -e
   cp -f '$STAGE/client-smoke.cjs' '$BASE/bin/client-smoke.cjs'
   [ -f '$BASE/home/.env' ] || : > '$BASE/home/.env'
   cp -f '$STAGE/cachalote.patch.yml' '$BASE/home/cordis.patch.yml'
+  # O CLI e a ponte têm o base por omissão dentro do ficheiro: reescrevê-lo para o base
+  # escolhido, senão um --base alternativo (ex.: /data/local/tmp para o Shizuku) arranca o
+  # daemon do sítio errado.
+  sed -i \"s|/data/adb/cachalote|$BASE|g\" '$BASE/bin/cachalote' '$BASE/bridge.cjs' '$BASE/home/cordis.patch.yml' '$BASE/bin/client-smoke.cjs' 2>/dev/null || true
   chmod 755 '$BASE/bin/cachalote' '$BASE/bin/bash' '$BASE/runtime/bin/node'
   chmod 600 '$BASE/home/.env'
   chmod -R a+rX '$BASE/kernel' '$BASE/runtime/lib'
   chmod -R u+w '$BASE/home'
-  echo 'instalado em $BASE'"
+  printf '%s\n' '$PORT' > '$BASE/home/port'
+  chmod 644 '$BASE/home/port'
+  echo 'instalado em $BASE (porto $PORT)'"
 SH "du -sh '$BASE'; ls '$BASE' '$BASE/bin'"
 
 say "5/6 arrancar"

@@ -134,5 +134,33 @@ web-status)
   fi
   ;;
 env) sed -E 's/^(.*=.{0,4}).*/\1****/' "$BASE/home/.env" 2>/dev/null || echo "(sem $BASE/home/.env)" ;;
-*) echo "uso: cachalote start|stop|restart|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status"; exit 2 ;;
+
+# ---------------------------------------------------------------- chave (valor por stdin)
+key-set)
+  # Uso: printf '%s\n' "<chave>" | cachalote key-set [NOME]
+  NAME="${2:-DEEPSEEK_API_KEY}"
+  VALUE="$(cat)"
+  [ -n "$VALUE" ] || { echo "ERRO: chave vazia (envia o valor por stdin)" >&2; exit 1; }
+  mkdir -p "$BASE/home"
+  TMP="$BASE/home/.env.new"
+  { grep -v "^$NAME=" "$BASE/home/.env" 2>/dev/null || true; printf '%s=%s\n' "$NAME" "$VALUE"; } > "$TMP"
+  mv "$TMP" "$BASE/home/.env"
+  chmod 600 "$BASE/home/.env"
+  echo "gravado: $NAME (${#VALUE} caracteres) em $BASE/home/.env"
+  "$0" restart >/dev/null 2>&1 || true
+  ;;
+key-remove)
+  NAME="${2:-DEEPSEEK_API_KEY}"
+  if [ -f "$BASE/home/.env" ]; then
+    grep -v "^$NAME=" "$BASE/home/.env" > "$BASE/home/.env.new" 2>/dev/null || true
+    mv "$BASE/home/.env.new" "$BASE/home/.env"; chmod 600 "$BASE/home/.env"
+  fi
+  echo "removido: $NAME"
+  "$0" restart >/dev/null 2>&1 || true
+  ;;
+key-status)
+  NAME="${2:-DEEPSEEK_API_KEY}"
+  if grep -q "^$NAME=" "$BASE/home/.env" 2>/dev/null; then echo "presente"; else echo "ausente"; fi
+  ;;
+*) echo "uso: cachalote start|stop|restart|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|key-set|key-remove|key-status"; exit 2 ;;
 esac

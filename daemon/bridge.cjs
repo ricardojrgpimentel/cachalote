@@ -31,7 +31,17 @@ const { spawn } = require("node:child_process");
 
 const BASE = process.env.CACHALOTE_BASE || "/data/adb/cachalote";
 const SOCK = process.env.CACHALOTE_SOCK || path.join(BASE, "run", "cachalote.sock");
-const PORT = Number(process.env.CACHALOTE_PORT || 39731);
+// O porto pode vir do ambiente ou de $BASE/home/port (assim o daemon root e o daemon shell
+// coexistem no mesmo telefone, cada um no seu porto). Ver base de conhecimento 75.
+const PORT = (() => {
+  const fromEnv = Number(process.env.CACHALOTE_PORT || 0);
+  if (fromEnv) return fromEnv;
+  try {
+    const fromFile = Number(fs.readFileSync(path.join(BASE, "home", "port"), "utf8").trim());
+    if (fromFile) return fromFile;
+  } catch {}
+  return 39731;
+})();
 const PROFILE = process.env.CACHALOTE_PROFILE || "acp";
 const LOGDIR = path.join(BASE, "logs");
 const ENGINE_LOG = path.join(LOGDIR, "engine.log");
@@ -115,6 +125,11 @@ function startEngine() {
     LD_LIBRARY_PATH: path.join(BASE, "runtime", "lib"),
     TERM: "dumb",
     NODE_OPTIONS: "",
+    // O plugin do kernel fala com o daemon por TCP: tem de saber QUAL (o daemon root e o do
+    // Shizuku coexistem, em portas diferentes). Sem isto, o plugin do daemon shell ligava-se
+    // ao daemon root e as capacidades falhavam com "token inválido".
+    CACHALOTE_PORT: String(PORT),
+    CACHALOTE_TOKEN_FILE: path.join(BASE, "home", "app.token"),
   };
   fs.mkdirSync(env.TMPDIR, { recursive: true });
   // Áreas permitidas do bash (guarda de caminhos). Ficheiro editável pela app:
@@ -322,8 +337,15 @@ function attach(socket, { requireAuth }) {
 }
 
 const unixServer = net.createServer((s) => attach(s, { requireAuth: false }));
-unixServer.on("error", (e) => { log("ERRO no servidor unix: " + e.message); process.exit(1); });
+// O socket unix é um extra (ferramentas locais em root). Em /data/local/tmp o SELinux nega a
+// criação do socket ao domínio `shell` (EACCES) — e a app liga-se sempre por TCP, portanto
+// uma falha aqui não pode derrubar o daemon. Ver base de conhecimento 75.
+unixServer.on("error", (e) => {
+  log("aviso: socket unix indisponível (" + e.message + ") — sigo só com TCP");
+  unixReady = false;
+});
 try { fs.unlinkSync(SOCK); } catch {}
+let unixReady = true;
 unixServer.listen(SOCK, () => {
   try { fs.chmodSync(SOCK, 0o600); } catch {}
   log(`AF_UNIX à escuta em ${SOCK} (0600), pid ${process.pid}`);
@@ -332,6 +354,7 @@ unixServer.listen(SOCK, () => {
 
 const tcpServer = net.createServer((s) => attach(s, { requireAuth: true }));
 tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message));
+tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message + " (porta " + PORT + " já ocupada?)"));
 tcpServer.listen(PORT, "127.0.0.1", () => log(`TCP à escuta em 127.0.0.1:${PORT} (token obrigatório)`));
 
 function shutdown(why) {

@@ -39,6 +39,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -102,6 +104,14 @@ private val cachaloteColors = darkColorScheme(
 @Composable
 fun CachaloteApp() {
     val vm: MainViewModel = viewModel()
+    // Resultado do diálogo de permissão do Shizuku (o vm só existe aqui dentro).
+    DisposableEffect(Unit) {
+        val listener = rikka.shizuku.Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            vm.onShizukuPermissionResult(grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        }
+        runCatching { rikka.shizuku.Shizuku.addRequestPermissionResultListener(listener) }
+        onDispose { runCatching { rikka.shizuku.Shizuku.removeRequestPermissionResultListener(listener) } }
+    }
     MaterialTheme(colorScheme = cachaloteColors) {
         Surface(modifier = Modifier.fillMaxSize()) {
             var tab by rememberSaveable { mutableStateOf(0) }
@@ -499,21 +509,38 @@ private fun StatusScreen(vm: MainViewModel) {
         OnboardingCard(vm)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Motor embutido (sem root)", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            if (vm.embeddedMode) "a app corre o motor como seu filho — o sandbox do Android é o limite"
-                            else "usa o daemon com root/Shizuku (fora do sandbox da app)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary,
+                Text("Motor", fontWeight = FontWeight.SemiBold)
+                Text(
+                    when (vm.modeKind) {
+                        DaemonController.Mode.DAEMON -> "daemon com root: arranca no boot, bash como root com guarda de caminhos"
+                        DaemonController.Mode.SHIZUKU -> "daemon via Shizuku: corre como shell (uid 2000), sem root"
+                        DaemonController.Mode.EMBEDDED -> "embutido: motor dentro da app, o sandbox do Android é o limite"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        DaemonController.Mode.DAEMON to "root",
+                        DaemonController.Mode.SHIZUKU to "Shizuku",
+                        DaemonController.Mode.EMBEDDED to "embutido",
+                    ).forEach { (kind, label) ->
+                        FilterChip(
+                            selected = vm.modeKind == kind,
+                            onClick = { vm.switchMode(kind) },
+                            enabled = !vm.busy,
+                            label = { Text(label) },
                         )
                     }
-                    Switch(
-                        checked = vm.embeddedMode,
-                        onCheckedChange = { vm.switchMode(it) },
+                }
+                if (vm.shizukuState.isNotBlank()) {
+                    Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                }
+                if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
+                    OutlinedButton(
+                        onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
                         enabled = !vm.busy,
-                    )
+                    ) { Text("Autorizar no Shizuku") }
                 }
                 if (vm.embeddedInfo.isNotBlank()) {
                     Text(vm.embeddedInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)

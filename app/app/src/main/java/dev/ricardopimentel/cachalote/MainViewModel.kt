@@ -76,9 +76,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
     var a11yTicks by mutableStateOf(0)
 
-    /** Motor embutido (sem root) em vez do daemon? */
-    var embeddedMode by mutableStateOf(controller.mode == DaemonController.Mode.EMBEDDED)
+    /** Que motor está em uso: daemon com root, daemon via Shizuku, ou motor embutido. */
+    var modeKind by mutableStateOf(controller.mode)
+    val embeddedMode: Boolean get() = modeKind == DaemonController.Mode.EMBEDDED
     var embeddedInfo by mutableStateOf("")
+    var shizukuState by mutableStateOf("")
     var allowedRootsText by mutableStateOf("")
     var allowedRootsSaved by mutableStateOf("")
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
@@ -145,6 +147,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             runCatching { refreshStatus() }
             runCatching { run("chave") { refreshKeyStatus() } }
+        ShizukuBridge.init(app)
         refreshCapabilities()
         }
         viewModelScope.launch {
@@ -164,30 +167,79 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Troca entre o daemon (root/Shizuku) e o motor embutido (sem root). No modo embutido a
      * app extrai o kernel de `files/kernel.zip` (uma vez) e arranca o motor como seu filho.
      */
-    fun switchMode(embedded: Boolean) = run("modo") {
-        if (embedded == embeddedMode) return@run
+    /**
+     * Troca de motor:
+     *  · DAEMON   — daemon em /data/adb, root, arranca no boot (o mais poderoso)
+     *  · SHIZUKU  — daemon em /data/local/tmp arrancado pelo Shizuku (uid shell)
+     *  · EMBEDDED — motor dentro da app, sem root nem Shizuku (sandbox do Android)
+     */
+    fun switchMode(kind: DaemonController.Mode) = run("modo") {
+        if (kind == modeKind) return@run
         controller.stopEmbedded()
-        controller.mode = if (embedded) DaemonController.Mode.EMBEDDED else DaemonController.Mode.DAEMON
-        embeddedMode = embedded
-        tokenState = if (embedded) "n/d (modo embutido)" else "(por obter)"
-        if (embedded) {
-            if (!controller.embeddedHasZip()) {
-                error("falta kernel.zip no armazenamento privado da app — envia com tools/prepare-kernel-zip.sh --push")
+        controller.mode = kind
+        modeKind = kind
+        shizukuState = ""
+        when (kind) {
+            DaemonController.Mode.SHIZUKU -> {
+                if (!controller.shizukuAvailable()) error("o Shizuku não está a correr (abre a app Shizuku e inicia-o)")
+                if (!controller.shizukuHasPermission()) {
+                    shizukuState = "falta autorizar o Cachalote no Shizuku (botão abaixo)"
+                    return@run
+                }
+                shizukuState = "a arrancar o daemon via Shizuku…"
+                controller.startDaemon()
+                shizukuState = "daemon activo via Shizuku (" + controller.ensureToken().take(6) + "…)"
             }
-            if (!controller.embeddedPrepared()) {
-                embeddedInfo = "a extrair o kernel (pode levar um minuto)…"
-                val n = controller.prepareEmbedded()
-                embeddedInfo = "kernel extraído ($n ficheiros)"
-            } else {
-                embeddedInfo = "kernel já extraído"
+            DaemonController.Mode.DAEMON -> tokenState = "(por obter)"
+            DaemonController.Mode.EMBEDDED -> {
+                tokenState = "n/d (modo embutido)"
+                if (!controller.embeddedHasZip()) {
+                    error("falta kernel.zip no armazenamento privado da app — envia com tools/prepare-kernel-zip.sh --push")
+                }
+                if (!controller.embeddedPrepared()) {
+                    embeddedInfo = "a extrair o kernel (pode levar um minuto)…"
+                    val n = controller.prepareEmbedded()
+                    embeddedInfo = "kernel extraído ($n ficheiros)"
+                } else {
+                    embeddedInfo = "kernel já extraído"
+                }
             }
-        } else {
-            embeddedInfo = ""
         }
         controller.ensureConnected()
         controller.ensureAcp()
         refreshStatus()
         runCatching { refreshKeyStatus() }
+    }
+
+    /** Arranca (ou liga-se ao) daemon do modo Shizuku. */
+    private suspend fun startShizukuLocked() {
+        shizukuState = "a arrancar o daemon via Shizuku…"
+        controller.startDaemon()
+        val token = controller.ensureToken()
+        shizukuState = "daemon activo via Shizuku (" + token.take(6) + "…)"
+    }
+
+    /** Pede a permissão do Shizuku (abre o diálogo do sistema). */
+    fun requestShizukuPermission(activity: android.app.Activity) {
+        if (!controller.shizukuAvailable()) {
+            shizukuState = "o Shizuku não está a correr"
+            return
+        }
+        ShizukuBridge.requestPermission(activity)
+        shizukuState = "pedido enviado ao Shizuku — autoriza no diálogo"
+    }
+
+    /** Actualizado pelo listener do MainActivity quando o utilizador responde ao diálogo. */
+    fun onShizukuPermissionResult(granted: Boolean) {
+        shizukuState = if (granted) "autorizado pelo Shizuku" else "permissão recusada"
+        if (!granted) return
+        run("shizuku") {
+            startShizukuLocked()
+            controller.ensureConnected()
+            controller.ensureAcp()
+            refreshStatus()
+            runCatching { refreshKeyStatus() }
+        }
     }
 
     fun refreshStatus() = run("estado") {
@@ -200,7 +252,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         a11yTicks += 1
         daemonInstalled = controller.daemonInstalled()
         if (daemonInstalled != true) {
-            error = "o daemon não está instalado em ${controller.base} — corre daemon/install.sh no computador"
+            error = if (embeddedMode) "kernel não extraído"
+            else if (modeKind == DaemonController.Mode.SHIZUKU)
+                "o daemon não está instalado em /data/local/tmp/cachalote — corre daemon/install.sh --base /data/local/tmp/cachalote --no-root"
+            else "o daemon não está instalado em ${controller.base} — corre daemon/install.sh no computador"
             return@run
         }
         if (embeddedMode) embeddedInfo = if (controller.embeddedEngineRunning()) "motor embutido a correr" else "motor embutido parado"
