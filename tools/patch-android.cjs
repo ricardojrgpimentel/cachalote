@@ -136,6 +136,11 @@ const LINK_SITES = [
     subs: [
       ["await link(source, target);", "await rename(source, target);"],
       ["await link(staged.path, target);", "await rename(staged.path, target);"],
+      // Com hard link o nome de staging continuava a existir; com rename já não. O unlink
+      // seguinte (que fazia sentido antes) tem de tolerar ENOENT — foi ISTO que impedia as
+      // imagens de serem publicadas ("unable to persist the prompt image batch") e, com elas,
+      // a visão chegar ao modelo. Ver base de conhecimento 80.
+      ["await unlink(staged.path);", "await unlink(staged.path).catch(() => {});"],
     ],
   },
 ];
@@ -147,7 +152,7 @@ for (const site of LINK_SITES) {
     continue;
   }
   let src = fs.readFileSync(site.file, "utf8");
-  if (src.includes("cachalote: link->rename")) {
+  if (src.includes("cachalote: link->rename v2")) {
     report.push(short + ": já patcheado (nada a fazer)");
     continue;
   }
@@ -169,7 +174,7 @@ for (const site of LINK_SITES) {
     report.push(short + ": AVISO — nenhum ponto de link() reconhecido");
     continue;
   }
-  src = "/* cachalote: link->rename (o SELinux do Android nega link) */\n" + src;
+  src = "/* cachalote: link->rename v2 (o SELinux do Android nega link; unlink tolerante após rename) */\n" + src;
   fs.writeFileSync(site.file, src);
   report.push(short + ": " + n + " publicação(ões) link()->rename()");
 }
@@ -323,6 +328,100 @@ if (fs.existsSync(bashLocalFile)) {
   }
 } else {
   report.push("bash-local (shell): AVISO — ficheiro não encontrado");
+}
+
+/* ---------- patch 9: imagens sem sharp ---------- */
+// O `dsh-attachment-local` exige **sharp** (libvips) para ler metadados e normalizar imagens.
+// Não existe build do sharp para **bionic** (o prebuild linux-arm64 é glibc; o musl também não
+// serve), portanto no Android qualquer imagem falhava com
+// "unable to persist the prompt image batch" — e com isso a visão (android_see) nunca chegava
+// ao modelo. O harness tem um caminho de **passagem directa** para imagens já limpas
+// (PNG 8-bit sRGB sem metadados e dentro dos limites): basta saber os factos sem sharp.
+// Implementamos a leitura em JS puro; tudo o que precise mesmo de re-encodar falha com uma
+// mensagem clara. Ver base de conhecimento 80.
+const attachFile = HOME + "/@deepseek-ai/dsh-attachment-local/lib/index.js";
+if (fs.existsSync(attachFile)) {
+  let src = fs.readFileSync(attachFile, "utf8");
+  const imarker = "cachalote: imagens sem sharp";
+  const probeAnchor = "async function probeImage(data) {\n\tconst sharp = requireSharp();";
+  const detectAnchor = "async function detectImage(data, limits) {\n\tconst sharp = requireSharp();";
+  if (src.includes(imarker)) {
+    report.push("attachment-local (imagens): já patcheado (nada a fazer)");
+  } else if (!src.includes(probeAnchor) || !src.includes(detectAnchor)) {
+    report.push("attachment-local (imagens): AVISO — âncoras não encontradas; versão mudou?");
+  } else {
+    const helper = [
+      "/** " + imarker + " — factos de imagem sem libvips (PNG limpo; o resto exige sharp). */",
+      "function cachaloteImageFacts(data) {",
+      "\tconst b = Buffer.isBuffer(data) ? data : Buffer.from(data);",
+      "\t// PNG: assinatura + IHDR + varrimento dos chunks (metadados, APNG, alfa).",
+      "\tif (b.length >= 26 && b.readUInt32BE(0) === 0x89504e47 && b.readUInt32BE(4) === 0x0d0a1a0a) {",
+      "\t\tconst width = b.readUInt32BE(16);",
+      "\t\tconst height = b.readUInt32BE(20);",
+      "\t\tconst bitDepth = b[24];",
+      "\t\tconst colourType = b[25];",
+      "\t\tlet off = 8, animated = false, carriesMetadata = false, hasAlpha = colourType === 4 || colourType === 6;",
+      "\t\twhile (off + 8 <= b.length) {",
+      "\t\t\tconst len = b.readUInt32BE(off);",
+      "\t\t\tconst type = b.toString(\"latin1\", off + 4, off + 8);",
+      "\t\t\tif (type === \"acTL\") animated = true;",
+      "\t\t\tif (type === \"tRNS\") hasAlpha = true;",
+      "\t\t\tif (type === \"tEXt\" || type === \"iTXt\" || type === \"zTXt\" || type === \"eXIf\" || type === \"tIME\" || type === \"iCCP\") carriesMetadata = true;",
+      "\t\t\toff += 12 + len;",
+      "\t\t\tif (type === \"IEND\") break;",
+      "\t\t}",
+      "\t\treturn {",
+      "\t\t\tmediaType: \"image/png\",",
+      "\t\t\twidth,",
+      "\t\t\theight,",
+      "\t\t\tanimated,",
+      "\t\t\tcarriesMetadata,",
+      "\t\t\tdepth: bitDepth === 8 ? \"uchar\" : String(bitDepth),",
+      "\t\t\tspace: \"srgb\",",
+      "\t\t\thasAlpha",
+      "\t\t};",
+      "\t}",
+      "\t// JPEG: varrer marcadores até ao SOF (dimensões). Tem metadados quase sempre, logo",
+      "\t// segue o caminho do sharp — que no Android falha com mensagem clara.",
+      "\tif (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {",
+      "\t\tlet off = 2;",
+      "\t\twhile (off + 9 < b.length) {",
+      "\t\t\tif (b[off] !== 0xff) { off++; continue; }",
+      "\t\t\tconst marker = b[off + 1];",
+      "\t\t\tif (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {",
+      "\t\t\t\treturn {",
+      "\t\t\t\t\tmediaType: \"image/jpeg\",",
+      "\t\t\t\t\theight: b.readUInt16BE(off + 5),",
+      "\t\t\t\t\twidth: b.readUInt16BE(off + 7),",
+      "\t\t\t\t\tanimated: false,",
+      "\t\t\t\t\tcarriesMetadata: true,",
+      "\t\t\t\t\tdepth: \"uchar\",",
+      "\t\t\t\t\tspace: \"srgb\",",
+      "\t\t\t\t\thasAlpha: false",
+      "\t\t\t\t};",
+      "\t\t\t}",
+      "\t\t\toff += 2 + b.readUInt16BE(off + 2);",
+      "\t\t}",
+      "\t}",
+      "\tthrow new AttachmentError(\"Unsupported or malformed image data.\", \"INVALID_IMAGE\");",
+      "}",
+      "",
+      "async function cachaloteProbe(data, limits) {",
+      "\tconst detected = cachaloteImageFacts(data);",
+      "\tif (limits?.maxPixels !== void 0 && detected.width * detected.height > limits.maxPixels) throw new AttachmentError(\"Image exceeds the configured decoded-pixel limit.\", \"IMAGE_TOO_MANY_PIXELS\");",
+      "\tif (limits?.maxDimension !== void 0 && Math.max(detected.width, detected.height) > limits.maxDimension) throw new AttachmentError(\"Image exceeds the configured per-side pixel limit.\", \"IMAGE_DIMENSION_TOO_LARGE\");",
+      "\treturn detected;",
+      "}",
+      "",
+    ].join("\n");
+
+    src = src.replace(probeAnchor, helper + "async function probeImage(data) {\n\treturn cachaloteImageFacts(data);\n}\n\nasync function probeImageSharp(data) {\n\tconst sharp = requireSharp();");
+    src = src.replace(detectAnchor, "async function detectImage(data, limits) {\n\treturn cachaloteProbe(data, limits);\n}\n\nasync function detectImageSharp(data, limits) {\n\tconst sharp = requireSharp();");
+    fs.writeFileSync(attachFile, src);
+    report.push("attachment-local (imagens): leitura em JS puro (o Android não tem sharp)");
+  }
+} else {
+  report.push("attachment-local (imagens): AVISO — ficheiro não encontrado");
 }
 
 /* ---------- verificação final: nenhum .node na árvore ---------- */

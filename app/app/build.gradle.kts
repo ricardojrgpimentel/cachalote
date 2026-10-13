@@ -54,6 +54,8 @@ android {
     // gerado por tools/prepare-embed.sh. useLegacyPackaging obriga a APK a EXTRAIR os
     // .so para o nativeLibraryDir — é lá que o exec é permitido com targetSdk moderno.
     sourceSets["main"].jniLibs.srcDir("${rootDir}/../.work/jniLibs")
+    // O kernel vai como zip já comprimido: recomprimi-lo no APK só gastaria minutos de build.
+    androidResources { noCompress += listOf("zip") }
     packaging {
         jniLibs { useLegacyPackaging = true }
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"

@@ -523,3 +523,30 @@ shell. Instalei o Shizuku (13.6.0) no S10+ a teu pedido e testei tudo.
 
 O Shizuku ficou instalado no telemóvel (podes desinstalá-lo quando quiseres: o modo root e o
 embutido não dependem dele).
+
+
+---
+
+## 18. Visão real: o agente vê o ecrã
+
+O `android_see` deixou de devolver só um caminho: a captura é **anexada à conversa** e o modelo
+vê os pixels.
+
+| Peça | Como |
+|---|---|
+| App | `screenshot(maxWidth)` reduz a captura (720 px por omissão) e devolve o PNG em base64 além do ficheiro |
+| Plugin | `android_see` cria um **anexo** (`ctx.get("attachments").saveImage`) e devolve um bloco `{type:"image"}` no resultado da ferramenta |
+| Kernel | patch 9: leitura de imagens em JS puro (o `sharp` não tem build para bionic) |
+| Modelo | `deepseek-v4-flash` declarado com `inputModalities: ["text","image"]` (fora do catálogo era tratado como só-texto) |
+| Correcção | patch 4 v2: `unlink` tolerante depois do `link()`→`rename()` — era isto que impedia a publicação das imagens |
+
+**Prova (imagem sem texto a descrevê-la):** calculadora com **512** no visor → prompt com bloco
+`image` → o motor registou no seu log
+`agent_thought_chunk: "The image shows \"512\""` e respondeu **512**; o objecto ficou em
+`$DSH_HOME/attachments/v1/objects/61/…` (88 KB). O `initialize` passou a anunciar
+`promptCapabilities.image: true`.
+
+Fica uma ressalva honesta: o caminho **imagem → anexo → modelo** está verificado directamente;
+o caminho da **ferramenta** (`android_see`) usa exactamente o mesmo código de publicação já
+corrigido, mas a verificação pelo agente foi interrompida pelos diálogos da guarda de caminhos
+e pela automação da UI — não é falta de confiança no código, é falta de um teste limpo.

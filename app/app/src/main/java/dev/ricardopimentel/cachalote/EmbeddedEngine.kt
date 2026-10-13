@@ -40,7 +40,54 @@ class EmbeddedEngine(private val ctx: Context) {
 
     fun isPrepared(): Boolean = binJs.isFile
 
-    fun hasZip(): Boolean = kernelZip.isFile
+    /** O zip existe na app **ou** vem embutido na APK (asset) — em qualquer dos casos dá. */
+    fun hasZip(): Boolean = kernelZip.isFile || assetZipPresent()
+
+    private fun assetZipPresent(): Boolean = runCatching { ctx.assets.open("kernel.zip").close(); true }.getOrDefault(false)
+
+    /**
+     * Garante o zip do kernel no armazenamento da app. Se não estiver lá (primeira execução,
+     * ou depois de limpar os dados), copia-o do **asset embutido na APK** e verifica o sha256
+     * antes de confiar nele — é a diferença entre "funciona" e "o utilizador tem de fazer
+     * `adb push`".
+     */
+    private fun ensureKernelZip(): File {
+        if (kernelZip.isFile && kernelZip.length() > 0) return kernelZip
+        require(assetZipPresent()) {
+            "falta o kernel: nem em files/kernel.zip nem embutido na APK (corre tools/prepare-kernel-zip.sh --bundle)"
+        }
+        kernelZip.parentFile?.mkdirs()
+        val tmp = File(kernelZip.parentFile, "kernel.zip.part")
+        ctx.assets.open("kernel.zip").use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        val expected = expectedSha256()
+        if (expected != null) {
+            val actual = sha256(tmp)
+            require(actual.equals(expected, ignoreCase = true)) {
+                "o kernel embutido falhou a verificação de integridade (esperado ${expected.take(16)}…, obtido ${actual.take(16)}…)"
+            }
+        }
+        if (kernelZip.exists()) kernelZip.delete()
+        require(tmp.renameTo(kernelZip)) { "não consegui guardar o kernel em ${kernelZip.absolutePath}" }
+        return kernelZip
+    }
+
+    private fun expectedSha256(): String? = runCatching {
+        ctx.assets.open("kernel.sha256").bufferedReader().use { it.readText().trim() }
+            .split(Regex("\\s+")).firstOrNull { it.length == 64 }
+    }.getOrNull()
+
+    private fun sha256(file: File): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buf = ByteArray(1 shl 16)
+            while (true) {
+                val n = input.read(buf)
+                if (n <= 0) break
+                digest.update(buf, 0, n)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
 
     val running: Boolean get() = proc?.isAlive == true
 
@@ -77,7 +124,7 @@ class EmbeddedEngine(private val ctx: Context) {
     /** Extrai o kernel do zip (uma vez). Devolve o número de ficheiros escritos. */
     suspend fun prepare(): Int = withContext(Dispatchers.IO) {
         if (isPrepared()) return@withContext 0
-        require(hasZip()) { "falta ${kernelZip.name} em files/ (envia com tools/prepare-kernel-zip.sh --push)" }
+        ensureKernelZip()
         var files = 0
         ZipInputStream(kernelZip.inputStream().buffered()).use { zin ->
             while (true) {

@@ -62,3 +62,14 @@
         sandbox: danger-full-access
         approval: never
     defaultPreset: workspace-write
+
+# O perfil ACP fixa `deepseek-v4-flash`, que não está no catálogo por omissão — e um modelo
+# fora do catálogo é tratado como **só texto**: o `initialize` anunciava
+# `promptCapabilities.image: false` e o agente respondia "I can't read images". Esta entrada
+# devolve-lhe a visão, que é o que faz o `android_see` valer a pena (o modelo vê o ecrã).
+- id: llm-deepseek
+  config:
+    models:
+      - id: deepseek-v4-flash
+        name: DeepSeek-V4-Flash
+        inputModalities: ["text", "image"]

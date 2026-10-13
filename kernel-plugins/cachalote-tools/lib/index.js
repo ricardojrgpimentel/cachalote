@@ -18,7 +18,7 @@ import path from "node:path";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 
 const name = "tool-cachalote";
-const inject = ["tools"];
+const inject = ["tools", "attachments"];
 
 const PORT = Number(process.env.CACHALOTE_PORT || 39731);
 const TOKEN_PATH = process.env.CACHALOTE_TOKEN_FILE ||
@@ -203,13 +203,74 @@ function apply(ctx) {
   ctx.tools.register(defineTool({
     name: "android_see",
     description:
-      "Take a screenshot on the phone and save it as a PNG (returns the path and size). Use it when " +
-      "you need the pixels — e.g. a canvas, a game, or a layout whose text tree is not enough. " +
-      "Requires the accessibility service (Android 11+).",
-    parameters: {},
-    output: textOutput("Screenshot taken"),
-    async execute() {
-      return asText(await hostCall("screenshot", {}));
+      "Take a screenshot on the phone and SEE it: the PNG is attached to the conversation, so you " +
+      "get the actual pixels (canvas, game, image, layout whose text tree is not enough). Also " +
+      "returns the file path and size. Requires the accessibility service (Android 11+).",
+    parameters: {
+      maxWidth: {
+        type: "integer",
+        description: "Downscale the capture to this width before attaching (default 720; use 1080+ to read small text).",
+      },
+    },
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          path: { type: "string", required: true },
+          bytes: { type: "integer" },
+          width: { type: "integer" },
+          height: { type: "integer" },
+          mediaType: { type: "string" },
+          attached: { type: "boolean" },
+          attachmentRef: {},
+          hint: { type: "string" },
+        },
+      },
+      render: (_args, value) => {
+        const parts = [{
+          type: "text",
+          text: `captura ${value.width ?? "?"}×${value.height ?? "?"}, ` +
+            `${Math.round((value.bytes ?? 0) / 1024)} KB, guardada em ${value.path}` +
+            (value.attached ? " (imagem em anexo)" : "") +
+            (value.hint ? ` — ${value.hint}` : ""),
+        }];
+        if (value.attachmentRef) parts.push({ type: "image", attachment: value.attachmentRef });
+        return parts;
+      },
+      presentationMeta: () => ({ title: "Screenshot (ver o ecrã)" }),
+    },
+    async execute(args) {
+      const maxWidth = Number.isFinite(args.maxWidth) ? args.maxWidth : 720;
+      const raw = await hostCall("screenshot", { maxWidth });
+      const value = {
+        path: raw.path,
+        bytes: raw.bytes,
+        width: raw.width,
+        height: raw.height,
+        mediaType: raw.mediaType || "image/png",
+        attached: false,
+        attachmentRef: null,
+      };
+      // A app devolve o PNG em base64; transformamo-lo num anexo do harness para que o modelo
+      // veja a imagem. O `render` é síncrono, logo o anexo tem de ser criado aqui.
+      const attachments = ctx.get("attachments");
+      if (attachments === void 0) {
+        value.hint = "não há serviço de anexos nesta composição: a imagem não chega ao modelo";
+      } else if (typeof raw.data !== "string" || raw.data.length === 0) {
+        value.hint = "a app não devolveu os pixels";
+      } else {
+        try {
+          value.attachmentRef = await attachments.saveImage({
+            data: Buffer.from(raw.data, "base64"),
+            mediaType: value.mediaType,
+          });
+          value.attached = true;
+        } catch (error) {
+          value.hint = "falhou o anexo da imagem: " + (error?.message ?? String(error));
+        }
+      }
+      return value;
     },
   }));
 }

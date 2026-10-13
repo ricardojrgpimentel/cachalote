@@ -751,3 +751,30 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   chave, ao reiniciar e ao arrancar).
 - **Solução:** `ensureAcp()` tenta 4 vezes com 2 s de intervalo (e reconecta se a ligação caiu).
 - **Origem:** **[LOCAL]**.
+
+---
+
+## T. Visão: a captura de ecrã chega ao modelo
+
+### 80. `sharp` não existe para bionic — e o `link()`→`rename()` deixou um `unlink` órfão
+- **Sintoma:** `android_see` corria mas o modelo nunca via nada; o motor respondia
+  `Internal error: unable to persist the prompt image batch` e o `attachments/` ficava vazio.
+- **Duas causas, ambas no `dsh-attachment-local`:**
+  1. **`sharp`** (libvips) é obrigatório para ler metadados e normalizar imagens. Não há build
+     para **bionic** (o prebuild linux-arm64 é glibc; o musl também não serve) — daí o porto
+     original o ter cortado. Solução (patch 9): ler os factos em **JS puro** (PNG: IHDR +
+     varrimento de chunks; JPEG: marcadores até ao SOF) e deixar o harness usar o caminho de
+     **passagem directa** que já existe para PNG 8-bit sRGB sem metadados e dentro dos limites.
+     O que precise mesmo de re-encodar falha com mensagem clara (não há libvips no Android).
+  2. **O nosso próprio patch** `link()`→`rename()` (item 41) deixou um `await unlink(staged.path)`
+     a seguir: com hard link o nome antigo continuava a existir, com `rename` já não — o
+     `unlink` rebentava com ENOENT e a publicação falhava. Correcção: `unlink(...).catch(() => {})`.
+- **Modelo:** o perfil fixa `deepseek-v4-flash`, que **não** está no catálogo por omissão — um
+  modelo fora do catálogo é tratado como só-texto e o `initialize` anunciava
+  `promptCapabilities.image: false` (o agente respondia *"I can't read images"*). Declarar o
+  modelo com `inputModalities: ["text","image"]` na nossa camada de patch resolve.
+- **Verificação (só a imagem, sem texto a descrevê-la):** captura da calculadora com **512** no
+  visor → `session/prompt` com bloco `image` → o motor registou
+  `agent_thought_chunk: 'The image shows "512"'` e respondeu **512**; objecto guardado em
+  `$DSH_HOME/attachments/v1/objects/61/…` (88 KB, `sha256` no nome).
+- **Origem:** **[LOCAL]**.

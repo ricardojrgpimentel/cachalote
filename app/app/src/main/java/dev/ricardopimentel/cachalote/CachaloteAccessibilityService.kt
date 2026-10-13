@@ -206,7 +206,11 @@ class CachaloteAccessibilityService : AccessibilityService() {
     }
 
     /** Captura o ecrã (API 30+) para PNG no armazenamento externo privado da app. */
-    fun screenshot(): Map<String, Any?> {
+    /**
+     * Captura de ecrã. Devolve o PNG em disco **e** os pixels em base64 (para o modelo poder
+     * ver), reduzido a [maxWidth] para o pacote não ser enorme.
+     */
+    fun screenshot(maxWidth: Int = 720): Map<String, Any?> {
         val dir = getExternalFilesDir("shots") ?: filesDir
         if (!dir.isDirectory) dir.mkdirs()
         val file = File(dir, "shot-${System.currentTimeMillis()}.png")
@@ -214,6 +218,10 @@ class CachaloteAccessibilityService : AccessibilityService() {
         val latch = java.util.concurrent.CountDownLatch(1)
         var error: String? = null
         var size = 0
+        var shotBytes = 0L
+        var shotWidth = 0
+        var shotHeight = 0
+        var shotBase64: String? = null
         takeScreenshot(Display.DEFAULT_DISPLAY, io, object : TakeScreenshotCallback {
             override fun onSuccess(result: ScreenshotResult) {
                 try {
@@ -222,9 +230,19 @@ class CachaloteAccessibilityService : AccessibilityService() {
                     bmp?.recycle()
                     result.hardwareBuffer.close()
                     if (copy != null) {
-                        file.outputStream().use { copy.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                        size = copy.width
-                        copy.recycle()
+                        val scaled = if (maxWidth in 64 until copy.width) {
+                            val h = (copy.height.toLong() * maxWidth / copy.width).toInt().coerceAtLeast(1)
+                            Bitmap.createScaledBitmap(copy, maxWidth, h, true).also { if (it !== copy) copy.recycle() }
+                        } else {
+                            copy
+                        }
+                        file.outputStream().use { scaled.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                        size = scaled.width
+                        shotBytes = file.length()
+                        shotWidth = scaled.width
+                        shotHeight = scaled.height
+                        shotBase64 = android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
+                        scaled.recycle()
                     }
                 } catch (t: Throwable) {
                     error = t.message
@@ -242,8 +260,12 @@ class CachaloteAccessibilityService : AccessibilityService() {
         if (error != null) throw IllegalStateException(error)
         return mapOf(
             "path" to file.absolutePath,
-            "bytes" to file.length(),
-            "width" to size,
+            "bytes" to shotBytes,
+            "width" to shotWidth,
+            "height" to shotHeight,
+            "mediaType" to "image/png",
+            // Só vai base64 quando há imagem: é o que permite ao modelo VER o ecrã.
+            "data" to shotBase64,
         )
     }
 }

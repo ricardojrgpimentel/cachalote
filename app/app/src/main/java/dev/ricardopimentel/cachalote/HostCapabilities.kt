@@ -150,7 +150,10 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
 
     private fun screenshot(params: JSONObject): JSONObject {
         val svc = requireService()
-        return JSONObject(svc.screenshot())
+        // `maxWidth` reduz a captura antes de a mandar (o modelo vê-a; o base64 não pode ser
+        // gigante). Ver o plugin `android_see`.
+        val maxWidth = params.optInt("maxWidth", 720).coerceIn(64, 4096)
+        return JSONObject(svc.screenshot(maxWidth))
     }
 
     // ---------------------------------------------------------------- auxiliares

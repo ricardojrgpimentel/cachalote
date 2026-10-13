@@ -18,3 +18,8 @@ app/local.properties
 
 # runtime embutido (gerado por tools/prepare-embed.sh)
 app/app/src/main/assets/embed-libs.txt
+app/app/src/main/assets/kernel.zip
+app/app/src/main/assets/kernel.sha256
+
+# caches locais do Kotlin/Gradle do projecto da app
+app/.kotlin/
