@@ -68,7 +68,7 @@ Escrevi `daemon/set-key.sh` para **tu** correres. A chave nunca passa por mim, n
 entra em `argv` (vai por stdin), nunca é ecoada e nunca fica no histórico.
 
 ```sh
-cd /Users/ricardopimentel/Documents/dshm
+cd <a-pasta-do-repo>
 ./daemon/set-key.sh                 # pede a chave (não aparece no ecrã) e grava-a
 ./daemon/set-key.sh --check         # confirma o ficheiro e mascara o valor
 ./daemon/set-key.sh --remove        # apaga

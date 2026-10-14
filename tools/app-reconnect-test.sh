@@ -10,7 +10,9 @@
 #   ./tools/app-reconnect-test.sh
 set -uo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
+# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+. "$WS/tools/lib-device.sh"
+DEV="$(cachalote_escolher_dispositivo)" || exit 1
 PKG="dev.ricardopimentel.cachalote"
 ADB=(adb -s "$DEV")
 UI="$WS/.work/ui-reconnect.xml"

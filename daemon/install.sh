@@ -18,7 +18,9 @@ BASE="/data/adb/cachalote"
 # para o Shizuku) usa 39733 para poderem coexistir.
 PORT=""
 STAGE="/data/local/tmp/cachalote-stage"
-DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
+# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+. "$WS/tools/lib-device.sh"
+DEV="$(cachalote_escolher_dispositivo)" || exit 1
 APP="/Applications/DeepSeek Harness.app"
 ASAR="$APP/Contents/Resources/app.asar"
 ELECTRON="$APP/Contents/MacOS/DeepSeek Harness"

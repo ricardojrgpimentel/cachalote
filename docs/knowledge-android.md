@@ -1054,3 +1054,21 @@ diferentes, e tratá-los como iguais era o erro:
   (*"o Shizuku não está a correr (abre a app Shizuku e inicia-o)"*) e oferece o botão
   **Autorizar no Shizuku**. Não falha em silêncio nem finge que ligou.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AB. Preparar um repositório para ser público
+
+### 95. Nada de identificadores da máquina do autor no repositório
+- **O que estava mal:** nove scripts usavam `DEV="${CACHALOTE_DEV:-<serial-do-telemóvel>}"` — o
+  identificador do aparelho do autor ficava gravado (e não servia a mais ninguém), e havia
+  caminhos absolutos da máquina em dois documentos.
+- **Solução:** [`tools/lib-device.sh`](../tools/lib-device.sh) resolve o dispositivo por
+  `$CACHALOTE_DEV` → único ligado → erro explícito se houver vários. Caminhos pessoais
+  trocados por `<repo>`.
+- **Auditoria completa** (segredos na árvore e no histórico, licenças, referências internas):
+  ver [`PUBLICAR.md`](../PUBLICAR.md). Resumo: nada de segredos, nada de LGPL/GPL, nenhuma
+  referência interna.
+- **Detalhe que quase passa:** o email do autor fica nos **metadados dos commits** (não é
+  conteúdo de ficheiro, logo `git grep` não o apanha). Ver a decisão em `PUBLICAR.md` §2.1.
+- **Origem:** **[LOCAL]**.

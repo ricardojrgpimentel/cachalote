@@ -586,8 +586,8 @@ technique, with object-level streams, applies to ACP's `config.stream`.
 
 ## 10. Evidence: exact commands and observed results
 
-Environment: macOS, `/Users/ricardopimentel/Documents/dshm`. `DSH=/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`,
-`export DSH_HOME=/Users/ricardopimentel/Documents/dshm/.work/dshhome`.
+Environment: macOS, `<repo>`. `DSH=/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`,
+`export DSH_HOME=<repo>/.work/dshhome`.
 
 ### 10.1 SDK handshake + streaming (`.work/rpc-probe.mjs`, `--profile sdk`)
 

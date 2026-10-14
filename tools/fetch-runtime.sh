@@ -20,7 +20,9 @@
 # arquitecturas, por isso o caminho é o mesmo — só muda o índice do repositório.
 set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
+# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+. "$WS/tools/lib-device.sh"
+DEV="$(cachalote_escolher_dispositivo)" || exit 1
 REPO="https://packages.termux.dev/apt/termux-main"
 TERMUX_PREFIX_IN_DEB="data/data/com.termux/files/usr"
 ARCH="aarch64"

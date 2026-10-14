@@ -8,7 +8,9 @@
 set -uo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
+# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+. "$WS/tools/lib-device.sh"
+DEV="$(cachalote_escolher_dispositivo)" || exit 1
 PKG="dev.ricardopimentel.cachalote"
 ACT="$PKG/.MainActivity"
 SVC="$PKG/$PKG.CachaloteAccessibilityService"

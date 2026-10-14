@@ -20,7 +20,9 @@ set -euo pipefail
 
 BASE="${CACHALOTE_BASE:-/data/adb/cachalote}"
 VAR="DEEPSEEK_API_KEY"
-DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
+# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+. "$(cd "$(dirname "$0")/.." && pwd)/tools/lib-device.sh"
+DEV="$(cachalote_escolher_dispositivo)" || exit 1
 MODE="set"
 KEYFILE=""
 DELETE_SOURCE=0

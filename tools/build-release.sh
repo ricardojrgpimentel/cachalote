@@ -45,4 +45,4 @@ APKSIGNER="$(ls -d "$HOME"/Library/Android/sdk/build-tools/*/apksigner 2>/dev/nu
 [ -n "$APKSIGNER" ] && "$APKSIGNER" verify --print-certs "$APK" | head -4
 echo "sha256: $(shasum -a 256 "$APK" | cut -d' ' -f1)"
 echo
-echo "instalar:  adb -s ${CACHALOTE_DEV:-R58M55JNP6X} install -r \"$APK\""
+echo "instalar:  adb -s \"\${CACHALOTE_DEV:-<serial>}\" install -r \"$APK\""

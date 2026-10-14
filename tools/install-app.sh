@@ -11,7 +11,9 @@
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
+# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+. "$WS/tools/lib-device.sh"
+DEV="$(cachalote_escolher_dispositivo)" || exit 1
 PKG="dev.ricardopimentel.cachalote"
 GRADLE="$WS/.work/tools/gradle-8.13/bin/gradle"
 # O Gradle precisa de escrever no seu home e no home do Android; manter tudo dentro
