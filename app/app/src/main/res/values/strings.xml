@@ -9,6 +9,7 @@
     <string name="aba_resumo">Summary</string>
     <string name="abrir_acessibilidade">Open Settings → Accessibility</string>
     <string name="accessibility_description">Gives the Cachalote agent eyes and fingers: reads the screen\'s control tree, taps, types, scrolls and takes screenshots, whenever you ask it to.</string>
+    <string name="a_reconectar">reconnecting…</string>
     <string name="acessibilidade">Accessibility</string>
     <string name="acessibilidade_caiu">accessibility turned off: the agent lost its eyes and fingers on the screen (Settings → Accessibility → Cachalote)</string>
     <string name="acessibilidade_voltou">accessibility is back on</string>
@@ -60,6 +61,7 @@
     <string name="dialogo_autorizacao">Authorisation</string>
     <string name="ditar">Dictate</string>
     <string name="ditar_texto">Speak</string>
+    <string name="em_direto">live</string>
     <string name="enviar">Send</string>
     <string name="esconder">Hide</string>
     <string name="escreve_tarefa">Write a task for the agent</string>
@@ -75,6 +77,7 @@
     <string name="ferramenta_a_correr">running</string>
     <string name="ferramenta_concluida">done</string>
     <string name="ferramenta_falhada">failed</string>
+    <string name="fila_dica">Write a task and tap «Add to queue» — the agent runs them one after another.</string>
     <string name="fila_falhada">failed</string>
     <string name="fila_feita">done</string>
     <string name="fila_pendente">pending</string>
@@ -165,6 +168,9 @@
     <string name="sobre">About</string>
     <string name="sobre_detalhe">identity, version and the security model</string>
     <string name="sobre_texto">Cachalote — the DeepSeek Harness running on the phone. With root, Android does not enforce the DSH sandbox: what stops a command outside the workspace is the approval you give, and everything is logged.</string>
+    <string name="telemetria_ferramentas">%1$d tool calls · %2$d running</string>
+    <string name="telemetria_tempo">%1$d s</string>
+    <string name="tentar_novamente">Try again</string>
     <string name="testar_execucao">Test execution</string>
     <string name="testar_execucao_texto">Checks whether the Node embedded in the APK can run from the native library directory.</string>
     <string name="token_do_canal">channel token (a secret between the app and the daemon)</string>

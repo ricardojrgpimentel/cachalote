@@ -9,6 +9,7 @@
     <string name="aba_resumo">Resumo</string>
     <string name="abrir_acessibilidade">Abrir Definições → Acessibilidade</string>
     <string name="accessibility_description">Dá ao agente Cachalote olhos e dedos: lê a árvore de controlos do ecrã, toca, escreve, faz scroll e captura o ecrã, quando lhe pedires.</string>
+    <string name="a_reconectar">a reconectar…</string>
     <string name="acessibilidade">Acessibilidade</string>
     <string name="acessibilidade_caiu">a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)</string>
     <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
@@ -60,6 +61,7 @@
     <string name="dialogo_autorizacao">Autorização</string>
     <string name="ditar">Ditar</string>
     <string name="ditar_texto">Falar</string>
+    <string name="em_direto">em direto</string>
     <string name="enviar">Enviar</string>
     <string name="esconder">Esconder</string>
     <string name="escreve_tarefa">Escreve uma tarefa para o agente</string>
@@ -75,6 +77,7 @@
     <string name="ferramenta_a_correr">a correr</string>
     <string name="ferramenta_concluida">concluída</string>
     <string name="ferramenta_falhada">falhada</string>
+    <string name="fila_dica">Escreve uma tarefa e toca em «Juntar à fila» — o agente corre-as uma a seguir à outra.</string>
     <string name="fila_falhada">falhada</string>
     <string name="fila_feita">feita</string>
     <string name="fila_pendente">pendente</string>
@@ -165,6 +168,9 @@
     <string name="sobre">Sobre</string>
     <string name="sobre_detalhe">identidade, versão e o modelo de segurança</string>
     <string name="sobre_texto">Cachalote — o DeepSeek Harness a correr no telemóvel. Com root, o Android não impõe o sandbox do DSH: quem trava um comando fora do workspace é a autorização que aprovas, e tudo fica registado.</string>
+    <string name="telemetria_ferramentas">%1$d ferramentas · %2$d a correr</string>
+    <string name="telemetria_tempo">%1$d s</string>
+    <string name="tentar_novamente">Tentar novamente</string>
     <string name="testar_execucao">Testar execução</string>
     <string name="testar_execucao_texto">Testa se o Node embutido na APK consegue executar-se a partir do directório de bibliotecas nativas.</string>
     <string name="token_do_canal">token do canal (segredo entre a app e o daemon)</string>

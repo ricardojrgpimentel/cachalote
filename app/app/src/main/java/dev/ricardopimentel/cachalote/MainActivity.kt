@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -40,17 +41,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
@@ -62,10 +69,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
@@ -219,6 +231,14 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
                     modifier = Modifier.size(26.dp),
                 )
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                // O chip do design («ON-DEVICE»): diz, de relance, como o motor está a correr.
+                Chip(
+                    when (vm.modeKind) {
+                        DaemonController.Mode.DAEMON -> "root"
+                        DaemonController.Mode.SHIZUKU -> "Shizuku"
+                        else -> "on-device"
+                    },
+                )
             }
             Text(
                 if (vm.connected) stringResource(R.string.cabecalho_motor_ligado) else stringResource(R.string.cabecalho_motor_desligado),
@@ -1156,25 +1176,29 @@ private fun ChatScreen(vm: MainViewModel) {
         if (vm.transcript.isNotEmpty()) listState.animateScrollToItem(vm.transcript.size - 1)
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.sessao_rotulo, vm.sessionId?.take(8) ?: stringResource(R.string.nenhuma)) +
-                    (if (vm.reconnecting) "  · a reconectar…" else ""),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { vm.refreshSessions() }, enabled = !vm.busy) { Text(stringResource(R.string.seccoes)) }
-            TextButton(onClick = { vm.newSession() }, enabled = !vm.busy) { Text(stringResource(R.string.nova_sessao)) }
+    // Cronómetro do turno: só conta enquanto o agente trabalha (a linha «em direto» do design).
+    var inicio by remember { mutableStateOf(0L) }
+    var agora by remember { mutableStateOf(0L) }
+    LaunchedEffect(vm.busy) {
+        if (vm.busy) {
+            inicio = System.currentTimeMillis()
+            agora = inicio
+            while (true) {
+                kotlinx.coroutines.delay(1000)
+                agora = System.currentTimeMillis()
+            }
         }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        LinhaDeSessao(vm)
+        LinhaDeTelemetria(vm, if (vm.busy) ((agora - inicio) / 1000).coerceAtLeast(0) else 0)
+
         if (vm.configOptions.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 vm.configOptions.forEach { opt ->
@@ -1189,14 +1213,25 @@ private fun ChatScreen(vm: MainViewModel) {
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            itemsIndexed(vm.transcript) { _, line ->
+            itemsIndexed(vm.transcript) { i, line ->
                 when (line.role) {
                     // A ferramenta tem cartão próprio (nome em monospace + chip do estado), como no
                     // design; o pensamento e as notas do sistema ficam discretos, sem cartão.
                     "tool" -> CartaoFerramenta(line)
+                    // O erro mais recente traz o «Tentar novamente» do design: repete o último
+                    // prompt do utilizador (é o que se quer depois de um turno que falhou).
+                    "error" -> {
+                        CartaoDeMensagem(line)
+                        val ultimo = vm.transcript.lastOrNull { it.role == "user" }?.text
+                        if (i == vm.transcript.lastIndex && !vm.busy && !ultimo.isNullOrBlank()) {
+                            TextButton(onClick = { vm.send(ultimo) }) {
+                                Text(stringResource(R.string.tentar_novamente))
+                            }
+                        }
+                    }
                     "thought" -> Text(
                         line.text,
                         style = MaterialTheme.typography.bodySmall,
@@ -1221,12 +1256,13 @@ private fun ChatScreen(vm: MainViewModel) {
         // blocos `image` — é o mesmo caminho que o `android_see` usa para mostrar o ecrã).
         vm.pendingImage?.let { img ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "imagem: ${img.name} · ${img.kb} KB",
+                    stringResource(R.string.imagem_anexo, img.name, img.kb),
                     style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { vm.clearImage() }) { Text(stringResource(R.string.remover)) }
@@ -1246,62 +1282,176 @@ private fun ChatScreen(vm: MainViewModel) {
             onRemover = { vm.removerDaFila(it) },
             onLimpar = { vm.limparConcluidas() },
         )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-                if (uri != null) vm.attachImage(uri)
+        BarraDeInput(vm, input) { input = it }
+    }
+}
+
+/** Sessão à esquerda, acções de sessão à direita — em ícones, como no design. */
+@Composable
+private fun LinhaDeSessao(vm: MainViewModel) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Etiqueta(stringResource(R.string.sessao_rotulo, vm.sessionId?.take(8) ?: stringResource(R.string.nenhuma)))
+            if (vm.reconnecting) {
+                Text(
+                    stringResource(R.string.a_reconectar),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
             }
-            // Voz: usa o reconhecedor do sistema (`RecognizerIntent`), que é quem pede o
-            // microfone — a app não precisa de permissão nenhuma para isto e funciona com o
-            // que o telefone já tiver. O texto reconhecido entra no campo, onde pode ser
-            // corrigido antes de enviar: ditar e enviar à cegueira é pior do que ditar e ver.
-            val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                    ?.firstOrNull()?.trim()
-                when {
-                    result.resultCode == Activity.RESULT_OK && !spoken.isNullOrBlank() ->
-                        input = if (input.isBlank()) spoken else "$input $spoken"
-                    result.resultCode == Activity.RESULT_OK -> vm.error = "não percebi nada — tenta outra vez"
-                    // Cancelado pelo utilizador: não é erro.
-                }
-            }
-            TextButton(onClick = { picker.launch("image/*") }, enabled = !vm.busy) { Text(stringResource(R.string.anexar)) }
-            TextButton(
-                onClick = {
-                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Fala para escrever")
-                    }
-                    runCatching { voice.launch(intent) }
-                        .onFailure { vm.error = "não há reconhecedor de voz neste dispositivo" }
-                },
-                enabled = !vm.busy,
-            ) { Text(stringResource(R.string.ditar_texto)) }
-            Spacer(Modifier.width(4.dp))
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it },
-                placeholder = { Text(stringResource(R.string.escreve_tarefa)) },
-                modifier = Modifier.weight(1f),
-                maxLines = 4,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = {
-                    val t = input
-                    if (t.isNotBlank() || vm.pendingImage != null) { input = ""; vm.send(t) }
-                }),
+        }
+        IconButton(onClick = { vm.refreshSessions() }, enabled = !vm.busy) {
+            Icon(
+                Icons.AutoMirrored.Filled.List,
+                contentDescription = stringResource(R.string.seccoes),
+                tint = MaterialTheme.colorScheme.secondary,
             )
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Button(
-                    onClick = { val t = input; input = ""; vm.send(t) },
-                    enabled = !vm.busy && (input.isNotBlank() || vm.pendingImage != null),
-                ) { Text(stringResource(R.string.enviar)) }
-                if (vm.busy) {
-                    TextButton(onClick = { vm.cancelTurn() }) { Text(stringResource(R.string.parar)) }
+        }
+        IconButton(onClick = { vm.newSession() }, enabled = !vm.busy) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = stringResource(R.string.nova_sessao),
+                tint = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    }
+}
+
+/**
+ * A linha «em direto» do design: enquanto o agente trabalha, mostra há quanto tempo, quantas
+ * ferramentas já chamou e o consumo de contexto. Sem turno a correr e sem números do motor, não
+ * ocupa espaço nenhum.
+ */
+@Composable
+private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
+    val uso = vm.uso
+    if (!vm.busy && uso == null) return
+
+    val ferramentas = vm.transcript.count { it.role == "tool" }
+    val aCorrer = vm.transcript.count { it.role == "tool" && !it.done }
+    val partes = ArrayList<String>(3)
+    if (ferramentas > 0) partes.add(stringResource(R.string.telemetria_ferramentas, ferramentas, aCorrer))
+    uso?.let { partes.add(it.texto()) }
+    if (vm.busy) partes.add(stringResource(R.string.telemetria_tempo, segundos))
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (vm.busy) Chip(stringResource(R.string.em_direto), cor = MaterialTheme.colorScheme.primaryContainer)
+        Text(
+            partes.joinToString("  ·  "),
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * A barra de escrita: **um** campo largo com os ícones por dentro (anexar à esquerda, ditar à
+ * direita) e o botão de enviar redondo ao lado — como no design. Antes disto eram dois botões de
+ * texto encostados a uma caixa pequena, e era a parte mais feia do ecrã.
+ */
+@Composable
+private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> Unit) {
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) vm.attachImage(uri)
+    }
+    // Voz: usa o reconhecedor do sistema (`RecognizerIntent`), que é quem pede o microfone — a app
+    // não precisa de permissão nenhuma para isto. O texto reconhecido entra no campo, onde pode ser
+    // corrigido antes de enviar: ditar e enviar à cegueira é pior do que ditar e ver.
+    val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()?.trim()
+        when {
+            result.resultCode == Activity.RESULT_OK && !spoken.isNullOrBlank() ->
+                onInput(if (input.isBlank()) spoken else "$input $spoken")
+            result.resultCode == Activity.RESULT_OK -> vm.error = "não percebi nada — tenta outra vez"
+            // Cancelado pelo utilizador: não é erro.
+        }
+    }
+    fun enviar() {
+        if (input.isNotBlank() || vm.pendingImage != null) {
+            onInput("")
+            vm.send(input)
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Surface(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { picker.launch("image/*") }, enabled = !vm.busy) {
+                    Icon(
+                        Icons.Filled.AttachFile,
+                        contentDescription = stringResource(R.string.anexar),
+                        tint = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                TextField(
+                    value = input,
+                    onValueChange = onInput,
+                    placeholder = {
+                        Text(stringResource(R.string.escreve_tarefa), style = MaterialTheme.typography.bodyMedium)
+                    },
+                    modifier = Modifier.weight(1f),
+                    maxLines = 4,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { enviar() }),
+                )
+                IconButton(
+                    onClick = {
+                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Fala para escrever")
+                        }
+                        runCatching { voice.launch(intent) }
+                            .onFailure { vm.error = "não há reconhecedor de voz neste dispositivo" }
+                    },
+                    enabled = !vm.busy,
+                ) {
+                    Icon(
+                        Icons.Filled.Mic,
+                        contentDescription = stringResource(R.string.ditar_texto),
+                        tint = MaterialTheme.colorScheme.secondary,
+                    )
                 }
             }
+        }
+        if (vm.busy) {
+            FilledIconButton(
+                onClick = { vm.cancelTurn() },
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+            ) { Icon(Icons.Filled.Stop, contentDescription = stringResource(R.string.parar)) }
+        } else {
+            FilledIconButton(
+                onClick = { enviar() },
+                enabled = input.isNotBlank() || vm.pendingImage != null,
+            ) { Icon(Icons.Filled.Send, contentDescription = stringResource(R.string.enviar)) }
         }
     }
 }

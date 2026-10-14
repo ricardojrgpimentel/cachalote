@@ -1943,6 +1943,41 @@ unitários e build verdes; percurso no aparelho (3 abas + 8 secções + assisten
 motor não manda; o que há (tokens e sessão) já está no cabeçalho e no Resumo. Fica anotado como
 ideia, não como dívida.
 
+---
+
+## 65. A conversa não estava como o design — e a culpa era da barra de escrita
+
+**O autor viu a app no telefone e disse-o sem rodeios:** «a caixa de input minúscula com 2 botões de
+texto do lado esquerdo, nada a ver com o que está no design». Tinha razão — e era a parte mais
+visível do ecrã.
+
+**O que estava mal:** `Anexar` e `Falar` eram `TextButton` encostados a um `OutlinedTextField`
+pequeno, com um `Button` «Enviar» ao lado. No design é **uma** barra: campo largo com contorno
+arredondado, os **ícones por dentro** (clipe à esquerda, microfone à direita) e o **botão de enviar
+redondo** (`FilledIconButton`) fora, a acender só quando há texto (ou imagem). Também faltavam as
+outras peças da conversa do desenho.
+
+**O que mudou** ([`MainActivity.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt)):
+
+| Peça | Antes | Agora |
+|---|---|---|
+| Barra de escrita | caixa pequena + 2 botões de texto + botão «Enviar» | campo largo (cantos 24dp) com clipe e microfone **dentro**, botão redondo de enviar; enquanto o turno corre, o botão passa a **parar** |
+| Sessão | texto + «Sessões»/«Nova sessão» em texto | `SESSÃO: xxxxxxxx` em micro-etiqueta + **ícones** (lista e +) |
+| Cabeçalho | marca + nome + estado | mais o **chip do modo** («ROOT»/«SHIZUKU»/«ON-DEVICE»), como o «ON-DEVICE» do design |
+| Linha «em direto» | não existia | **em direto** + ferramentas (quantas, quantas a correr) + consumo + segundos do turno |
+| Fila | cartão com parágrafo de 4 linhas | dica de 2 linhas só quando está vazia; com tarefas fica compacta |
+| Erro | cartão vermelho cheio, sem acção | cartão discreto com contorno vermelho e, no erro **mais recente**, **«Tentar novamente»** (repete o último prompt) |
+
+**Strings:** mais 6 chaves nos dois idiomas (chip do modo não — é técnico, fica como «root»/«Shizuku»/
+«on-device»); i18n verde: **223 chaves iguais**, 202 usadas. Testes e build verdes; no aparelho
+**0 crashes**. Visto no telefone: [`design/app/conversa-input-design.png`](design/app/conversa-input-design.png).
+
+**Lição:** o desenho tinha sido «aplicado» às secções e aos cartões, mas a **barra de escrita** — o
+sítio onde o dedo vai a toda a hora — ficou da versão anterior. Comparar ecrã a ecrã com o desenho
+(o `design/ecras/` ao lado do `design/app/`) é o que apanha isto; olhar só para as cores e para os
+cartões não apanha.
+
+
 
 
 

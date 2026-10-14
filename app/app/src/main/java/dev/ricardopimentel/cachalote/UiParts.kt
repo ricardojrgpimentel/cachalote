@@ -85,11 +85,15 @@ fun FilaCard(
                 )
                 if (aCorrer) CircularProgressIndicator(modifier = Modifier.padding(start = 8.dp).size(16.dp), strokeWidth = 2.dp)
             }
-            Text(
-                stringResource(R.string.fila_texto),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-            )
+            // A dica só quando a fila está vazia: com tarefas à vista o cartão fica compacto
+            // (o design mostra-o curto, e a conversa não pode perder meio ecrã com isto).
+            if (tarefas.isEmpty()) {
+                Text(
+                    stringResource(R.string.fila_dica),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onJuntar, enabled = enabled) { Text(stringResource(R.string.fila_juntar)) }
                 if (aCorrer) {
