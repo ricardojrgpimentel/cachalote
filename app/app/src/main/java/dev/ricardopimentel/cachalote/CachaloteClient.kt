@@ -24,7 +24,6 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -61,7 +60,14 @@ class CachaloteClient {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val writeLock = Mutex()
     private val ids = AtomicInteger(1)
-    private val pending = ConcurrentHashMap<Int, CompletableDeferred<JSONObject>>()
+    // Os pedidos pendentes são guardados por `pendingLock`. O mapa concorrente que aqui estava
+    // dava duas avarias medidas no S10+ (2026-10-14): (a) `pending.values.toList()` explodia com
+    // NoSuchElementException — com uma entrada só, o atalho de tamanho da stdlib chama
+    // `iterator().next()` e o mapa já podia estar vazio (o `readLoop` morria no finally);
+    // (b) um pedido registado entre o "tirar cópia" e o "limpar" ficava sem ninguém a
+    // completá-lo, e o turno acabava em «Timed out waiting for 15000 ms».
+    private val pendingLock = Any()
+    private val pending = HashMap<Int, CompletableDeferred<JSONObject>>()
 
     private val _events = MutableSharedFlow<JSONObject>(
         extraBufferCapacity = 1024,
@@ -104,7 +110,7 @@ class CachaloteClient {
         // Android lança NetworkOnMainThreadException (foi apanhado em teste).
         val id = ids.getAndIncrement()
         val slot = CompletableDeferred<JSONObject>()
-        pending[id] = slot
+        synchronized(pendingLock) { pending[id] = slot }
         val frame = JSONObject()
             .put("jsonrpc", "2.0")
             .put("id", id)
@@ -127,7 +133,7 @@ class CachaloteClient {
             android.util.Log.d("cachalote-rpc", "→ $method (id=$id)")
             withTimeout(timeoutMs) { slot.await() }
         } finally {
-            pending.remove(id)
+            synchronized(pendingLock) { pending.remove(id) }
         }
     }
 
@@ -182,7 +188,8 @@ class CachaloteClient {
                         }
                         hasId -> {
                             android.util.Log.d("cachalote-rpc", "← resposta id=" + obj.opt("id") + " erro=" + obj.has("error"))
-                            pending.remove(obj.optInt("id", -1))?.complete(obj)
+                            val espera = synchronized(pendingLock) { pending.remove(obj.optInt("id", -1)) }
+                            espera?.complete(obj)
                         }
                         else -> {
                             android.util.Log.d("cachalote-rpc", "← nota " + obj.optString("method"))
@@ -195,8 +202,12 @@ class CachaloteClient {
             // queda da ligação: tratada no finally
         } finally {
             _connected.value = false
-            val stragglers = pending.values.toList()
-            pending.clear()
+            // Cópia e limpeza debaixo do mesmo lock: nenhum pedido fica a meio caminho.
+            val stragglers = synchronized(pendingLock) {
+                val copia = pending.values.toList()
+                pending.clear()
+                copia
+            }
             stragglers.forEach { it.completeExceptionally(IllegalStateException("a ligação ao motor caiu")) }
         }
     }

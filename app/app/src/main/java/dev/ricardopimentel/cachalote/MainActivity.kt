@@ -346,295 +346,372 @@ private fun SessionsDialog(vm: MainViewModel) {
  */
 @Composable
 private fun AjustesScreen(vm: MainViewModel) {
+    var secao by rememberSaveable { mutableStateOf("menu") }
+
+    // O «voltar» do sistema não pode fechar a app a partir de uma secção: volta ao menu.
+    // (Sem isto, o BACK numa secção terminava a Activity — medido no S10+ em 2026-10-14.)
+    if (secao != "menu") {
+        androidx.activity.compose.BackHandler { secao = "menu" }
+    }
+
+    // O menu é uma lista simples.
+    if (secao == "menu") {
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Text(
+                        stringResource(R.string.ajustes_titulo),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
+                    )
+                    LinhaDeMenu(stringResource(R.string.motor), stringResource(R.string.motor_detalhe)) { secao = "motor" }
+                    LinhaDeMenu(stringResource(R.string.chave_provedor), stringResource(R.string.chave_detalhe)) { secao = "provedor" }
+                    LinhaDeMenu(stringResource(R.string.capacidades_titulo)) { secao = "capacidades" }
+                    LinhaDeMenu(stringResource(R.string.acessibilidade)) { secao = "acessibilidade" }
+                    LinhaDeMenu(stringResource(R.string.areas_bash)) { secao = "areas" }
+                    LinhaDeMenu(stringResource(R.string.mcp_titulo)) { secao = "mcp" }
+                    LinhaDeMenu(stringResource(R.string.vscreen_titulo)) { secao = "vscreen" }
+                    LinhaDeMenu(stringResource(R.string.backup_e_licencas)) { secao = "backup" }
+                    LinhaDeMenu(stringResource(R.string.wizard_repetir)) { vm.repetirWizard() }
+                }
+            }
+        }
+        return
+    }
+
+    // Secção aberta: ecrã próprio. Cabeçalho fixo com o «voltar» e **um só** contentor com
+    // scroll — as secções já não trazem o seu por dentro. Era isso que rebentava a app com
+    // «Vertically scrollable component was measured with an infinity maximum height
+    // constraints» (reproduzido no S10+ em 2026-10-14, ao abrir «Motor» e «Chave do provedor»;
+    // as duas secções tinham `fillMaxSize().verticalScroll()` dentro do scroll dos Ajustes).
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { secao = "menu" }) { Text("\u2190 " + stringResource(R.string.ajustes_titulo)) }
+            Text(
+                tituloDaSecao(secao),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 6.dp),
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            when (secao) {
+                "motor" -> {
+                    StatusScreen(vm)
+                    CartaoTesteExecucao(vm)
+                    CartaoKernelDownload(vm)
+                }
+                "provedor" -> KeyScreen(vm)
+                "capacidades" -> {
+                    CartaoCapacidades(vm)
+                    CartaoRegisto(vm)
+                }
+                "acessibilidade" -> CartaoAcessibilidade()
+                "areas" -> CartaoAreasBash(vm)
+                "mcp" -> CartaoMcp(vm)
+                "vscreen" -> CartaoVscreen(vm)
+                "backup" -> {
+                    CartaoBackup(vm)
+                    CartaoLicencas(vm)
+                }
+            }
+            Text(
+                stringResource(R.string.aviso_root),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    }
+}
+
+/** Título da secção aberta, para o cabeçalho. */
+@Composable
+private fun tituloDaSecao(secao: String): String = stringResource(
+    when (secao) {
+        "motor" -> R.string.motor
+        "provedor" -> R.string.chave_provedor
+        "capacidades" -> R.string.capacidades_titulo
+        "acessibilidade" -> R.string.acessibilidade
+        "areas" -> R.string.areas_bash
+        "mcp" -> R.string.mcp_titulo
+        "vscreen" -> R.string.vscreen_titulo
+        else -> R.string.backup_e_licencas
+    },
+)
+
+@Composable
+private fun CartaoAcessibilidade() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val accessibilityOn = CachaloteAccessibilityService.isEnabled()
-    var secao by rememberSaveable { mutableStateOf("menu") }
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    stringResource(R.string.ajustes_titulo),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
-                )
-                LinhaDeMenu(stringResource(R.string.motor), stringResource(R.string.motor_detalhe)) { secao = "motor" }
-                LinhaDeMenu(stringResource(R.string.chave_provedor), stringResource(R.string.chave_detalhe)) { secao = "provedor" }
-                LinhaDeMenu(stringResource(R.string.capacidades_titulo)) { secao = "capacidades" }
-                LinhaDeMenu(stringResource(R.string.acessibilidade)) { secao = "acessibilidade" }
-                LinhaDeMenu(stringResource(R.string.areas_bash)) { secao = "areas" }
-                LinhaDeMenu(stringResource(R.string.mcp_titulo)) { secao = "mcp" }
-                LinhaDeMenu(stringResource(R.string.vscreen_titulo)) { secao = "vscreen" }
-                LinhaDeMenu(stringResource(R.string.backup_e_licencas)) { secao = "backup" }
-                LinhaDeMenu(stringResource(R.string.wizard_repetir)) { vm.repetirWizard() }
-            }
-        }
-        if (secao == "motor") StatusScreen(vm)
-        if (secao == "provedor") KeyScreen(vm)
-        if (secao != "menu") {
-            TextButton(onClick = { secao = "menu" }) { Text("\u2190 " + stringResource(R.string.ajustes_titulo)) }
-        }
-        if (secao == "acessibilidade") {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.acessibilidade), fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (accessibilityOn) "serviço ligado — o agente consegue ver e tocar no ecrã"
-                    else "serviço desligado — sem ele o agente só envia notificações",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(Modifier.height(6.dp))
-                OutlinedButton(onClick = {
-                    runCatching {
-                        ctx.startActivity(
-                            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }
-                }) { Text(stringResource(R.string.abrir_acessibilidade)) }
-            }
-        }
-
-        if (secao == "motor") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.testar_execucao_texto),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                Text(vm.embedTest, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = { vm.testEmbeddedNode() }, enabled = !vm.busy) { Text(stringResource(R.string.testar_execucao)) }
-            }
-        }
-
-        if (secao == "capacidades") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(stringResource(R.string.capacidades_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.capacidades_explicacao),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, true) } }) {
-                        Text(stringResource(R.string.autorizar_todas))
-                    }
-                    OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, false) } }) {
-                        Text(stringResource(R.string.negar_todas))
-                    }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.acessibilidade), fontWeight = FontWeight.SemiBold)
+            Text(
+                if (accessibilityOn) "serviço ligado — o agente consegue ver e tocar no ecrã"
+                else "serviço desligado — sem ele o agente só envia notificações",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(6.dp))
+            OutlinedButton(onClick = {
+                runCatching {
+                    ctx.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
                 }
-                Spacer(Modifier.height(4.dp))
-                CapabilityToggles(
-                    nomes = vm.capabilityNames,
-                    autorizadas = vm.capabilityToggles,
-                    onToggle = { cap, ligado -> vm.setCapability(cap, ligado) },
-                )
-            }
+            }) { Text(stringResource(R.string.abrir_acessibilidade)) }
         }
+    }
+}
 
-        if (secao == "capacidades") {
+/** Testa se o Node embutido na APK corre a partir da biblioteca nativa. */
+@Composable
+private fun CartaoTesteExecucao(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.testar_execucao), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.testar_execucao_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Text(vm.embedTest, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { vm.testEmbeddedNode() }, enabled = !vm.busy) { Text(stringResource(R.string.testar_execucao)) }
         }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.registo), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { vm.clearAudit() }) { Text(stringResource(R.string.limpar)) }
+    }
+}
+
+/** Onde o modo embutido vai buscar o kernel (por download, em vez de dentro da APK). */
+@Composable
+private fun CartaoKernelDownload(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.kernel_titulo), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.kernel_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            OutlinedTextField(
+                value = vm.kernelUrlText,
+                onValueChange = { vm.kernelUrlText = it },
+                placeholder = { Text(stringResource(R.string.placeholder_url)) },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 2,
+            )
+            OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_url)) }
+        }
+    }
+}
+
+@Composable
+private fun CartaoCapacidades(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(stringResource(R.string.capacidades_titulo), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.capacidades_explicacao),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, true) } }) {
+                    Text(stringResource(R.string.autorizar_todas))
                 }
-                if (vm.audit.isEmpty()) {
-                    Text(stringResource(R.string.sem_pedidos), style = MaterialTheme.typography.bodySmall)
-                } else {
-                    vm.audit.take(25).forEach { line ->
-                        Text(
-                            line,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                            modifier = Modifier.padding(vertical = 1.dp),
-                        )
-                    }
+                OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, false) } }) {
+                    Text(stringResource(R.string.negar_todas))
                 }
             }
+            Spacer(Modifier.height(4.dp))
+            CapabilityToggles(
+                nomes = vm.capabilityNames,
+                autorizadas = vm.capabilityToggles,
+                onToggle = { cap, ligado -> vm.setCapability(cap, ligado) },
+            )
         }
+    }
+}
 
-        if (secao == "areas") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.areas_bash), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.areas_bash_texto),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                OutlinedTextField(
-                    value = vm.allowedRootsText,
-                    onValueChange = { vm.allowedRootsText = it },
-                    placeholder = { Text(stringResource(R.string.placeholder_areas)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 4,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { vm.saveAllowedRoots() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_reiniciar)) }
-                    if (vm.allowedRootsSaved.isNotBlank()) {
-                        Text(vm.allowedRootsSaved, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+@Composable
+private fun CartaoRegisto(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.registo), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { vm.clearAudit() }) { Text(stringResource(R.string.limpar)) }
             }
-        }
-
-        if (secao == "motor") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.kernel_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.kernel_texto),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                OutlinedTextField(
-                    value = vm.kernelUrlText,
-                    onValueChange = { vm.kernelUrlText = it },
-                    placeholder = { Text(stringResource(R.string.placeholder_url)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2,
-                )
-                OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_url)) }
-            }
-        }
-
-        if (secao == "backup") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.backup_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.backup_texto),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                val exportar = rememberLauncherForActivityResult(
-                    androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
-                ) { uri -> if (uri != null) vm.exportarDefinicoes(uri) }
-                val importar = rememberLauncherForActivityResult(
-                    androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
-                ) { uri -> if (uri != null) vm.importarDefinicoes(uri) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { exportar.launch(Backup.nomeFicheiro()) },
-                        enabled = !vm.busy,
-                    ) { Text(stringResource(R.string.backup_exportar)) }
-                    OutlinedButton(
-                        onClick = { importar.launch(arrayOf("application/json", "*/*")) },
-                        enabled = !vm.busy,
-                    ) { Text(stringResource(R.string.backup_importar)) }
-                }
-                if (vm.backupAviso.isNotBlank()) {
-                    Text(vm.backupAviso, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-
-        if (secao == "backup") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.licencas_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.licencas_texto),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                OutlinedButton(onClick = { vm.carregarLicencas() }, enabled = !vm.busy) {
-                    Text(stringResource(R.string.ver_licencas))
-                }
-            }
-        }
-
-        if (secao == "vscreen") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.vscreen_texto),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                VscreenControls(
-                    rodando = vm.vscreenRunning,
-                    aoVivo = vm.vscreenAoVivo,
-                    enabled = !vm.busy,
-                    onStart = { vm.vscreenStart() },
-                    onRefresh = { vm.vscreenRefresh() },
-                    onStop = { vm.vscreenStop() },
-                    onAoVivo = { vm.vscreenAoVivo = it },
-                )
-                // Ao vivo: um fotograma a cada 1,5 s enquanto o interruptor estiver ligado e o
-                // ecrã virtual existir. É o que deixa o dono *ver* o agente a trabalhar.
-                if (vm.vscreenAoVivo && vm.vscreenRunning) {
-                    LaunchedEffect(vm.vscreenRunning, vm.vscreenAoVivo) {
-                        while (true) {
-                            vm.vscreenRefresh(silencioso = true)
-                            kotlinx.coroutines.delay(1500)
-                        }
-                    }
-                }
-                if (vm.vscreenInfo.isNotBlank()) {
-                    Text(vm.vscreenInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                }
-                vm.vscreenBitmap?.let { bmp ->
-                    Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = stringResource(R.string.fotograma_desc),
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
-                        contentScale = ContentScale.Fit,
+            if (vm.audit.isEmpty()) {
+                Text(stringResource(R.string.sem_pedidos), style = MaterialTheme.typography.bodySmall)
+            } else {
+                vm.audit.take(25).forEach { line ->
+                    Text(
+                        line,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(vertical = 1.dp),
                     )
                 }
             }
         }
+    }
+}
 
-        if (secao == "mcp") {
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.mcp_titulo), fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(R.string.mcp_texto) + "\n" +
-                        stringResource(R.string.mcp_exemplo) + "\n" +
-                        stringResource(R.string.mcp_aviso),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                OutlinedTextField(
-                    value = vm.mcpJsonText,
-                    onValueChange = { vm.mcpJsonText = it },
-                    placeholder = { Text("[{\"name\":\"…\",\"command\":\"/caminho/absoluto\"}]") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 6,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { vm.saveMcpServers() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_mcp)) }
-                    if (vm.mcpSaved.isNotBlank()) {
-                        Text(vm.mcpSaved, style = MaterialTheme.typography.bodySmall)
-                    }
+@Composable
+private fun CartaoAreasBash(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.areas_bash), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.areas_bash_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            OutlinedTextField(
+                value = vm.allowedRootsText,
+                onValueChange = { vm.allowedRootsText = it },
+                placeholder = { Text(stringResource(R.string.placeholder_areas)) },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 4,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = { vm.saveAllowedRoots() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_reiniciar)) }
+                if (vm.allowedRootsSaved.isNotBlank()) {
+                    Text(vm.allowedRootsSaved, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
+    }
+}
 
-        Text(
-            stringResource(R.string.aviso_root),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary,
-        )
+@Composable
+private fun CartaoMcp(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.mcp_titulo), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.mcp_texto) + "\n" +
+                    stringResource(R.string.mcp_exemplo) + "\n" +
+                    stringResource(R.string.mcp_aviso),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            OutlinedTextField(
+                value = vm.mcpJsonText,
+                onValueChange = { vm.mcpJsonText = it },
+                placeholder = { Text("[{\"name\":\"…\",\"command\":\"/caminho/absoluto\"}]") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 6,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = { vm.saveMcpServers() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_mcp)) }
+                if (vm.mcpSaved.isNotBlank()) {
+                    Text(vm.mcpSaved, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CartaoVscreen(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.vscreen_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            VscreenControls(
+                rodando = vm.vscreenRunning,
+                aoVivo = vm.vscreenAoVivo,
+                enabled = !vm.busy,
+                onStart = { vm.vscreenStart() },
+                onRefresh = { vm.vscreenRefresh() },
+                onStop = { vm.vscreenStop() },
+                onAoVivo = { vm.vscreenAoVivo = it },
+            )
+            // Ao vivo: um fotograma a cada 1,5 s enquanto o interruptor estiver ligado e o
+            // ecrã virtual existir. É o que deixa o dono *ver* o agente a trabalhar.
+            if (vm.vscreenAoVivo && vm.vscreenRunning) {
+                LaunchedEffect(vm.vscreenRunning, vm.vscreenAoVivo) {
+                    while (true) {
+                        vm.vscreenRefresh(silencioso = true)
+                        kotlinx.coroutines.delay(1500)
+                    }
+                }
+            }
+            if (vm.vscreenInfo.isNotBlank()) {
+                Text(vm.vscreenInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+            }
+            vm.vscreenBitmap?.let { bmp ->
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = stringResource(R.string.fotograma_desc),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CartaoBackup(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.backup_titulo), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.backup_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            val exportar = rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+            ) { uri -> if (uri != null) vm.exportarDefinicoes(uri) }
+            val importar = rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+            ) { uri -> if (uri != null) vm.importarDefinicoes(uri) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { exportar.launch(Backup.nomeFicheiro()) },
+                    enabled = !vm.busy,
+                ) { Text(stringResource(R.string.backup_exportar)) }
+                OutlinedButton(
+                    onClick = { importar.launch(arrayOf("application/json", "*/*")) },
+                    enabled = !vm.busy,
+                ) { Text(stringResource(R.string.backup_importar)) }
+            }
+            if (vm.backupAviso.isNotBlank()) {
+                Text(vm.backupAviso, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CartaoLicencas(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.licencas_titulo), fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.licencas_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            OutlinedButton(onClick = { vm.carregarLicencas() }, enabled = !vm.busy) {
+                Text(stringResource(R.string.ver_licencas))
+            }
         }
     }
 }
@@ -712,8 +789,9 @@ private fun OnboardingCard(vm: MainViewModel) {
 @Composable
 private fun StatusScreen(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Sem scroll próprio: quem rola é o contentor da secção (ver AjustesScreen).
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         OnboardingCard(vm)
@@ -818,11 +896,6 @@ private fun StatusScreen(vm: MainViewModel) {
             vm.busy = true
             ctx.startActivity(android.content.Intent(ctx, WebModeActivity::class.java))
         }, enabled = !vm.busy) { Text(stringResource(R.string.modo_completo)) }
-        Text(
-            stringResource(R.string.aviso_root),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary,
-        )
     }
 }
 
@@ -831,8 +904,9 @@ private fun KeyScreen(vm: MainViewModel) {
     var value by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
 
+    // Sem scroll próprio: quem rola é o contentor da secção (ver AjustesScreen).
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
