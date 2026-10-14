@@ -610,7 +610,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**`cachalote doctor`**~~ | ✅ **feito em §30** | verifica ficheiros, chave, daemon, `oom_score_adj`, watchdog, canal, motor, app ponta a ponta, disco e registos; `exit=1` se houver problemas |
 | **Títulos de sessão** | ✅ **feito em §31** | o motor gera mas **não expõe** no `session/list`; a app deriva o título do primeiro prompt (o do motor tem prioridade se vier) |
 | ~~**LMK sob pressão real**~~ | ✅ **feito em §32** | 97% de RAM durante 30 s: daemon, motor e app sobreviveram sem mudar de pid |
-| **Clique do ✕ na UI** | meio | o fecho funciona (ACPP medido); o teste de UI não acerta nas linhas do diálogo |
+| **Clique do ✕ na UI** | ⚠ **bug aberto (§34)** | o diálogo das sessões não marca a sessão activa (o estado está certo) → o ✕ nunca aparece; o `session/close` funciona no protocolo |
 | **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
 | **MCP servers configuráveis** | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado no motor (agente chamou `mcp__ping__ping` → pong) |
 | **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
@@ -1270,3 +1270,27 @@ comando for o Node do daemon, tem de levar
 não ficou provada — a automação da UI falhou três vezes (escreveu no campo errado, a app perdeu a
 ligação quando mexi nas preferências, e o `BACK` para esconder o teclado fechou a app). O caminho
 do motor está provado; o da app tem o código e o campo visível, mas falta o clique.
+
+
+---
+
+## 34. Bug aberto: o diálogo das sessões não marca a sessão activa
+
+Investigando o teste do ✕ chegou-se a um **bug de produto**, não de teste:
+
+| Verificação | Resultado |
+|---|---|
+| Cabeçalho da app | `sessão: 17c839db` ✅ |
+| Instantâneo em disco | `sessionId: 17c839db` ✅ |
+| `session/list` (motor) | inclui `17c839db` ✅ |
+| Linha no diálogo | mostra `17c839db`, **sem ✓** ❌ |
+| `session/close` no protocolo | devolve `{}` (medido) ✅ |
+| ✕ no diálogo | **não aparece** (só se mostra na sessão activa) ❌ |
+
+Ou seja: o estado está certo e a composição do diálogo é que não o acompanha — a mesma família do
+item 66 ("a composição não acompanhava as actualizações de estado"). Consequência prática: **fechar
+uma sessão pela UI não é alcançável hoje**, apesar de o motor o aceitar.
+
+Próximo passo (para a próxima ronda): ler `vm.sessionId` numa `val` no topo do `SessionsDialog`,
+`key(...)` nos itens, ou perceber porque é que o conteúdo do `AlertDialog` fica preso; e só depois
+fazer o teste do clique.

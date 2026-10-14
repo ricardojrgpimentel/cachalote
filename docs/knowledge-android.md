@@ -1164,3 +1164,22 @@ diferentes, e tratá-los como iguais era o erro:
 - **Verificação:** servidor MCP mínimo (`tools/mcp-ping-server.mjs`, ferramentas `ping` e `echo`)
   montado numa sessão → o agente chamou `mcp__ping__ping` e respondeu **pong**.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AG. Recomposição em diálogos (bug aberto)
+
+### 100. O diálogo das sessões não reflecte o estado da sessão activa
+- **Sintoma:** o cabeçalho mostra `sessão: 17c839db`, o instantâneo tem esse id, e a lista do
+  diálogo mostra a linha `17c839db` — mas **sem o ✓** (e, sem ✓, também não aparece o ✕ de
+  fechar, que só se mostra na sessão activa).
+- **O que está descartado:** não é o estado (cabeçalho e ficheiro concordam), não é o motor
+  (`session/list` devolve esse id), não é o `close` (medido: devolve `{}` para a sessão activa).
+  É a **composição do diálogo** que não acompanha `vm.sessionId`.
+- **Hipótese:** o conteúdo do `AlertDialog` fica com a primeira composição (o `if (current)`
+  avaliado quando `sessionId` ainda era outro/nulo) — o mesmo tipo de problema do item 66.
+- **Como verificar (próximo passo):** ler `vm.sessionId` numa `val` no topo do `SessionsDialog`,
+  forçar `key(vm.sessionId, row.id)` nos itens, ou testar se o diálogo recompõe ao fechar/abrir
+  duas vezes. Depois, o teste de UI do ✕ fica possível.
+- **Impacto:** hoje o fecho de sessões **não é alcançável pela UI** (o protocolo funciona).
+- **Origem:** **[LOCAL]**.
