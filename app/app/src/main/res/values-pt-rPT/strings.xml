@@ -25,6 +25,11 @@
     <string name="areas_bash">Áreas permitidas do bash</string>
     <string name="areas_bash_texto">Fora destas pastas o agente tem de pedir autorização no telefone. Uma por linha; o workspace da sessão é sempre permitido.</string>
     <string name="atualizar">Atualizar</string>
+    <string name="autorizacao_agente_quer">O agente quer correr:</string>
+    <string name="autorizacao_confirmar">Autorizar</string>
+    <string name="autorizacao_explicacao">Fora das áreas permitidas, nada corre sem tu aprovares. Este pedido fica no registo do dispositivo.</string>
+    <string name="autorizacao_fora_sandbox">Fora do sandbox</string>
+    <string name="autorizacao_rodape">PID: %1$d · modo %2$s</string>
     <string name="autorizar_no_shizuku">Autorizar no Shizuku</string>
     <string name="autorizar_todas">Autorizar todas</string>
     <string name="aviso_root">Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.</string>

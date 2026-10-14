@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,7 +55,9 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
@@ -75,9 +78,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
@@ -257,38 +262,123 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
  * O motor pede autorização antes de uma operação sensível (ACP `session/request_permission`).
  * As opções vêm do motor (permitir uma vez / sempre / recusar); mostramo-las tal como vêm.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
-    AlertDialog(
-        onDismissRequest = { vm.answerApproval(null) },
-        title = { Text(stringResource(R.string.dialogo_autorizacao)) },
-        text = {
-            Column {
-                Text(ap.title, fontWeight = FontWeight.SemiBold)
-                if (ap.detail.isNotBlank()) {
-                    Spacer(Modifier.height(8.dp))
+    // O pedido de autorização é um painel que sobe de baixo, como no design: cabeçalho com escudo
+    // e fechar, o que o agente quer correr em monospace, as opções **seleccionáveis** (a primeira
+    // vem escolhida) e um botão para confirmar. Antes era um AlertDialog com um botão por opção,
+    // que decidia no toque — sem se ver o que se estava a escolher.
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var escolhida by remember(ap.requestId) { mutableStateOf(ap.options.firstOrNull()?.first) }
+    val foraDoSandbox = ap.detail.contains("sandbox", ignoreCase = true) ||
+        ap.title.contains("sandbox", ignoreCase = true)
+
+    ModalBottomSheet(onDismissRequest = { vm.answerApproval(null) }, sheetState = sheet) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Security,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    stringResource(R.string.dialogo_autorizacao),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { vm.answerApproval(null) }) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.recusar_turno))
+                }
+            }
+
+            if (foraDoSandbox) {
+                Chip(stringResource(R.string.autorizacao_fora_sandbox), cor = MaterialTheme.colorScheme.error)
+            }
+
+            Etiqueta(stringResource(R.string.autorizacao_agente_quer))
+            Text(ap.title, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
+
+            if (ap.detail.isNotBlank()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
                     Text(
                         ap.detail,
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()),
+                        modifier = Modifier
+                            .heightIn(max = 200.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(10.dp),
                     )
                 }
             }
-        },
-        confirmButton = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ap.options.forEach { (optionId, name) ->
-                    Button(onClick = { vm.answerApproval(optionId) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(name)
+
+            Text(
+                stringResource(R.string.autorizacao_explicacao),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            ap.options.forEach { (id, nome) ->
+                val sel = id == escolhida
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { escolhida = id },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (sel) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (sel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            if (sel) "\u25C9" else "\u25CB",
+                            color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary,
+                        )
+                        Spacer(Modifier.size(10.dp))
+                        Text(
+                            nome,
+                            fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = { vm.answerApproval(null) }) { Text(stringResource(R.string.recusar_turno)) }
-        },
-    )
+
+            Button(
+                onClick = { vm.answerApproval(escolhida) },
+                enabled = escolhida != null,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.autorizacao_confirmar)) }
+
+            TextButton(onClick = { vm.answerApproval(null) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.recusar_turno))
+            }
+
+            Text(
+                stringResource(R.string.autorizacao_rodape, android.os.Process.myPid(), vm.modeKind.name.lowercase()),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    }
 }
 
 /** Escolha de uma opção da sessão (modelo, esforço de raciocínio) — as escolhas vêm do motor. */

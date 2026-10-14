@@ -621,11 +621,39 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 resposta.ifBlank { getApplication<Application>().getString(R.string.notif_sem_texto) },
             )
         } catch (t: Throwable) {
-            transcript.add(ChatLine("error", "turno falhou: ${t.message ?: t::class.java.simpleName}"))
+            val msg = t.message ?: t::class.java.simpleName
+            // O motor pode ter perdido a sessão (reinício, daemon novo, sessão fechada noutro
+            // sítio). Sem isto, a app ficava a bater numa sessão que já não existe e **todos** os
+            // turnos falhavam com «unknown session» — o utilizador não tem de saber o que é um
+            // sessionId para voltar a trabalhar: abre-se sessão nova e repete-se o turno uma vez.
+            if (msg.contains("unknown session", ignoreCase = true)) {
+                transcript.add(ChatLine("system", "a sessão anterior já não existe no motor — a abrir uma nova"))
+                val res = controller.newSession()
+                val novo = res.optString("sessionId").takeIf { it.isNotBlank() }
+                if (novo != null) {
+                    sessionId = novo
+                    applyConfigOptions(res)
+                    uso = null
+                    saveState()
+                    try {
+                        controller.prompt(novo, text, img?.bytes, img?.mime ?: "image/png")
+                        val resposta = transcript.lastOrNull { it.role == "assistant" }?.text.orEmpty()
+                        Notificacoes.fimDeTurno(
+                            getApplication(),
+                            getApplication<Application>().getString(R.string.notif_turno_titulo),
+                            resposta.ifBlank { getApplication<Application>().getString(R.string.notif_sem_texto) },
+                        )
+                    } catch (t2: Throwable) {
+                        transcript.add(ChatLine("error", "turno falhou (sessão nova): ${t2.message ?: t2::class.java.simpleName}"))
+                    }
+                    return
+                }
+            }
+            transcript.add(ChatLine("error", "turno falhou: $msg"))
             Notificacoes.fimDeTurno(
                 getApplication(),
                 getApplication<Application>().getString(R.string.notif_turno_titulo),
-                getApplication<Application>().getString(R.string.notif_turno_falhou, t.message ?: "?"),
+                getApplication<Application>().getString(R.string.notif_turno_falhou, msg),
             )
         }
     }

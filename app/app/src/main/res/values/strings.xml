@@ -25,6 +25,11 @@
     <string name="areas_bash">Allowed bash areas</string>
     <string name="areas_bash_texto">Outside these folders the agent must ask for permission on the phone. One per line; the session workspace is always allowed.</string>
     <string name="atualizar">Refresh</string>
+    <string name="autorizacao_agente_quer">The agent wants to run:</string>
+    <string name="autorizacao_confirmar">Authorise</string>
+    <string name="autorizacao_explicacao">Outside the allowed areas nothing runs without your approval. This request goes into the device log.</string>
+    <string name="autorizacao_fora_sandbox">Outside the sandbox</string>
+    <string name="autorizacao_rodape">PID: %1$d · mode %2$s</string>
     <string name="autorizar_no_shizuku">Authorise in Shizuku</string>
     <string name="autorizar_todas">Allow all</string>
     <string name="aviso_root">Warning: the engine runs as root and Android does not enforce the DSH sandbox. What stops a command outside the workspace is the authorisation you approve here — and everything is logged.</string>

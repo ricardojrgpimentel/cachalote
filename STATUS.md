@@ -1977,6 +1977,38 @@ sítio onde o dedo vai a toda a hora — ficou da versão anterior. Comparar ecr
 (o `design/ecras/` ao lado do `design/app/`) é o que apanha isto; olhar só para as cores e para os
 cartões não apanha.
 
+---
+
+## 66. O painel de autorização do design — e o «unknown session» que parava a app
+
+**Painel de autorização** ([`MainActivity.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt)):
+o pedido deixou de ser um `AlertDialog` com um botão por opção (decidia no toque, sem se ver o que
+se estava a escolher) e passou a ser o painel do design — sobe de baixo (`ModalBottomSheet`),
+cabeçalho com escudo e fechar, chip «FORA DO SANDBOX» quando o pedido é fora das áreas permitidas,
+«o agente quer correr:» com o nome da ferramenta em monospace, o pedido dentro de uma caixa com
+contorno, a explicação, as opções em **cartões seleccionáveis** (a primeira vem escolhida) e o botão
+**Autorizar** a confirmar a escolha, com «Recusar o turno» por baixo e o rodapé `PID · modo`.
+Cinco chaves novas nos dois idiomas.
+
+**«Unknown session»** ([`MainViewModel.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainViewModel.kt)):
+ao testar isto no telefone, o turno falhou com *«Invalid params: unknown session: 269676d6-…»* — a
+app guardava um `sessionId` que já não existia no motor (daemon reiniciado/sessão perdida) e
+**todos** os turnos falhavam a partir daí. Agora, quando o erro é esse, a app **abre sessão nova e
+repete o turno uma vez**, dizendo-o no transcript («a sessão anterior já não existe no motor — a
+abrir uma nova»). O `Tentar novamente` do cartão de erro (do §65) também já se viu no ecrã.
+
+**Estado desta ronda (parada a pedido do autor, para continuar depois):**
+
+- ✅ feito e no repositório: painel de autorização, recuperação de sessão, barra de escrita e o resto
+  do §65, mais as 5 chaves de i18n (228 chaves iguais nos dois idiomas).
+- ⏳ **por confirmar no aparelho:** o painel de autorização ainda não foi **visto** a aparecer (o
+  turno que o ia provocar caiu no «unknown session» e o teste foi interrompido a meio); e a
+  recuperação de sessão nova foi compilada e instalada mas o turno de prova não chegou a correr.
+- ⏳ **por alinhar com o design:** o ecrã do **Ecrã Virtual** (o desenho tem moldura do ecrã,
+  informação do display, controles e registo em monospace) — é a última peça da comparação ecrã a
+  ecrã que ficou por fazer.
+
+
 
 
 
