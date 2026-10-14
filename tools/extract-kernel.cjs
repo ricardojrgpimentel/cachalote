@@ -80,6 +80,43 @@ function walk(dir, rel) {
 console.log("a extrair " + src + " -> " + out + (trim ? " (trim)" : ""));
 walk(src, "");
 
+// Marca de origem: sem isto não se sabe dizer se a árvore veio do npm ou do app.asar do
+// desktop — foi uma pergunta que ficou sem resposta quando se olhou para o telefone e não havia
+// marca nenhuma. O `cachalote doctor` mostra-a.
+try {
+  const pacote = JSON.parse(fs.readFileSync(out + "/dsh/node_modules/@deepseek-ai/dsh/package.json", "utf8"));
+  const crypto = require("crypto");
+  const hash = crypto.createHash("sha256");
+  const contar = (dir) => {
+    for (const nome of fs.readdirSync(dir).sort()) {
+      const caminho = dir + "/" + nome;
+      const st = fs.statSync(caminho);
+      if (st.isDirectory()) contar(caminho);
+      else {
+        hash.update(caminho.slice(out.length));
+        hash.update(fs.readFileSync(caminho));
+      }
+    }
+  };
+  contar(out + "/dsh");
+  fs.writeFileSync(
+    out + "/.cachalote-origem",
+    JSON.stringify({
+      origem: nodeModules ? "npm" : "app.asar (desktop)",
+      fonte: nodeModules || asar,
+      versao: pacote.version ?? "?",
+      pacote: pacote.name ?? "?",
+      cortado: trim,
+      sha256: hash.digest("hex"),
+      quando: new Date().toISOString(),
+      extractor: "tools/extract-kernel.cjs",
+    }, null, 1) + "\n",
+  );
+  console.log("origem gravada: " + (nodeModules ? "npm" : "app.asar") + " · versão " + (pacote.version ?? "?"));
+} catch (e) {
+  console.log("AVISO: não consegui gravar a marca de origem: " + e.message);
+}
+
 const report = [
   "ficheiros: " + files,
   "tamanho: " + (bytes / 1048576).toFixed(1) + " MB",

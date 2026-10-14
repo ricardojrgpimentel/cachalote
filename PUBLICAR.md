@@ -122,3 +122,34 @@ Notas:
 - [ ] Instalar a app noutro telefone (ou no emulador) e deixar o modo embutido descarregar o
       kernel com verificação de integridade.
 - [ ] Verificar que nenhum segredo entrou por engano: `git log -p | grep -iE "sk-[a-z0-9]{20}"`.
+
+
+---
+
+## 4. A chave de assinatura da release (não a percas)
+
+O ficheiro `.work/cachalote-release.jks` **não é versionado** (e o [`tools/secret-scan.sh`](tools/secret-scan.sh)
+recusa que ele entre, à árvore ou ao histórico). Sem ele não consegues voltar a assinar a app com a
+**mesma** identidade — e uma app instalada só aceita actualizações do mesmo assinante. Ou seja: se
+este portátil se perder e não houver cópia, quem tem a app instalada fica sem actualizações.
+
+| | |
+|---|---|
+| Ficheiro | `.work/cachalote-release.jks` |
+| sha256 | `d31252d70c7f1b6f987edf24f32f8c4c62f8dbdd4647382e4494e06196db81fc` |
+| Alias | `cachalote` |
+| Password | por omissão `cachalote` (variável `CACHALOTE_STORE_PASS`) — **muda-a** e guarda-a num gestor de palavras-passe |
+| Certificado | `CN=Cachalote, O=Cachalote, C=PT` |
+
+**O que fazer (é tua ação, não a posso fazer por ti):**
+
+1. Copia o ficheiro para um sítio fora deste portátil (gestor de palavras-passe com anexos, disco
+   externo cifrado, ou cofre na nuvem) — junto com a password.
+2. Confirma que a cópia está certa comparando o `sha256` acima.
+3. Para restaurar noutra máquina, basta pôr o ficheiro em `.work/cachalote-release.jks` e definir
+   `CACHALOTE_STORE_PASS` (e `CACHALOTE_KEY_ALIAS`, se mudares o alias) antes de
+   `./tools/build-release.sh`.
+
+**Nota de segurança:** a password por omissão está escrita no `build-release.sh` (é pública). Serve
+para desenvolvimento; se a chave for parar a mãos erradas, quem a tiver assina como "Cachalote" com
+a password por omissão. Muda-a e guarda-a.

@@ -122,6 +122,13 @@ doctor)
   [ -f "$BASE/bin/cachalote" ] && ok "CLI" || bad "falta $BASE/bin/cachalote"
   [ -f "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" ] && ok "kernel do DSH" || bad "falta o kernel (tools/prepare-kernel-zip.sh)"
   [ -f "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/package.json" ] && ok "versão do kernel: $(grep -m1 '"version"' "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/package.json" | tr -d ' ",' | cut -d: -f2)" || true
+  # De onde veio esta árvore? Sem marca não se sabe — aconteceu olhar para o telefone e não haver
+  # como responder. A marca é escrita por tools/extract-kernel.cjs.
+  if [ -f "$BASE/kernel/.cachalote-origem" ]; then
+    ok "origem do kernel: $(sed -n 's/.*"origem": *"\([^"]*\)".*/\1/p' "$BASE/kernel/.cachalote-origem") $(sed -n 's/.*"versao": *"\([^"]*\)".*/\1/p' "$BASE/kernel/.cachalote-origem")"
+  else
+    warn "kernel sem marca de origem (não se sabe se veio do npm ou do app.asar)"
+  fi
   [ -f "$BASE/home/cordis.patch.yml" ] && ok "camada de patch do perfil" || warn "sem home/cordis.patch.yml (usa o perfil por omissão)"
   PLUGIN="$(grep -o "/[^']*dsh-tool-cachalote/lib/index.js" "$BASE/home/cordis.patch.yml" 2>/dev/null | head -1)"
   if [ -n "$PLUGIN" ]; then

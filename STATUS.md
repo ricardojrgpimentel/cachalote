@@ -1486,7 +1486,7 @@ segundo ecrã" — sem os testes, isto ia para o telefone.
 | Português europeu | `res/values-pt-rPT/strings.xml` — os mesmos 106 |
 | Idiomas declarados | `res/xml/locales_config.xml` + `android:localeConfig` |
 | pt-BR | cai no pt-PT (não há `values-pt-rBR`), sempre **sem** formas brasileiras |
-| Guarda na CI | `tools/i18n-check.sh`: chaves iguais nos dois ficheiros, `R.string.*` todas definidas, zero formas brasileiras |
+| Guarda na CI | `tools/i18n-check.sh`: chaves iguais nos dois ficheiros, `R.string.*` todas definidas, zero formas brasileiras (**ligado à CI em §51** — a primeira tentativa ficou só no papel) |
 
 O extractor (`.work/i18n-extract.py`) ficou guardado contra apagar chaves: à primeira tentativa
 apagou o `strings.xml` que já existia (`app_name`, `accessibility_description`) e o build apanhou-o.
@@ -1592,3 +1592,46 @@ deixar de aparecer no repo (o perfil público pode continuar a mostrá-lo, é es
 
 Novo commit de exemplo (já sem `ricardo@local`): `19d3216`. Instruções para o outro computador no
 [`PUBLICAR.md`](PUBLICAR.md) §2 (`git fetch origin && git reset --hard origin/main`).
+
+
+---
+
+## 49. `bootstrap.sh` completo: os passos 4 e 5 nunca tinham corrido
+
+O script prometia "de um clone a **daemon a correr + app instalada**, num comando" e só tinha sido
+testado com `--skip-daemon --skip-app`. Corrido a sério em 2026-10-14: **6/6 passos, saída 0** —
+kernel do npm + patches, runtime do Termux, daemon com autostart, APK instalada (376 MB, com o kernel
+embutido, que é como este caminho funciona), app aberta.
+
+A **chave do provedor sobreviveu** (o instalador só cria `home/.env` se não existir): 53 bytes, modo
+600, data original. Antes de correr fez-se cópia do `home/` para `.work/backup-device/`.
+
+## 50. A origem da árvore do kernel passa a estar gravada
+
+Não havia forma de saber se o kernel do telefone veio do **npm** ou do **app.asar** do desktop.
+Agora `tools/extract-kernel.cjs` escreve `.cachalote-origem` (origem, fonte, versão, `sha256` da
+árvore, quando) e o `doctor` mostra:
+
+```
+  [ok]  versão do kernel: 0.2.0-rc.2
+  [ok]  origem do kernel: npm 0.2.0-rc.2
+```
+
+## 51. Segredos e i18n: verificações que eu **dizia** estar na CI e não estavam
+
+Duas edições minhas falharam em silêncio (o script imprimia "feito" mesmo quando a âncora não
+existia) e eu reportei-as como feitas. Ao ligar o `secret-scan.sh` descobri que **o passo do i18n
+nunca tinha entrado no `ci.yml`**. Corrigido e **verificado por `grep`**:
+
+| Passo na CI (job *scripts*) | Estado |
+|---|---|
+| `tools/secret-scan.sh` (árvore + histórico, 79 commits) | ✅ ligado e verificado |
+| `tools/i18n-check.sh` (chaves iguais, `R.string` definidas, zero pt-BR) | ✅ ligado e verificado |
+
+**Lição:** edição por script sem verificação a seguir é meia edição. Passou a ser regra: `grep`
+depois de cada substituição.
+
+## 52. Chave de assinatura protegida (o que dependia de ti)
+
+`PUBLICAR.md` §4 passa a ter o `sha256` da chave, o alias, o certificado e o procedimento de cópia e
+restauro — e o aviso que a password por omissão é pública.

@@ -1448,3 +1448,40 @@ diferentes, e tratá-los como iguais era o erro:
   *"a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã"* no transcript (gravado).
   `AvisosTest` cobre a lógica de transição (só cai, não repete, conta quedas).
 - **Origem:** **[LOCAL]**.
+
+### 119. Bootstrap completo: do clone ao daemon a correr + app instalada
+- **O que faltava:** o `bootstrap.sh` só tinha sido corrido com `--skip-daemon --skip-app` — ou seja,
+  os passos 4 e 5 (instalar o daemon e a app) **nunca** tinham sido exercitados a sério. Uma coisa é
+  ter o script, outra é saber que ele funciona do princípio ao fim.
+- **Corrido a sério (2026-10-14):** os 6 passos, saída 0 — kernel do **npm** (`@deepseek-ai/dsh`
+  0.2.0-rc.2) + patches, runtime do Termux, daemon com autostart, APK (376 MB, com o kernel
+  embutido, que é como este caminho funciona) instalada, app aberta.
+- **A chave do provedor sobreviveu** — o instalador do daemon só cria `home/.env` se ele **não
+  existir** (53 bytes, modo 600, data original intacta). Antes de correr, fez-se cópia do `home/`
+  inteiro para `.work/backup-device/` (2,6 MB), porque um erro aqui custaria a chave do utilizador.
+- **Origem:** **[LOCAL]**.
+
+### 120. "De onde veio esta árvore?" — marca de origem do kernel
+- **O problema:** ao olhar para o telefone não havia **maneira nenhuma** de saber se o kernel veio do
+  `app.asar` do desktop ou do `npm`. Havia dois caminhos possíveis e zero registo.
+- **A correcção:** `tools/extract-kernel.cjs` escreve `.cachalote-origem` na raiz da árvore com
+  `origem`, `fonte`, `versao`, `cortado`, `sha256` da árvore, `quando`; o `cachalote doctor` mostra
+  `[ok] origem do kernel: npm 0.2.0-rc.2` (e avisa quando não há marca).
+- **Dois erros meus pelo caminho, os dois por caminhos de ficheiro errados:** o kernel vive em
+  `dsh/node_modules/@deepseek-ai/dsh/`, e eu procurei `dsh/package.json`.
+- **Lição (a terceira vez nesta sessão):** uma edição feita por script **tem de ser verificada** a
+  seguir (`grep`) — o script imprimia "feito" mesmo quando a âncora não existia. Foi assim que os
+  passos do i18n e do scan de segredos ficaram **fora da CI** sem eu notar.
+- **Origem:** **[LOCAL]**.
+
+### 121. `secret-scan.sh`: segredos fora do repositório e do histórico
+- **Porque:** o repositório vai ser público e tirar um segredo depois obriga a reescrever o
+  histórico (como já foi preciso fazer com a identidade dos commits). Prevenir é mais barato.
+- **O que verifica:** (1) ficheiros que o git segue — `.jks`, `.keystore`, `.p12`, `.pem`, `.env`,
+  `app.token`; (2) conteúdo com cara de segredo — chaves privadas, `sk-…`, tokens do GitHub/AWS/Slack;
+  (3) **nomes no histórico**; (4) **conteúdo no histórico** (todos os commits).
+- **Corre na CI** a cada push, ao lado do `i18n-check.sh`.
+- **Cuidado:** a password por omissão da chave de assinatura está escrita no `build-release.sh`
+  (é pública). Serve para desenvolvimento; quem tiver o `.jks` assina como "Cachalote" com ela. A
+  secção 4 do `PUBLICAR.md` explica o que fazer (e o `sha256` para conferir a cópia).
+- **Origem:** **[LOCAL]**.

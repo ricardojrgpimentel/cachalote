@@ -56,6 +56,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # Não deixar segredos entrar no repositório (e no histórico): o repo vai ser público e
+      # tirar um segredo depois obriga a reescrever tudo.
+      - name: Segredos (árvore e histórico)
+        run: ./tools/secret-scan.sh
+
+      # As duas línguas andam juntas: uma tradução em falta cai silenciosamente no inglês, por
+      # isso só uma comparação dos ficheiros a apanha.
+      - name: i18n (pt-PT e inglês)
+        run: ./tools/i18n-check.sh
+
       - name: bash -n em todos os scripts
         run: |
           set -e
