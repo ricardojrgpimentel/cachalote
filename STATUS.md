@@ -617,7 +617,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | **Testes de UI instrumentados** (`androidTest`) | por fazer | os três scripts de teste conduzem a app por `uiautomator` e são **flaky por natureza** (campos errados, teclado, `BACK`); umas quantas asserções Compose resolviam isso de vez |
 | **Inglês / i18n** | decisão | a app tem os textos **em português e dentro do Kotlin** (não há `strings.xml`); para um repo público vale decidir: manter PT, ou extrair + traduzir |
 | **vscreen: polimento** | por fazer | `tap`/`key`/`text` próprios no ecrã virtual (hoje o agente usa `bash input -d`), pré-visualização ao vivo (auto-refresh) e `vscreen_launch` dentro da ferramenta |
-| **Ecrã de licenças na app** | por fazer (pedido) | área na app com os **textos integrais** das licenças (Node, libc++, OpenSSL, ICU, SQLite, zlib, c-ares, AndroidX, Shizuku, DSH) — e publicar o mesmo no repo quando ficar público |
+| ~~**Ecrã de licenças na app**~~ | ✅ **feito em §40** | 13 entradas com os **textos integrais** em `assets/licenses.json` + diálogo em Poderes |
 | ~~**Publicar o kernel e a APK de release**~~ | ✅ **preparado** (§3 do `PUBLICAR.md`) | release `kernel-77fa6785a4e4` com `kernel.zip` (211 MB) + APK assinada (42 MB); falta **tornares o repo público** |
 | ~~**vscreen** (ecrã virtual)~~ | ✅ **feito em §37-39** | reimplementado do zero com APIs do AOSP (D8 = opção A, zero LGPL); sete passos verificados com prova visual |
 | ~~**SEA + snapshot V8**~~ | ✅ medido e rejeitado | § item 4: não ganha nada |
@@ -1414,3 +1414,19 @@ fugas — `dumpsys display` fica limpo).
 | S2 pôr apps + tocar | `am start --display` e `input -d` (root) | [`vscreen-toque-registado.png`](docs/screenshots/vscreen-toque-registado.png) (5 127) |
 | S3 ferramentas do agente | o agente cria, lança, **vê** e lê o conteúdo | transcript: *"O número no visor é 5127"* |
 | S4 pré-visualização | o dono vê o que o agente está a fazer | [`app-ecra-virtual.png`](docs/screenshots/app-ecra-virtual.png) |
+
+
+---
+
+## 40. Licenças de terceiros na app
+
+| Peça | Como |
+|---|---|
+| Dados | `app/src/main/assets/licenses.json` — 13 entradas (`nome`, `licenca`, `url`, texto integral), 56 KB |
+| Código | `Licencas.kt` (lê o asset) + diálogo em *Poderes* → *Ver licenças* → texto em monoespaçado |
+| Textos | MIT canónico · Apache-2.0 (`apache.org`) · Unicode License V3 · zlib · excepção LLVM para o libc++ · SQLite (nota de domínio público) · Termux (proveniência) |
+
+![Ecrã de licenças](docs/screenshots/app-licencas.png)
+
+**Armadilha:** o `LICENSE` do repositório do Node tem 154 KB e **não** é o texto MIT — inclui as
+licenças de todas as dependências embutidas. Para o MIT usa-se o texto canónico.

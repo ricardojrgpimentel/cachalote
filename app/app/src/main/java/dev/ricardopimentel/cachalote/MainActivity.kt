@@ -162,6 +162,7 @@ fun CachaloteApp() {
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
                     if (vm.showSessions) SessionsDialog(vm)
+                    if (vm.mostrarLicencas) LicensesDialog(vm)
                     if (vm.error.isNotBlank()) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -481,6 +482,20 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     maxLines = 2,
                 )
                 OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_url)) }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.licencas_titulo), fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.licencas_texto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                OutlinedButton(onClick = { vm.carregarLicencas() }, enabled = !vm.busy) {
+                    Text(stringResource(R.string.ver_licencas))
+                }
             }
         }
 
@@ -931,4 +946,64 @@ private fun ChatScreen(vm: MainViewModel) {
             }
         }
     }
+}
+
+@Composable
+private fun LicensesDialog(vm: MainViewModel) {
+    AlertDialog(
+        onDismissRequest = { vm.mostrarLicencas = false; vm.licencaAberta = null },
+        title = { Text(stringResource(R.string.licencas_titulo)) },
+        text = {
+            val aberta = vm.licencaAberta
+            if (aberta == null) {
+                if (vm.licencas.isEmpty()) {
+                    Text(stringResource(R.string.sem_pedidos))
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 460.dp)) {
+                        itemsIndexed(vm.licencas) { _, lic ->
+                            TextButton(onClick = { vm.licencaAberta = lic }) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(lic.nome, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        lic.licenca,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                Column {
+                    Text(aberta.nome, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        aberta.licenca + " · " + aberta.url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                        item {
+                            Text(
+                                aberta.texto,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (vm.licencaAberta != null) {
+                TextButton(onClick = { vm.licencaAberta = null }) { Text(stringResource(R.string.voltar)) }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { vm.mostrarLicencas = false; vm.licencaAberta = null }) {
+                Text(stringResource(R.string.fechar))
+            }
+        },
+    )
 }

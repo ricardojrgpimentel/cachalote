@@ -276,6 +276,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     var kernelUrlText by mutableStateOf("")
     var mcpJsonText by mutableStateOf("")
+    var licencas by mutableStateOf<List<Licenca>>(emptyList())
+    var licencaAberta by mutableStateOf<Licenca?>(null)
+    var mostrarLicencas by mutableStateOf(false)
     var vscreenInfo by mutableStateOf("")
     var vscreenRunning by mutableStateOf(false)
     var vscreenBitmap by mutableStateOf<android.graphics.Bitmap?>(null)
@@ -302,6 +305,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         vscreenBitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         vscreenRunning = true
         vscreenInfo = "display ${r.optInt("displayId")} · ${r.optInt("width")}×${r.optInt("height")} · ${r.optInt("bytes") / 1024} KB"
+    }
+
+    /** Lê as licenças de terceiros (textos integrais) do asset. */
+    fun carregarLicencas() {
+        if (licencas.isEmpty()) licencas = Licencas.carregar(getApplication())
+        mostrarLicencas = true
     }
 
     /** Chama uma capacidade da app localmente (o mesmo caminho que o agente usa). */

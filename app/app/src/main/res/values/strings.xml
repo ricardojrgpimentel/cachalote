@@ -37,6 +37,7 @@
     <string name="estado_titulo">Status</string>
     <string name="fechar">Close</string>
     <string name="fechar_sessao_activa">Close the active session</string>
+    <string name="fechar_texto">Close</string>
     <string name="fotograma_desc">virtual screen frame</string>
     <string name="gravar_mcp">Save MCP</string>
     <string name="gravar_reiniciar">Save and restart</string>
@@ -48,6 +49,9 @@
     <string name="kernel_texto">With no asset in the APK, the app fetches the kernel from this URL and checks its sha256. Empty = use the URL baked into the build. Useful for self-hosting.</string>
     <string name="kernel_titulo">Kernel by download (embedded mode)</string>
     <string name="legenda_sessoes">✕ closes the active session · tap a row to resume</string>
+    <string name="licenca_url">Project page</string>
+    <string name="licencas_texto">Cachalote is MIT. This app ships libraries with their own licences: the full texts are here, as they require.</string>
+    <string name="licencas_titulo">Third-party licences</string>
     <string name="ligar_daemon">Start daemon</string>
     <string name="limpar">Clear</string>
     <string name="mcp_aviso">⚠ The command must be an ABSOLUTE path and, if it uses the daemon\'s Node, it needs LD_LIBRARY_PATH in its env (otherwise it dies in the linker).</string>
@@ -92,8 +96,10 @@
     <string name="testar_execucao_texto">Checks whether the Node embedded in the APK can run from the native library directory.</string>
     <string name="token_rotulo">token: %1$s</string>
     <string name="ver_fotograma">View frame</string>
+    <string name="ver_licencas">View licences</string>
     <string name="verificar">Check</string>
     <string name="verificar_estado">Check status</string>
+    <string name="voltar">Back</string>
     <string name="vscreen_texto">A second screen where the agent works without touching your screen. Put apps there with bash: am start --display &lt;id&gt; -n &lt;pkg&gt;/&lt;activity&gt;; tap with input -d &lt;id&gt;. It lives inside this app: close the app and the virtual screen goes away.</string>
     <string name="vscreen_titulo">Virtual screen</string>
 </resources>

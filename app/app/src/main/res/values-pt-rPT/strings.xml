@@ -37,6 +37,7 @@
     <string name="estado_titulo">Estado</string>
     <string name="fechar">Fechar</string>
     <string name="fechar_sessao_activa">Fechar a sessão activa</string>
+    <string name="fechar_texto">Fechar</string>
     <string name="fotograma_desc">fotograma do ecrã virtual</string>
     <string name="gravar_mcp">Gravar MCP</string>
     <string name="gravar_reiniciar">Gravar e reiniciar</string>
@@ -48,6 +49,9 @@
     <string name="kernel_texto">Sem asset na APK, a app vai buscar o kernel a este URL e verifica o sha256. Vazio = usa o URL gravado no build. Serve para hospedagem própria.</string>
     <string name="kernel_titulo">Kernel por download (modo embutido)</string>
     <string name="legenda_sessoes">✕ fecha a sessão activa · toca numa linha para retomar</string>
+    <string name="licenca_url">Página do projecto</string>
+    <string name="licencas_texto">O Cachalote é MIT. Dentro desta app viajam bibliotecas com as suas próprias licenças: aqui estão os textos integrais, como elas pedem.</string>
+    <string name="licencas_titulo">Licenças de terceiros</string>
     <string name="ligar_daemon">Ligar daemon</string>
     <string name="limpar">Limpar</string>
     <string name="mcp_aviso">⚠ O comando tem de ser um caminho ABSOLUTO e, se usar o Node do daemon, precisa do LD_LIBRARY_PATH no env (senão morre no linker).</string>
@@ -92,8 +96,10 @@
     <string name="testar_execucao_texto">Testa se o Node embutido na APK consegue executar-se a partir do directório de bibliotecas nativas.</string>
     <string name="token_rotulo">token: %1$s</string>
     <string name="ver_fotograma">Ver fotograma</string>
+    <string name="ver_licencas">Ver licenças</string>
     <string name="verificar">Verificar</string>
     <string name="verificar_estado">Verificar estado</string>
+    <string name="voltar">Voltar</string>
     <string name="vscreen_texto">Uma segunda tela onde o agente trabalha sem mexer no teu ecrã. Põe apps lá com bash: am start --display &lt;id&gt; -n &lt;pkg&gt;/&lt;activity&gt;; toca com input -d &lt;id&gt;. Vive dentro desta app: se ela for fechada, o ecrã virtual desaparece.</string>
     <string name="vscreen_titulo">Ecrã virtual</string>
 </resources>

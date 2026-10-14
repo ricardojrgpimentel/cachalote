@@ -1287,3 +1287,19 @@ diferentes, e tratá-los como iguais era o erro:
 - **Lição:** um requisito novo (mesmo "higiénico", como tirar o serial) tem de ser testado no
   caminho mais restrito onde o script corre — a CI é esse sítio.
 - **Origem:** **[LOCAL]**.
+
+### 107. Licenças de terceiros dentro da app (textos integrais)
+- **Porque:** o Apache-2.0 pede uma **cópia da licença** para o que se redistribui, e as outras
+  pedem atribuição. Ter os textos no sítio onde o utilizador os pode ler resolve isso e serve de
+  fonte única para o repositório.
+- **Como:** `app/src/main/assets/licenses.json` (13 entradas, 56 KB) com `nome`, `licenca`, `url` e
+  o `texto` integral; `Licencas.kt` lê-o e o separador *Poderes* mostra a lista e, ao tocar, o
+  texto em monoespaçado.
+- **Textos de onde:** MIT canónico (com a linha de copyright de cada projecto), Apache-2.0 de
+  `apache.org`, Unicode License V3 de `unicode.org`, zlib de `madler/zlib`, mais a excepção LLVM
+  para o libc++. SQLite é domínio público (nota, sem texto) e o Termux entra só como proveniência.
+- **Cuidado:** o `LICENSE` do Node (154 KB) **não** é o texto MIT — traz as licenças de todas as
+  dependências embutidas. Para o MIT usa-se o texto canónico.
+- **Verificação:** diálogo com a lista e o texto do Apache-2.0 em
+  [`docs/screenshots/app-licencas.png`](../docs/screenshots/app-licencas.png).
+- **Origem:** **[LOCAL]**.
