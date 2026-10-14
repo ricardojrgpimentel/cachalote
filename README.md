@@ -4,6 +4,8 @@
 protocolo do motor, aprovações no telefone e três motores possíveis (root, Shizuku ou dentro da
 própria app).
 
+[![CI](https://github.com/ricardojrgpimentel/cachalote/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardojrgpimentel/cachalote/actions/workflows/ci.yml)
+
 > Estado: **funcional e verificado num Samsung Galaxy S10+ (LineageOS 23.2 / Android 16)**.
 > O plano completo está em [`PLANO.md`](PLANO.md) e o que já foi verificado, com provas, em
 > [`STATUS.md`](STATUS.md).

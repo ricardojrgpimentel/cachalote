@@ -1063,3 +1063,26 @@ um valor de desenvolvimento — `kernel.remote.json` está no `.gitignore`. Em p
 ser público; o repositório é privado, logo um asset de release aqui **não** serve à app sem
 token. Caminhos possíveis: um repositório público só para o kernel, uma release pública, ou
 qualquer hospedagem estática.
+
+
+---
+
+## 25. CI: do clone à APK num runner, sem telemóvel
+
+O workflow (`.github/workflows/ci.yml`) tinha dois jobs; passou a ter três e o terceiro é o que
+fecha a promessa do bootstrap.
+
+| Job | O que prova | Estado |
+|---|---|---|
+| `schema do plugin` | o kernel do npm gera as 7 ferramentas `android_*`; **as âncoras dos patches continuam a existir** (um patch que deixe de pegar falha o CI) | ✅ |
+| `sintaxe dos scripts` | `bash -n` e `node --check` em tudo | ✅ |
+| `APK de debug a partir de um clone` | runtime arm64 do Termux → `prepare-embed.sh` → Gradle 8.13 → **`assembleDebug`**, com a APK como artefacto | ✅ |
+
+**Resultado verificado:** run `38527105998` em `ubuntu-latest`, os três jobs verdes —
+`APK de debug a partir de um clone: success`. Isto é o bootstrap a ser executado por uma máquina
+que nunca viu este projecto.
+
+Pelo caminho: o `android-actions/setup-android@v3` falha porque pede o pacote legacy `tools`;
+passou a instalar-se só o necessário pelo `sdkmanager` (`platforms;android-35`,
+`build-tools;35.0.0`). E o `bootstrap.sh` ganhou `--no-device` (kernel + runtime sem telemóvel),
+que é o que a CI usa.

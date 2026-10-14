@@ -950,3 +950,21 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   local, o `sha256` no telemóvel ficou **igual** ao publicado (`77fa6785…`), o kernel foi
   extraído e o motor embutido arrancou (`embedded: true, engine: true, hostServer: true`).
 - **Origem:** **[LOCAL]**.
+
+---
+
+## W. Integração contínua
+
+### 90. O que a CI consegue provar sem telemóvel (e o que se partiu pelo caminho)
+- **O que corre no runner:** kernel do npm + patches (com verificação de âncoras), regressão do
+  schema do plugin, `bash -n`/`node --check` em tudo, e o **build da APK** (runtime arm64 do
+  Termux + `prepare-embed.sh` + Gradle 8.13 + `assembleDebug`, com a APK como artefacto).
+- **`android-actions/setup-android@v3` não serve:** pede o pacote legacy `tools` (já removido do
+  repositório do SDK) e o passo falha com `Failed to find package 'tools'`. Solução: usar o SDK
+  que a imagem do runner já traz e instalar só o que falta com o `sdkmanager` —
+  `platform-tools platforms;android-35 build-tools;35.0.0` (a app declara `compileSdk 35`).
+- **Âncoras dos patches:** são substituições de texto. Se a versão do kernel mudar, um patch
+  pode passar a ser um no-op **silencioso** — por isso a CI falha quando aparece um `AVISO` no
+  relatório do `patch-android.cjs`, e exige a linha da guarda de caminhos como prova positiva.
+- **Resultado:** num clone limpo, em `ubuntu-latest`, os três jobs passam — incluindo a APK.
+- **Origem:** **[LOCAL]**.
