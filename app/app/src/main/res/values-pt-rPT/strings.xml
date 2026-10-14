@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Gerado por .work/i18n-extract.py — não editar à mão sem correr o extractor. -->
 <resources>
+    <string name="aba_ajustes">Ajustes</string>
     <string name="aba_chave">Chave</string>
     <string name="aba_conversa">Conversa</string>
     <string name="aba_estado">Estado</string>
@@ -11,6 +12,7 @@
     <string name="acessibilidade_caiu">a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)</string>
     <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
     <string name="acesso">Acesso</string>
+    <string name="ajustes_titulo">Ajustes</string>
     <string name="anexar">Anexar</string>
     <string name="anexar_imagem">Anexar imagem</string>
     <string name="ao_vivo">Ao vivo</string>
@@ -22,6 +24,7 @@
     <string name="autorizar_no_shizuku">Autorizar no Shizuku</string>
     <string name="autorizar_todas">Autorizar todas</string>
     <string name="aviso_root">Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.</string>
+    <string name="backup_e_licencas">Backup e licenças</string>
     <string name="backup_exportar">Exportar definições</string>
     <string name="backup_importar">Importar definições</string>
     <string name="backup_texto">Exporta o modo, as capacidades autorizadas, as áreas do bash, o URL do kernel e os servidores MCP. A chave do provedor e o token do canal **não** entram no ficheiro.</string>
@@ -31,6 +34,7 @@
     <string name="cabecalho_motor_ligado">motor DSH no telefone · ligado</string>
     <string name="capacidades_explicacao">O agente pede; tu decides. Cada pedido fica registado em baixo.</string>
     <string name="capacidades_titulo">Capacidades autorizadas</string>
+    <string name="chave_detalhe">a chave do provedor, guardada no daemon</string>
     <string name="chave_explicacao">A chave é enviada ao daemon, que a escreve em home/.env com modo 600. A app não a guarda.</string>
     <string name="chave_provedor">Chave do provedor</string>
     <string name="descarregar_kernel">Descarregar kernel</string>
@@ -80,6 +84,7 @@
     <string name="modo_shizuku_texto">daemon via Shizuku: corre como shell (uid 2000), sem root</string>
     <string name="mostrar">Mostrar</string>
     <string name="motor">Motor</string>
+    <string name="motor_detalhe">estado, modos (root, Shizuku, embutido) e diagnóstico</string>
     <string name="motor_root">root</string>
     <string name="motor_rotulo">motor: %1$s</string>
     <string name="motor_shizuku">Shizuku</string>
@@ -117,6 +122,9 @@
     <string name="sessao_activa">activa: %1$s</string>
     <string name="sessao_nenhuma_activa">nenhuma sessão activa</string>
     <string name="sessao_rotulo">sessão: %1$s</string>
+    <string name="sobre">Sobre</string>
+    <string name="sobre_detalhe">identidade, versão e o modelo de segurança</string>
+    <string name="sobre_texto">Cachalote — o DeepSeek Harness a correr no telemóvel. Com root, o Android não impõe o sandbox do DSH: quem trava um comando fora do workspace é a autorização que aprovas, e tudo fica registado.</string>
     <string name="testar_execucao">Testar execução</string>
     <string name="testar_execucao_texto">Testa se o Node embutido na APK consegue executar-se a partir do directório de bibliotecas nativas.</string>
     <string name="token_rotulo">token: %1$s</string>

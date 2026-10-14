@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material3.AlertDialog
@@ -140,26 +141,14 @@ fun CachaloteApp() {
                         NavigationBarItem(
                             selected = tab == 0,
                             onClick = { tab = 0 },
-                            icon = { Icon(Icons.Filled.Memory, null) },
-                            label = { Text(stringResource(R.string.aba_estado)) },
-                        )
-                        NavigationBarItem(
-                            selected = tab == 1,
-                            onClick = { tab = 1 },
-                            icon = { Icon(Icons.Filled.Key, null) },
-                            label = { Text(stringResource(R.string.aba_chave)) },
-                        )
-                        NavigationBarItem(
-                            selected = tab == 2,
-                            onClick = { tab = 2 },
                             icon = { Icon(Icons.Filled.Chat, null) },
                             label = { Text(stringResource(R.string.aba_conversa)) },
                         )
                         NavigationBarItem(
-                            selected = tab == 3,
-                            onClick = { tab = 3 },
-                            icon = { Icon(Icons.Filled.Build, null) },
-                            label = { Text(stringResource(R.string.aba_poderes)) },
+                            selected = tab == 1,
+                            onClick = { tab = 1 },
+                            icon = { Icon(Icons.Filled.Settings, null) },
+                            label = { Text(stringResource(R.string.aba_ajustes)) },
                         )
                     }
                 },
@@ -178,12 +167,10 @@ fun CachaloteApp() {
                             Text(vm.error, modifier = Modifier.padding(12.dp), color = Color(0xFFFFC9D0))
                         }
                     }
-                    LaunchedEffect(tab) { if (tab == 3) vm.refreshCapabilities() }
+                    LaunchedEffect(tab) { if (tab == 1) vm.refreshCapabilities() }
                     when (tab) {
-                        0 -> StatusScreen(vm)
-                        1 -> KeyScreen(vm)
-                        2 -> ChatScreen(vm)
-                        else -> CapabilitiesScreen(vm)
+                        0 -> ChatScreen(vm)
+                        else -> AjustesScreen(vm)
                     }
                 }
             }
@@ -342,13 +329,38 @@ private fun SessionsDialog(vm: MainViewModel) {
  * Android não há sandbox a travar o agente, por isso quem decide é o utilizador.
  */
 @Composable
-private fun CapabilitiesScreen(vm: MainViewModel) {
+private fun AjustesScreen(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val accessibilityOn = CachaloteAccessibilityService.isEnabled()
+    var secao by rememberSaveable { mutableStateOf("menu") }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    stringResource(R.string.ajustes_titulo),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
+                )
+                LinhaDeMenu(stringResource(R.string.motor), stringResource(R.string.motor_detalhe)) { secao = "motor" }
+                LinhaDeMenu(stringResource(R.string.chave_provedor), stringResource(R.string.chave_detalhe)) { secao = "provedor" }
+                LinhaDeMenu(stringResource(R.string.capacidades_titulo)) { secao = "capacidades" }
+                LinhaDeMenu(stringResource(R.string.acessibilidade)) { secao = "acessibilidade" }
+                LinhaDeMenu(stringResource(R.string.areas_bash)) { secao = "areas" }
+                LinhaDeMenu(stringResource(R.string.mcp_titulo)) { secao = "mcp" }
+                LinhaDeMenu(stringResource(R.string.vscreen_titulo)) { secao = "vscreen" }
+                LinhaDeMenu(stringResource(R.string.backup_e_licencas)) { secao = "backup" }
+            }
+        }
+        if (secao == "motor") StatusScreen(vm)
+        if (secao == "provedor") KeyScreen(vm)
+        if (secao != "menu") {
+            TextButton(onClick = { secao = "menu" }) { Text("\u2190 " + stringResource(R.string.ajustes_titulo)) }
+        }
+        if (secao == "acessibilidade") {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.acessibilidade), fontWeight = FontWeight.SemiBold)
@@ -369,6 +381,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "motor") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
@@ -382,6 +396,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "capacidades") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(stringResource(R.string.capacidades_titulo), fontWeight = FontWeight.SemiBold)
@@ -408,6 +424,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "capacidades") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -429,6 +447,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "areas") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.areas_bash), fontWeight = FontWeight.SemiBold)
@@ -453,6 +473,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "motor") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.kernel_titulo), fontWeight = FontWeight.SemiBold)
@@ -472,6 +494,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "backup") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.backup_titulo), fontWeight = FontWeight.SemiBold)
@@ -502,6 +526,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "backup") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.licencas_titulo), fontWeight = FontWeight.SemiBold)
@@ -516,6 +542,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "vscreen") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
@@ -557,6 +585,8 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        if (secao == "mcp") {
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(R.string.mcp_titulo), fontWeight = FontWeight.SemiBold)
@@ -588,6 +618,7 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
         )
+        }
     }
 }
 
@@ -1024,4 +1055,20 @@ private fun LicensesDialog(vm: MainViewModel) {
             }
         },
     )
+}
+
+/** Uma linha do menu de ajustes: o nome da secção, um detalhe opcional e um chevron. */
+@Composable
+private fun LinhaDeMenu(titulo: String, detalhe: String? = null, onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(titulo, fontWeight = FontWeight.SemiBold)
+                if (detalhe != null) {
+                    Text(detalhe, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+            Text("\u203A", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.secondary)
+        }
+    }
 }
