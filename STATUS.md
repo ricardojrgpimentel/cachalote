@@ -607,7 +607,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 
 | Item | Estado | Nota |
 |---|---|---|
-| **`cachalote doctor`** | por fazer | um comando que verifica a cadeia toda (daemon, motor, chave, acessibilidade, kernel, disco, portos, oom, watchdog) e diz o que está mal. Barato e útil a sério |
+| ~~**`cachalote doctor`**~~ | ✅ **feito em §30** | verifica ficheiros, chave, daemon, `oom_score_adj`, watchdog, canal, motor, app ponta a ponta, disco e registos; `exit=1` se houver problemas |
 | **Títulos de sessão** | por fazer | o perfil desliga `session-title-llm`; ligá-lo dá nomes às sessões em vez de `0d876415` |
 | **LMK sob pressão real** | meio | `oom_score_adj` e watchdog feitos (§26); falta encher a RAM e ver o comportamento |
 | **Clique do ✕ na UI** | meio | o fecho funciona (ACPP medido); o teste de UI não acerta nas linhas do diálogo |
@@ -1172,3 +1172,31 @@ limitação do Shizuku, não do Cachalote.
 
 Quando o Shizuku não está a correr, a app di-lo no cartão do motor e oferece **Autorizar no
 Shizuku** — não falha em silêncio.
+
+
+---
+
+## 30. `cachalote doctor`
+
+Um comando que responde de uma vez às perguntas que eu andava a fazer ao `adb` uma a uma:
+
+```
+-- ficheiros              runtime Node v24.18.0 · ponte · CLI · kernel 0.2.0-rc.2 · plugin android_*
+-- chave do provedor      DEEPSEEK_API_KEY presente · home/.env modo 600
+-- daemon                 a correr (pid 576) · oom_score_adj=-800 · watchdog a vigiar
+-- canal e motor          TCP 39731 · socket unix · motor a responder · app ligada
+-- app e capacidades      acessibilidade ligada · notificações permitidas
+-- espaço e registos      103G livres · motor sem 'did not activate' · ponte sem ERRO
+resultado: tudo bem
+```
+
+**Verificação nos dois sentidos:**
+
+| Cenário | Resultado |
+|---|---|
+| Tudo saudável | `resultado: tudo bem`, exit 0 |
+| Daemon parado + plugin do perfil apontado a um caminho inexistente | `2 problema(s) e 3 aviso(s)`, **exit 1** |
+| Acessibilidade desligada (acontece a cada reinstalação da app) | aviso explícito com o que fazer |
+
+Pelo caminho ficou `cachalote ctl <método> [params]` — um cliente mínimo de controlo pelo socket
+unix, que é o que permite ao doctor perguntar o estado à ponte e às capacidades à app.

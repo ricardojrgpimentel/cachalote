@@ -237,6 +237,9 @@ function control(method, params) {
       return {
         daemon: true, version: VERSION, pid: process.pid, profile: PROFILE,
         engine: !!engine, engineRestarts: restarts,
+        // `appConnected` responde à pergunta que o `doctor` e a app fazem: a app está ligada
+        // agora? (sem isto só se via pelo log da ponte).
+        appConnected: !!appSocket && !appSocket.destroyed,
         uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
         socket: SOCK, port: PORT, base: BASE,
       };

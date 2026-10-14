@@ -63,6 +63,146 @@ watchdog)
     sleep "$INTERVAL"
   done
   ;;
+# ---------------------------------------------------------------- doctor
+ctl)
+  # Cliente de controlo pelo socket unix: `cachalote ctl cachalote.status` ou
+  # `cachalote ctl cachalote.host.call '{"capability":"status","params":{}}'`.
+  METHOD="${2:-cachalote.status}"
+  PARAMS="${3:-{\}}"
+  [ -S "$SOCK" ] || { echo "ERRO: socket ausente ($SOCK) — o daemon está a correr?" >&2; exit 1; }
+  TMP="$BASE/tmp/ctl.$$.cjs"
+  mkdir -p "$BASE/tmp"
+  cat > "$TMP" <<'CTLJS'
+const net = require("node:net");
+const [sock, method, params] = process.argv.slice(2);
+const s = net.connect(sock);
+let buf = "", id = 1, authed = false;
+const send = (m, p) => s.write(JSON.stringify({ jsonrpc: "2.0", id: id++, method: m, params: p }) + "\n");
+s.on("connect", () => send("cachalote.auth", { token: require("node:fs").readFileSync(process.env.TOKEN_FILE, "utf8").trim(), client: "tool" }));
+s.on("data", (c) => {
+  buf += c.toString();
+  let i;
+  while ((i = buf.indexOf("\n")) >= 0) {
+    const line = buf.slice(0, i); buf = buf.slice(i + 1);
+    if (!line.trim()) continue;
+    const m = JSON.parse(line);
+    if (m.id === 1 && !authed) { authed = true; send(method, JSON.parse(params)); continue; }
+    if (m.error) { console.error(JSON.stringify(m.error)); process.exit(1); }
+    console.log(JSON.stringify(m.result, null, 1)); process.exit(0);
+  }
+});
+s.on("error", (e) => { console.error(e.message); process.exit(1); });
+setTimeout(() => { console.error("tempo esgotado"); process.exit(1); }, 60000);
+CTLJS
+  TOKEN_FILE="$BASE/home/app.token" "$NODE" "$TMP" "$SOCK" "$METHOD" "$PARAMS"
+  RC=$?
+  rm -f "$TMP"
+  exit $RC
+  ;;
+doctor)
+  FALHAS=0; AVISOS=0
+  ok()   { echo "  [ok]  $1"; }
+  warn() { echo "  [!!]  $1"; AVISOS=$((AVISOS+1)); }
+  bad()  { echo "  [XX]  $1"; FALHAS=$((FALHAS+1)); }
+  echo "== cachalote doctor =="
+  echo "base: $BASE"
+  echo
+  echo "-- ficheiros"
+  [ -x "$NODE" ] && ok "runtime Node ($("$NODE" -v 2>/dev/null))" || bad "falta o runtime Node ($NODE)"
+  [ -f "$BASE/bridge.cjs" ] && ok "ponte (bridge.cjs)" || bad "falta $BASE/bridge.cjs"
+  [ -f "$BASE/bin/cachalote" ] && ok "CLI" || bad "falta $BASE/bin/cachalote"
+  [ -f "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" ] && ok "kernel do DSH" || bad "falta o kernel (tools/prepare-kernel-zip.sh)"
+  [ -f "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/package.json" ] && ok "versão do kernel: $(grep -m1 '"version"' "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/package.json" | tr -d ' ",' | cut -d: -f2)" || true
+  [ -f "$BASE/home/cordis.patch.yml" ] && ok "camada de patch do perfil" || warn "sem home/cordis.patch.yml (usa o perfil por omissão)"
+  PLUGIN="$(grep -o "/[^']*dsh-tool-cachalote/lib/index.js" "$BASE/home/cordis.patch.yml" 2>/dev/null | head -1)"
+  if [ -n "$PLUGIN" ]; then
+    [ -f "$PLUGIN" ] && ok "plugin das capacidades android_*" || bad "o perfil aponta para $PLUGIN, que não existe"
+  else
+    warn "o perfil não insere o plugin das capacidades (o agente não terá ferramentas android_*)"
+  fi
+  echo
+  echo "-- chave do provedor"
+  if [ -f "$BASE/home/.env" ]; then
+    [ "$(grep -c '^DEEPSEEK_API_KEY=' "$BASE/home/.env" 2>/dev/null)" -ge 1 ] && ok "DEEPSEEK_API_KEY presente" || bad "sem DEEPSEEK_API_KEY em home/.env (daemon/set-key.sh)"
+    MODO="$(stat -c %a "$BASE/home/.env" 2>/dev/null)"
+    [ "$MODO" = "600" ] && ok "home/.env com modo 600" || warn "home/.env com modo $MODO (devia ser 600)"
+  else
+    bad "falta home/.env"
+  fi
+  echo
+  echo "-- daemon"
+  if alive; then
+    PID="$(pid_of)"
+    ok "a correr (pid $PID)"
+    ADJ="$(cat "/proc/$PID/oom_score_adj" 2>/dev/null)"
+    if [ -n "$ADJ" ] && [ "$ADJ" -le -500 ] 2>/dev/null; then ok "protegido do LMK (oom_score_adj=$ADJ)"; else warn "sem protecção de memória (oom_score_adj=${ADJ:-?})"; fi
+  else
+    bad "parado — arranca com: cachalote start (ou liga o watchdog)"
+  fi
+  if pgrep -f "cachalote watchdog" >/dev/null 2>&1; then ok "watchdog a vigiar"; else warn "watchdog não está a correr (service.d liga-o no arranque)"; fi
+  echo
+  echo "-- canal e motor"
+  if port_open "${CACHALOTE_PORT:-39731}"; then ok "TCP ${CACHALOTE_PORT:-39731} à escuta"; else bad "porto ${CACHALOTE_PORT:-39731} sem resposta"; fi
+  [ -S "$SOCK" ] && ok "socket unix" || warn "socket unix ausente (normal em /data/local/tmp — o SELinux recusa)"
+  ST=""
+  [ -S "$SOCK" ] && ST="$("$0" ctl cachalote.status 2>/dev/null | tr -d '\n ' )"
+  case "$ST" in
+    *'"engine":true'*) ok "motor (engine) a responder" ;;
+    *'"engine":false'*) warn "motor em baixo — a ponte reinicia-o; vê logs/engine.log" ;;
+    *) pgrep -f "dsh/lib/bin.js" >/dev/null 2>&1 && ok "processo do motor presente" || warn "não consegui confirmar o motor" ;;
+  esac
+  if [ -S "$SOCK" ]; then
+    case "$ST" in
+      *'"appConnected":true'*) ok "app ligada ao daemon" ;;
+      *'"appConnected":false'*) warn "app não está ligada (abre a app Cachalote)" ;;
+      *'"engine":true'*) ok "motor a responder ao status" ;;
+      *) warn "não consegui ler o estado pelo canal de controlo" ;;
+    esac
+  fi
+  echo
+  echo "-- app e capacidades (ponta a ponta)"
+  if [ -S "$SOCK" ]; then
+    # O JSON vem indentado (`JSON.stringify(..., 1)`): tirar espaços e mudanças de linha, senão
+    # os padrões `"campo":valor` não casam (foi um bug de diagnóstico do próprio doctor).
+    CAPS="$("$0" ctl cachalote.host.call '{"capability":"status","params":{}}' 2>/dev/null | tr -d '\n ')"
+    case "$CAPS" in
+      *'"accessibility":true'*) ok "acessibilidade ligada (ver/tocar/escrever no ecrã)" ;;
+      *'"accessibility":false'*) warn "acessibilidade desligada — liga em Definições → Acessibilidade → Cachalote" ;;
+      *'"error"'*) warn "a app recusou/errou as capacidades: $(printf '%s' "$CAPS" | head -c 120)" ;;
+      *) if [ -n "$ST" ] && printf '%s' "$ST" | grep -q '"appConnected":true'; then
+           warn "a app está ligada mas não respondeu às capacidades (tem o serviço a funcionar?)"
+         else
+           warn "a app não está ligada (abre a app Cachalote para testar as capacidades)"
+         fi ;;
+    esac
+    case "$CAPS" in
+      *'"notifications":true'*) ok "notificações permitidas" ;;
+      *'"notifications":false'*) warn "notificações não permitidas" ;;
+    esac
+  fi
+  echo
+  echo "-- espaço e registos"
+  DF="$(df -h "$BASE" 2>/dev/null | tail -1 | awk '{print $4}')"
+  [ -n "$DF" ] && ok "espaço livre em $BASE: $DF" || warn "não consegui ler o espaço em disco"
+  if [ -f "$BASE/logs/engine.log" ]; then
+    E="$(tail -n 300 "$BASE/logs/engine.log" 2>/dev/null | grep -c "did not activate")"
+    [ "${E:-0}" = "0" ] && ok "motor sem 'did not activate'" || warn "$E entradas do motor não activaram (vê logs/engine.log)"
+  fi
+  if [ -f "$BASE/logs/daemon.log" ]; then
+    U="$(grep -c "ERRO" "$BASE/logs/daemon.log" 2>/dev/null)"
+    [ "${U:-0}" = "0" ] && ok "ponte sem ERRO no registo" || warn "$U ERRO no registo da ponte (vê logs/daemon.log)"
+  fi
+  echo
+  if [ "$FALHAS" = "0" ] && [ "$AVISOS" = "0" ]; then
+    echo "resultado: tudo bem"
+  elif [ "$FALHAS" = "0" ]; then
+    echo "resultado: $AVISOS aviso(s), nenhum problema"
+  else
+    echo "resultado: $FALHAS problema(s) e $AVISOS aviso(s)"
+  fi
+  [ "$FALHAS" = "0" ]
+  ;;
+
 stop)
   if ! alive; then echo "não está a correr"; rm -f "$PIDFILE"; exit 0; fi
   kill "$(pid_of)" 2>/dev/null
@@ -198,5 +338,5 @@ key-status)
   NAME="${2:-DEEPSEEK_API_KEY}"
   if grep -q "^$NAME=" "$BASE/home/.env" 2>/dev/null; then echo "presente"; else echo "ausente"; fi
   ;;
-*) echo "uso: cachalote start|stop|restart|watchdog [seg]|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|key-set|key-remove|key-status"; exit 2 ;;
+*) echo "uso: cachalote start|stop|restart|watchdog [seg]|ctl <método> [params]|doctor|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|key-set|key-remove|key-status"; exit 2 ;;
 esac

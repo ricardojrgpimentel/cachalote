@@ -1072,3 +1072,28 @@ diferentes, e tratá-los como iguais era o erro:
 - **Detalhe que quase passa:** o email do autor fica nos **metadados dos commits** (não é
   conteúdo de ficheiro, logo `git grep` não o apanha). Ver a decisão em `PUBLICAR.md` §2.1.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AC. Diagnóstico
+
+### 96. `cachalote doctor`: um comando em vez de dez perguntas ao adb
+- **Porque existe:** diagnosticar isto à mão era sempre a mesma sequência — o daemon está vivo? o
+  motor? a chave está lá e com modo 600? o `oom_score_adj`? o watchdog? o plugin foi inserido? a
+  app responde às capacidades? Cada uma destas perguntas já me custou uma ronda de investigação.
+- **O que faz:** percorre ficheiros (runtime, kernel + versão, ponte, CLI, camada de patch,
+  **plugin referenciado pelo perfil**), chave (presença e modo), daemon (vivo, `oom_score_adj`,
+  watchdog), canal (TCP, socket unix, motor a responder ao `status`), app **ponta a ponta**
+  (`cachalote.host.call status` → acessibilidade e notificações), espaço em disco e registos
+  (`did not activate` só no fim do registo, não no histórico todo). Sai com código 1 se houver
+  problemas.
+- **Como fala com a ponte:** `cachalote ctl <método> [params]` — um cliente mínimo pelo socket
+  unix (autentica como cliente `tool`). Foi preciso para o doctor poder perguntar
+  `cachalote.status` e `cachalote.host.call`.
+- **Dois bugs meus que o primeiro `doctor` revelou:** o `pgrep` do motor usava um caminho que não
+  corresponde ao real (o motor vive em `.../dsh/node_modules/@deepseek-ai/dsh/lib/bin.js`), e a
+  contagem de `did not activate` somava o histórico todo. E os padrões `"campo":valor` não casavam
+  porque o JSON vem indentado — tira-se espaços e mudanças de linha antes de comparar.
+- **Verificação:** com tudo bom → `resultado: tudo bem`; com o daemon parado e o plugin apontado
+  para um caminho inexistente → `2 problema(s) e 3 aviso(s)`, `exit=1`.
+- **Origem:** **[LOCAL]**.
