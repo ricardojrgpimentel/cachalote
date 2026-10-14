@@ -197,6 +197,15 @@ class DaemonController(private val context: Context) {
         return client.callForResult("session/list", JSONObject().put("cwd", cwd))
     }
 
+    /**
+     * Fecha uma sessão no motor (`session/close`). Não apaga o histórico em disco: desactiva-a,
+     * que é o que o ACP oferece (`sessionCapabilities.close`). Ver knowledge 93.
+     */
+    suspend fun closeSession(sessionId: String): JSONObject = comMotorPronto {
+        ensureAcp()
+        client.callForResult("session/close", JSONObject().put("sessionId", sessionId))
+    }
+
     suspend fun resumeSession(sessionId: String, cwd: String): JSONObject {
         ensureAcp()
         return client.callForResult(
@@ -409,6 +418,15 @@ class DaemonController(private val context: Context) {
 
     /** De onde vem o kernel (ficheiro, asset ou download) — para a UI dizer o que vai acontecer. */
     fun embeddedKernelSource(): String? = engine.kernelSource()
+
+    /** Última sessão deste modo (o id guarda-se por modo — ver knowledge 93). */
+    fun lastSessionId(): String? = prefs.lastSessionId
+
+    fun modeLabel(): String = when (mode) {
+        Mode.DAEMON -> "daemon (root)"
+        Mode.SHIZUKU -> "Shizuku"
+        Mode.EMBEDDED -> "embutido"
+    }
 
     var kernelUrl: String
         get() = prefs.kernelUrl

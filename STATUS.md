@@ -1125,3 +1125,26 @@ trabalho mostrou que são **três situações** e que tratá-las igual era o pro
 o pedido é aceite e que o motor volta com o daemon saudável. Na prática ele apanha a janela (3)
 de forma determinística, e diz explicitamente quando **não** apanhou a (2) — para não vender
 como verificado o que não foi.
+
+
+---
+
+## 28. Sessões por modo e fecho da sessão activa
+
+Ao testar o fecho de sessões apareceu um bug a sério: **a sessão era global**, mas pertence ao
+motor onde nasceu (o `cwd` difere por modo). Trocar de modo fazia a app tentar retomar a sessão
+do outro motor, e o erro aparecia como "a ligação ao motor caiu" — a despistar.
+
+| Peça | Antes | Agora |
+|---|---|---|
+| Transcript e sessão | um `sessao.json` global | `sessao-<modo>.json` (root / Shizuku / embutido) |
+| Última sessão | chave única | `lastSessionId:<modo>` |
+| Trocar de modo | tentava retomar a sessão alheia | guarda a deste motor e carrega a do novo |
+| Fechar sessão | não existia | ✕ no diálogo, **só na sessão activa** (o ACP só fecha activas: `unknown session` nas do histórico) |
+
+**Verificado:** os dois ficheiros existem com os `cwd` certos e o do embutido ficou sem sessão
+(não houve mais nenhuma tentativa de retomar sessão alheia); `session/close` devolve `{}` para a
+sessão activa e `unknown session` para as do histórico (medido com um cliente ACP directo);
+`app-ui-test` 9/9 e as 7 ferramentas do plugin registadas.
+
+**Não verificado:** o ✕ *pela UI* — a automação não acertou nas linhas do diálogo. Fica anotado.

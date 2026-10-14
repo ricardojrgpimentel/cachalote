@@ -10,9 +10,18 @@ import java.io.File
  * conversa sobreviver a fechar/abrir a app. Não guarda nada de secreto (a chave vive
  * no daemon).
  */
-class SessionStore(context: Context) {
+class SessionStore(private val context: Context) {
 
-    private val file = File(context.filesDir, "sessao.json")
+    /**
+     * Um ficheiro por **modo de motor**. A sessão e o histórico pertencem ao motor onde
+     * nasceram: o `cwd` da sessão é diferente em cada modo (root: /data/adb/cachalote/home/ws;
+     * embutido: files/dsh-home/ws) e retomar uma sessão no motor errado é recusado pelo ACP
+     * ("session/resume cwd mismatch"). Era isto que dava "a ligação ao motor caiu" ao trocar de
+     * modo. Ver knowledge 93.
+     */
+    private fun arquivoDoModo(modo: String) = File(context.filesDir, "sessao-$modo.json")
+    private val modoAtual: String get() = context.getSharedPreferences("cachalote", Context.MODE_PRIVATE)
+        .getString("mode", "daemon")!!
 
     data class Snapshot(
         val sessionId: String?,
@@ -23,6 +32,7 @@ class SessionStore(context: Context) {
     )
 
     fun save(sessionId: String?, cwd: String?, model: String?, effort: String?, lines: List<ChatLine>) {
+        val file = arquivoDoModo(modoAtual)
         val arr = JSONArray()
         lines.takeLast(300).forEach { l ->
             arr.put(
@@ -43,6 +53,7 @@ class SessionStore(context: Context) {
     }
 
     fun load(): Snapshot? {
+        val file = arquivoDoModo(modoAtual)
         if (!file.isFile) return null
         return runCatching {
             val obj = JSONObject(file.readText())
@@ -69,5 +80,5 @@ class SessionStore(context: Context) {
         }.getOrNull()
     }
 
-    fun clear() = runCatching { file.delete() }.let { }
+    fun clear() = runCatching { arquivoDoModo(modoAtual).delete() }.let { }
 }

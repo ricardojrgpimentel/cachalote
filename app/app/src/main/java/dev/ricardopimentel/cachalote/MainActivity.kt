@@ -269,6 +269,7 @@ private fun SessionsDialog(vm: MainViewModel) {
     AlertDialog(
         onDismissRequest = { vm.showSessions = false },
         title = { Text("Sessões") },
+        // (a legenda do rodapé explica o ✕: só a sessão activa se pode fechar)
         text = {
             if (vm.sessions.isEmpty()) {
                 Text("não há sessões guardadas no motor")
@@ -276,21 +277,32 @@ private fun SessionsDialog(vm: MainViewModel) {
                 LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                     itemsIndexed(vm.sessions) { _, row ->
                         val current = row.id == vm.sessionId
-                        TextButton(
-                            onClick = { vm.resumeSession(row.id) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    (if (current) "✓ " else "") + row.title,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (current) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                                )
-                                Text(
-                                    row.id.take(8) + "  ·  " + row.updatedAt.replace("T", " ").take(19),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                onClick = { vm.resumeSession(row.id) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        (if (current) "✓ " else "") + row.title,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (current) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                                    )
+                                    Text(
+                                        row.id.take(8) + "  ·  " + row.updatedAt.replace("T", " ").take(19),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                    )
+                                }
+                            }
+                            // O motor só fecha a sessão **activa** (`session/close` responde
+                            // "unknown session" às do histórico): o ✕ aparece só na linha da
+                            // sessão actual. Para fechar outra, toca-se nela primeiro (retoma) —
+                            // ver knowledge 93.
+                            if (current) {
+                                TextButton(onClick = { vm.closeSession(row.id) }, enabled = !vm.busy) {
+                                    Text("✕", color = MaterialTheme.colorScheme.secondary)
+                                }
                             }
                         }
                     }
@@ -298,7 +310,16 @@ private fun SessionsDialog(vm: MainViewModel) {
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = { vm.showSessions = false }) { Text("Fechar") } },
+        dismissButton = {
+            Column {
+                Text(
+                    "✕ fecha a sessão activa · toca numa linha para retomar",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                TextButton(onClick = { vm.showSessions = false }) { Text("Fechar") }
+            }
+        },
     )
 }
 

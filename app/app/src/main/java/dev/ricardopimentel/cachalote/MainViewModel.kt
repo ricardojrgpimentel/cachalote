@@ -208,6 +208,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun switchMode(kind: DaemonController.Mode) = run("modo") {
         if (kind == modeKind) return@run
+        // Guardar o estado deste modo antes de sair: cada modo tem a sua sessão e o seu
+        // histórico (o cwd é diferente e o motor recusa retomar sessões de outro).
+        runCatching { saveState() }
+        sessionId = null
+        transcript.clear()
         controller.stopEmbedded()
         controller.mode = kind
         modeKind = kind
@@ -522,6 +527,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         transcript.add(ChatLine("system", "sessão ${id.take(8)} retomada"))
         showSessions = false
         saveState()
+    }
+
+    /**
+     * Fecha uma sessão. Se for a sessão actual, a app fica sem sessão (a próxima mensagem cria
+     * uma nova) — é mais honesto do que continuar a escrever numa sessão fechada.
+     */
+    fun closeSession(id: String) = run("fechar sessão") {
+        // O ACP só fecha sessões activas (o motor responde "unknown session" às do histórico),
+        // por isso a app diz isso mesmo em vez de mostrar o erro cru do motor.
+        if (id != sessionId) {
+            error("o motor só fecha a sessão activa — toca na linha para a retomares primeiro")
+        }
+        controller.closeSession(id)
+        if (id == sessionId) {
+            sessionId = null
+            transcript.clear()
+            transcript.add(ChatLine("system", "sessão ${id.take(8)} fechada — a próxima mensagem abre uma nova"))
+        } else {
+            transcript.add(ChatLine("system", "sessão ${id.take(8)} fechada"))
+        }
+        saveState()
+        refreshSessions()
     }
 
     /** Muda modelo/esforço e o motor devolve as opções actualizadas. */

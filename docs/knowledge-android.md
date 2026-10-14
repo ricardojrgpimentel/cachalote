@@ -1015,3 +1015,27 @@ diferentes, e tratá-los como iguais era o erro:
   quando *não* a apanhou (não conta como sucesso do retry). Para (1) e (3) o comportamento é
   determinístico e está acima.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## Z. Sessões e modo do motor
+
+### 93. A sessão pertence a um motor, não à app
+- **Sintoma:** ao trocar de modo (embutido ↔ root) a app mostrava
+  `sessões: a ligação ao motor caiu`. No log via-se `→ session/resume` seguido de erro.
+- **Causa:** a sessão guardada era **global** e o `cwd` de uma sessão difere por modo
+  (`/data/adb/cachalote/home/ws` no root, `files/dsh-home/ws` no embutido). Retomar no motor
+  errado é recusado pelo ACP — e o erro aparecia como falha de ligação, o que despistava.
+- **Solução:** estado **por modo** — `files/sessao-<modo>.json` (transcript + sessão) e
+  `lastSessionId:<modo>` nas preferências. Ao trocar de modo, a app guarda o que era daquele
+  motor e carrega o do novo (há uma linha de sistema a dizê-lo).
+- **Verificado:** existem os dois ficheiros com os `cwd` certos e o do embutido ficou limpo
+  (nenhuma sessão), sem tentativas de retomar sessões alheias.
+- **`session/close` só fecha a sessão activa.** Verificado contra o motor: criar + fechar
+  devolve `{}`; fechar uma sessão do histórico devolve `unknown session`. Por isso o ✕ no
+  diálogo das sessões aparece **só** na linha da sessão activa, e a app explica em vez de
+  mostrar o erro cru (`o motor só fecha a sessão activa — toca na linha para a retomares`).
+- **Limite do teste:** a verificação do ✕ *pela UI* não ficou feita — a automação não acertou
+  nas linhas do diálogo (a sessão activa não estava entre as primeiras) e o clique em "Sessões"
+  chegou com a app a reconectar. O que está provado é o protocolo e o estado por modo.
+- **Origem:** **[LOCAL]**.
