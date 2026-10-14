@@ -340,16 +340,16 @@ A tabela anterior (de §11) tinha linhas que o trabalho seguinte resolveu. Fica 
 
 | Item | Nota |
 |---|---|
-| **`bootstrap.sh` completo** (daemon + app, do zero) | o teste real foi com `--skip-daemon --skip-app`; nunca se correu o caminho inteiro. É o que prova "instalar num telemóvel novo" |
-| **Instalar a árvore a partir do npm** | o daemon corre a árvore derivada do `app.asar` do desktop; falta provar a do npm (é a que o bootstrap usa). Falta também **gravar a origem** (não há marca no telefone — não se sabe dizer de onde veio) |
+| ~~**`bootstrap.sh` completo**~~ | ✅ **feito em §49**: 6/6 passos, saída 0 — kernel do npm, daemon com autostart, APK instalada; a chave sobreviveu |
+| ~~**Árvore do npm + marca de origem**~~ | ✅ **feito em §50**: o bootstrap instalou a árvore do npm e o `doctor` diz `origem do kernel: npm 0.2.0-rc.2` |
 | **Repositório público** | depende do autor (`PUBLICAR.md`); a release está pronta |
-| **Fila de tarefas** | lançar trabalho e ser avisado; a notificação de autorização (§47) foi o primeiro passo |
+| ~~**Fila de tarefas**~~ | ✅ **feito em §55**: corre uma a seguir à outra, sobrevive ao arranque, avisa por notificação; um pedido de autorização pára-a naturalmente |
 | **Modo seguro** | decisão de produto: as ferramentas passarem todas pela ponte (lista de caminhos imposta) em vez de `bash` como root |
-| **vscreen persistente** | hoje vive dentro da app (fechá-la, fecha-o); passar para o daemon é trabalho médio |
-| **Títulos do motor** | os títulos existem no motor mas não chegam ao `session/list`; investigar o formato da projecção |
-| **Documento de arquitectura** | o README e o PLANO explicam muito, mas está espalhado |
-| **Re-verificar o flavor Shizuku no aparelho** | o plano diz que foi verificado numa sessão anterior; nesta não foi repetido |
-| **Cópia de segurança da chave de assinatura** | `.work/cachalote-release.jks` não é versionada: sem ela não se actualiza a app instalada |
+| ~~**vscreen persistente**~~ | ✅ **medido e explicado em §54**: sobrevive a fechar a interface (serviço em primeiro plano) e **não pode** sobreviver a matar o processo (um display virtual pertence a um processo Android; o daemon é Node) |
+| ~~**Títulos do motor**~~ | ✅ **investigado em §54**: não existem do lado do cliente (`session/list` sem `title`, 76 registos só com o cabeçalho) — é lacuna da API; a app deriva do 1.º prompt |
+| ~~**Documento de arquitectura**~~ | ✅ **feito em §56**: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) |
+| ~~**Re-verificar o flavor Shizuku**~~ | ✅ **feito em §53**: cinco bugs reais corrigidos; o daemon corre como `shell`, porto 39733, a app pede a permissão sozinha |
+| **Cópia de segurança da chave de assinatura** | procedimento e `sha256` em `PUBLICAR.md` §4; **a cópia é ação do autor** (o ficheiro não sai deste portátil sozinho) |
 
 ---|---|
 | ~~**Confinamento do bash**~~ | ✅ **feito** (ver §12): guarda de caminhos + aprovação no telefone, verificada A/B (aprovar → corre; recusar → bloqueado). |
@@ -1697,3 +1697,13 @@ arranque do ViewModel). Corrigido e verificado: depois de reiniciar, `2 na fila`
 pendentes.
 
 **Testes:** `FilaTest` (7) + `FilaCardTest` (5) → **42 testes na JVM**, todos a passar.
+
+
+---
+
+## 56. `docs/ARQUITETURA.md`
+
+Documento para quem chega de fora: a ideia em três linhas, porque o motor corre **fora** da app
+(D2), os três motores, os canais da ponte (controlo, ACP e capacidades), as ferramentas do agente,
+onde vivem os segredos, o que trava o agente (**e o que não trava** com root), o ecrã virtual, o
+mapa dos directórios e como se verifica (as quatro suites). Ligado a partir do README.
