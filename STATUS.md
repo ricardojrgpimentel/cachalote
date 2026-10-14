@@ -1772,3 +1772,79 @@ de hoje: os turnos (*"DeepSeek Messages transport failed"*) e o MCP.
 
 **Hardening:** o `tools/secret-scan.sh` passou a reconhecer os formatos de chave da Google
 (`AQ.…`, `AIza…`).
+
+---
+
+## 60. Os crashes dos menus: dois bugs de raiz, um sistema de secções partido e o BACK
+
+Medido no S10+ (`R58M55JNP6X`, LineageOS 23.2 / Android 16, Magisk) a 2026-10-14 à noite. O buffer
+de crashes tinha **cinco** excepções do mesmo dia; duas causas distintas:
+
+**1. Scroll dentro de scroll (4 das 5).** `IllegalStateException: Vertically scrollable component was
+measured with an infinity maximum height constraints` ao abrir **«Motor»** e **«Chave do provedor»**.
+O ecrã dos Ajustes tinha `fillMaxSize().verticalScroll(...)` e as duas secções traziam **outro**
+`verticalScroll` por dentro. Reproduzido à primeira: abrir «Motor» rebenta sempre (21:16).
+
+**2. Corrida no cliente RPC (1 das 5).** `java.util.NoSuchElementException` em
+`CachaloteClient.readLoop(CachaloteClient.kt:198)`, numa thread de trabalho:
+
+- `pending.values.toList()` sobre um `ConcurrentHashMap`: com **uma** entrada, o atalho de tamanho da
+  stdlib chama `iterator().next()` — e o mapa já podia estar vazio (limpo pelo próprio `finally`);
+- e um pedido registado entre o «tirar cópia» e o «limpar» ficava **sem ninguém a completá-lo** — é a
+  explicação de *«turno falhou: Timed out waiting for 15000 ms»*, que estava no ecrã.
+
+**O que mais estava partido, e não se via no logcat:** o sistema de secções dos Ajustes tinha nove
+`if (secao == "…") { }` **vazios** e os cartões a renderizar **sempre, todos de uma vez** — sete dos
+nove itens do menu não faziam nada. E o **BACK do sistema** a partir de uma secção **fechava a app**
+(em vez de voltar ao menu).
+
+**Correcções:**
+
+| Onde | O que mudou |
+|---|---|
+| `MainActivity.kt` | Ajustes reestruturado: menu **ou** uma secção, com **um só** contentor com scroll; cada secção saiu para o seu `Cartao*`; `BackHandler` para o BACK voltar ao menu |
+| `CachaloteClient.kt` | `pending` passou a `HashMap` guardado por um lock (registo, resposta, desistência e limpeza debaixo do mesmo lock) |
+
+**Verificação (no aparelho, guiada pelas etiquetas reais, não por coordenadas fixas):** 3 abas +
+8 secções (todas com o título certo) + o assistente → **0 crashes**; o BACK volta ao menu.
+
+**Nota de instalação:** a APK que estava no telefone vinha de **outra máquina** (outro *debug
+keystore*): `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, e nem reassinar com o keystore local resolveu.
+Antes de mexer, copiei os dados da app com root (`/sdcard/cachalote-appdata.tar`), desinstalei,
+instalei e **repus** `shared_prefs/` e `files/` com `chown` para o uid novo e `restorecon`.
+
+**Também:** a identidade git **deste clone** ainda era `eu@ricardopimen.tel` (a reescrita de 14/10 foi
+feita no outro computador). Ficou posta a `12200109+ricardojrgpimentel@users.noreply.github.com`, como
+manda o [`PUBLICAR.md`](PUBLICAR.md) §2.
+
+---
+
+## 61. O design do Stitch: estava aplicado a meio — e o assistente inicial, refeito
+
+**Auditoria (projeto `projects/5379698934911994296`, «Cachalote — app Android (redesign UX/UI)»,
+sistema de design `assets/03e1655bce57463c8396dd34bc8cf3d0`).** O que estava aplicado: o **tema**
+(`Tema.kt`, gerado por `tools/design-to-compose.py`), a **marca** e o ícone, e o **cabeçalho**. O que
+não estava: os **ecrãs**. O desenho mostra 4 abas (Estado · Chave · Conversa · Poderes), cartões de
+ferramenta com estado no *transcript*, etiquetas em maiúsculas, valores em monospace e chips.
+
+**Decisão do autor:** ficam **3 abas** — a conversa primeiro, depois o **Resumo** (doctor, consumo de
+contexto) e por fim os **Ajustes**. Pedi ao Stitch os ecrãs com essa configuração nova
+([`design/ecras/resumo-3abas.png`](design/ecras/resumo-3abas.png),
+[`design/ecras/ajustes-3abas.png`](design/ecras/ajustes-3abas.png)) e o **assistente inicial**
+redesenhado ([`design/ecras/assistente-passo1.png`](design/ecras/assistente-passo1.png),
+[`design/ecras/assistente-passo2.png`](design/ecras/assistente-passo2.png), com o HTML ao lado para as
+medidas).
+
+**Implementado agora:** o **assistente inicial** ([`Assistente.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/Assistente.kt)),
+que era o que estava feio — cabeçalho com a marca e «PASSO n DE 6», **progresso segmentado**, cartões
+com contorno, linhas de benefício com visto, nota de rodapé, botão principal a toda a largura
+(«Continuar →» / «Começar») e o secundário «← Voltar»; duas strings novas nos dois idiomas (i18n:
+180 chaves iguais). Visto no telefone:
+[`design/app/assistente-novo-1.png`](design/app/assistente-novo-1.png) e
+[`design/app/assistente-novo-2.png`](design/app/assistente-novo-2.png).
+
+**Fica por fazer** (mesmo sistema visual, já com o desenho em mão): o menu dos Ajustes (ícones,
+linha de detalhe e chevron + cartão de perigo), o **Resumo** (tabela do `doctor` com valores em
+monospace e o consumo em número grande) e o ecrã da **Chave** (botão principal a toda a largura +
+cartão de privacidade), mais os cartões de ferramenta na conversa.
+

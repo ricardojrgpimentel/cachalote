@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote - Escolha do Modo do Motor</title>
+<!-- Google Fonts: Space Grotesk, JetBrains Mono, Geist -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-surface": "#dbe3f0",
+            "secondary-fixed-dim": "#58d6f1",
+            "on-tertiary-container": "#006947",
+            "surface-dim": "#0c141d",
+            "error-container": "#93000a",
+            "tertiary-fixed-dim": "#4edea3",
+            "surface-container-lowest": "#070f17",
+            "on-error-container": "#ffdad6",
+            "tertiary-container": "#5fedb0",
+            "on-secondary-container": "#003640",
+            "on-background": "#dbe3f0",
+            "surface-variant": "#2d353f",
+            "surface-bright": "#323a44",
+            "on-secondary": "#00363f",
+            "on-surface-variant": "#bacac2",
+            "on-secondary-fixed-variant": "#004e5b",
+            "tertiary-fixed": "#6ffbbe",
+            "primary-fixed": "#4dfdcf",
+            "on-tertiary-fixed": "#002113",
+            "surface-container-highest": "#2d353f",
+            "outline-variant": "#3b4a44",
+            "on-secondary-fixed": "#001f25",
+            "primary-fixed-dim": "#15e0b4",
+            "error": "#ffb4ab",
+            "inverse-on-surface": "#29313b",
+            "surface-container-low": "#141c25",
+            "outline": "#84948d",
+            "tertiary": "#c0ffdc",
+            "surface-container-high": "#232b34",
+            "background": "#0c141d",
+            "secondary-fixed": "#a7edff",
+            "secondary-container": "#00a7c0",
+            "on-primary-container": "#006952",
+            "on-tertiary-fixed-variant": "#005236",
+            "secondary": "#58d6f1",
+            "surface-container": "#182029",
+            "surface": "#0c141d",
+            "primary-container": "#38efc2",
+            "on-error": "#690005",
+            "on-tertiary": "#003824",
+            "primary": "#beffe7",
+            "on-surface": "#dbe3f0",
+            "on-primary-fixed-variant": "#00513f",
+            "on-primary": "#00382b",
+            "inverse-primary": "#006b55",
+            "surface-tint": "#15e0b4",
+            "on-primary-fixed": "#002118"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-xl": "2rem",
+            "margin": "1rem",
+            "gutter": "0.75rem",
+            "space-lg": "1.5rem",
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem"
+          },
+          "fontFamily": {
+            "label-sm": ["JetBrains Mono", "monospace"],
+            "body-md": ["Geist", "sans-serif"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "body-lg": ["Geist", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "body-sm": ["Geist", "sans-serif"],
+            "label-md": ["JetBrains Mono", "monospace"],
+            "label-lg": ["JetBrains Mono", "monospace"],
+            "headline-sm": ["Space Grotesk", "sans-serif"]
+          },
+          "fontSize": {
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1;
+    }
+    /* Hide scrollbars cleanly for mobile web view */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col justify-between selection:bg-primary-container selection:text-on-primary-container font-body-md antialiased overflow-x-hidden">
+<!-- TOP WRAPPER: Header & Step Indicators (No border-b as per navigation shell rules) -->
+<header class="w-full bg-surface-container-low/95 backdrop-blur-md sticky top-0 z-40 px-margin pt-3 pb-3">
+<!-- Top Bar: Logo, Step Tag, Skip Action -->
+<div class="flex items-center justify-between h-10">
+<!-- Brand & Step Identity -->
+<div class="flex items-center gap-2.5">
+<!-- Minimal Geometric Whale Icon -->
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center p-1.5 shadow-sm border border-outline-variant/30">
+<svg class="w-full h-full" fill="none" viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<line stroke="#38efc2" stroke-linecap="round" stroke-width="8" x1="18" x2="82" y1="36" y2="36"></line>
+<path d="M22 56 C22 47 48 46 68 53 C74 55 78 57 84 52 C81 59 81 63 84 68 C76 64 72 65 67 67 C46 73 22 71 22 56 Z" fill="#38efc2"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface leading-none">Cachalote</span>
+<span class="font-label-sm text-label-sm tracking-wider uppercase text-primary-container mt-0.5">PASSO 2 DE 6</span>
+</div>
+</div>
+<!-- Skip Button -->
+<button class="px-3 py-1.5 rounded-lg text-outline hover:text-on-surface font-label-md text-label-md transition-colors active:scale-95 touch-manipulation min-h-[48px] flex items-center" type="button">
+        Saltar
+      </button>
+</div>
+<!-- 6-Segment Onboarding Progress Bar -->
+<div class="grid grid-cols-6 gap-1.5 mt-3 pt-1">
+<div class="h-1 rounded-full bg-primary-container shadow-[0_0_8px_rgba(56,239,194,0.4)]"></div>
+<div class="h-1 rounded-full bg-primary-container shadow-[0_0_8px_rgba(56,239,194,0.4)]"></div>
+<div class="h-1 rounded-full bg-surface-container-highest"></div>
+<div class="h-1 rounded-full bg-surface-container-highest"></div>
+<div class="h-1 rounded-full bg-surface-container-highest"></div>
+<div class="h-1 rounded-full bg-surface-container-highest"></div>
+</div>
+</header>
+<!-- MAIN SCROLLABLE CONTENT CANVAS -->
+<main class="flex-1 px-margin pt-4 pb-6 max-w-md mx-auto w-full">
+<!-- Title and Subtitle Block -->
+<section class="mb-5">
+<h1 class="font-headline-md text-headline-md text-on-surface font-semibold tracking-tight">
+        Como queres correr o motor?
+      </h1>
+<p class="font-body-md text-body-md text-outline mt-1 leading-relaxed">
+        A escolha muda o que o agente consegue fazer e quanto o sistema operativo o trava.
+      </p>
+</section>
+<!-- Engine Mode Options Stack -->
+<section aria-label="Modo de execução do motor" class="space-y-3.5" role="radiogroup">
+<!-- OPÇÃO 1: ROOT (SUPERUTILIZADOR) - SELECIONADA -->
+<div class="relative rounded-2xl bg-surface-container-low p-4 border-2 border-primary-container shadow-[0_8px_24px_rgba(38,208,206,0.12)] transition-all cursor-pointer">
+<!-- Floating Ambient Glow Filter -->
+<div class="absolute -top-12 -right-12 w-28 h-28 bg-primary-container/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start justify-between gap-2">
+<!-- Left Badge Cluster & Title -->
+<div class="flex-1">
+<div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary-container/20 text-primary-container font-label-sm text-label-sm font-semibold tracking-wider uppercase border border-primary-container/30">
+<span class="material-symbols-outlined text-[13px] fill-icon">verified_user</span>
+                RECOMENDADO
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-on-surface-variant font-medium">
+                UID 0
+              </span>
+</div>
+<h2 class="font-headline-sm text-headline-sm font-semibold text-on-surface tracking-tight">
+              Root (Superutilizador)
+            </h2>
+</div>
+<!-- Active Selection Pill / Badge -->
+<div class="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-primary-container text-on-primary font-label-md text-label-md font-medium shadow-sm">
+<span class="material-symbols-outlined text-[16px] fill-icon">check</span>
+<span>A usar</span>
+</div>
+</div>
+<!-- Descriptions -->
+<p class="font-body-md text-body-md text-on-surface font-medium mt-2">
+          Acesso total, arranca com o telemóvel.
+        </p>
+<!-- Risk Warning Note -->
+<div class="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-surface-container/80 border border-outline-variant/30">
+<span class="material-symbols-outlined text-secondary text-[16px] shrink-0 mt-0.5">info</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-snug">
+            O agente fica com os poderes todos: só autorizes o que precisas.
+          </p>
+</div>
+<!-- Technical Telemetry Footer (Monospace) -->
+<div class="mt-3 pt-2.5 border-t border-outline-variant/30 flex flex-wrap items-center gap-x-2 gap-y-1 font-label-sm text-label-sm text-outline">
+<span class="text-primary-container font-medium">daemon dsh com UID 0</span>
+<span>·</span>
+<span class="truncate max-w-[170px]">/data/adb/modules/cachalote</span>
+<span>·</span>
+<span>injeção direta de toques</span>
+</div>
+</div>
+<!-- OPÇÃO 2: SHIZUKU (PONTE ADB) -->
+<div class="rounded-2xl bg-surface-container-low p-4 border border-outline-variant/40 hover:border-outline/50 transition-all cursor-pointer group active:scale-[0.99]">
+<div class="flex items-start justify-between gap-2">
+<div class="flex-1">
+<div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+<span class="px-1.5 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-on-surface-variant font-medium">
+                SEM ROOT
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-secondary-fixed-dim font-medium">
+                ADB SHELL
+              </span>
+</div>
+<h2 class="font-headline-sm text-headline-sm font-medium text-on-surface tracking-tight group-hover:text-primary transition-colors">
+              Shizuku (Ponte ADB)
+            </h2>
+</div>
+<!-- Inactive Outline Action Button -->
+<button class="shrink-0 px-3 py-1 rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-md text-label-md font-medium transition-colors min-h-[32px] flex items-center" type="button">
+            Usar
+          </button>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2 leading-snug">
+          Execução com permissões elevadas sem root, por ponte ADB.
+        </p>
+<p class="font-body-sm text-body-sm text-outline mt-1 leading-snug">
+          Requer o gestor Shizuku instalado e a correr em segundo plano.
+        </p>
+<!-- Monospace Details -->
+<div class="mt-3 pt-2 border-t border-outline-variant/20 font-label-sm text-label-sm text-outline">
+<span>conexão via Shizuku binder IPC</span>
+</div>
+</div>
+<!-- OPÇÃO 3: EMBUTIDO (PROCESSO DA APP) -->
+<div class="rounded-2xl bg-surface-container-low p-4 border border-outline-variant/40 hover:border-outline/50 transition-all cursor-pointer group active:scale-[0.99]">
+<div class="flex items-start justify-between gap-2">
+<div class="flex-1">
+<div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+<span class="px-1.5 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-on-surface-variant font-medium">
+                MODO SEGURO
+              </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-variant font-label-sm text-label-sm text-outline font-medium">
+                SANDBOX
+              </span>
+</div>
+<h2 class="font-headline-sm text-headline-sm font-medium text-on-surface tracking-tight group-hover:text-primary transition-colors">
+              Embutido (Processo da App)
+            </h2>
+</div>
+<!-- Inactive Outline Action Button -->
+<button class="shrink-0 px-3 py-1 rounded-xl border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-md text-label-md font-medium transition-colors min-h-[32px] flex items-center" type="button">
+            Usar
+          </button>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2 leading-snug">
+          Corre inteiramente na sandbox da aplicação, sem root nem Shizuku.
+        </p>
+<p class="font-body-sm text-body-sm text-outline mt-1 leading-snug">
+          Acesso restrito ao ecrã virtual e sujeito ao gestor de bateria (low-memory killer).
+        </p>
+<!-- Monospace Details -->
+<div class="mt-3 pt-2 border-t border-outline-variant/20 font-label-sm text-label-sm text-outline">
+<span>isolamento Android SELinux padrão</span>
+</div>
+</div>
+</section>
+<!-- HARDWARE / SYSTEM DIAGNOSTICS TELEMETRY BOX -->
+<section class="mt-4">
+<div class="rounded-xl bg-surface-container-lowest p-3 border border-outline-variant/40 flex items-center gap-2.5">
+<!-- Live Verified Pulse Dot -->
+<div class="relative flex h-2.5 w-2.5 shrink-0 ml-0.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary-container"></span>
+</div>
+<!-- Telemetry Diagnostic Text -->
+<div class="flex-1 font-label-sm text-label-sm truncate">
+<span class="text-outline">detectado neste telemóvel: </span>
+<span class="text-tertiary-fixed font-medium">root (Magisk)</span>
+<span class="text-outline"> · </span>
+<span class="text-outline">Shizuku não instalado</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[16px] shrink-0" title="Verificado">memory</span>
+</div>
+</section>
+</main>
+<!-- DOCKED BOTTOM ACTION DOCK (Thumb Zone Compliant, Min 48dp Targets, Flat no borders) -->
+<footer class="w-full bg-surface-container-low/95 backdrop-blur-md px-margin py-3 sticky bottom-0 z-40">
+<div class="max-w-md mx-auto grid grid-cols-5 gap-3 items-center">
+<!-- Back Button (2 cols) -->
+<button class="col-span-2 h-12 rounded-xl bg-surface-container border border-outline-variant/60 hover:bg-surface-container-high text-on-surface font-headline-sm text-body-lg font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95 touch-manipulation" type="button">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+<span>Voltar</span>
+</button>
+<!-- Primary Action: Continue Button (3 cols) -->
+<button class="col-span-3 h-12 rounded-xl bg-primary-container hover:bg-primary text-on-primary-fixed font-headline-sm text-body-lg font-semibold flex items-center justify-center gap-1.5 shadow-[0_4px_16px_rgba(56,239,194,0.2)] transition-all active:scale-95 touch-manipulation" type="button">
+<span>Continuar</span>
+<span class="material-symbols-outlined text-[20px] font-semibold">arrow_forward</span>
+</button>
+</div>
+</footer>
+</body></html>

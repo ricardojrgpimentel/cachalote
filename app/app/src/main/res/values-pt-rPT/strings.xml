@@ -151,6 +151,7 @@
     <string name="wizard_chave_titulo">A tua chave do provedor</string>
     <string name="wizard_comecar">Começar a conversar</string>
     <string name="wizard_continuar">Continuar</string>
+    <string name="wizard_ja_configurado">Já tenho tudo configurado</string>
     <string name="wizard_modo_detectado_nada">Não encontrei root nem Shizuku — o modo embutido é o que funciona já.</string>
     <string name="wizard_modo_detectado_root">Detectei root neste telemóvel — é a opção mais capaz.</string>
     <string name="wizard_modo_detectado_shizuku">Detectei o Shizuku a correr — dá para fazer quase tudo sem root.</string>
@@ -178,5 +179,6 @@
     <string name="wizard_pronto_titulo">Pronto</string>
     <string name="wizard_recomendado">RECOMENDADO</string>
     <string name="wizard_repetir">Repetir a configuração inicial</string>
+    <string name="wizard_rodape">Nada disto é obrigatório: podes saltar e configurar depois, nos Ajustes.</string>
     <string name="wizard_saltar">Saltar</string>
 </resources>

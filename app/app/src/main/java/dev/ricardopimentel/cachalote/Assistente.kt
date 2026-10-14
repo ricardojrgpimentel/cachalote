@@ -1,6 +1,9 @@
 package dev.ricardopimentel.cachalote
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,10 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * **Assistente de configuração inicial.**
@@ -41,63 +50,124 @@ import androidx.compose.ui.unit.dp
  *
  * Cada passo reaproveita o que a app já tem (os modos do `DaemonController`, o estado do daemon, a
  * chave do provedor, os interruptores das capacidades) — o assistente só **guia** e explica.
+ *
+ * A forma — cabeçalho com a marca e «PASSO n DE 6», progresso segmentado, cartões com contorno e
+ * botão principal a toda a largura — vem do design do Stitch «assistente de configuração inicial»
+ * (ecrãs dos passos 1 e 2 gerados a 2026-10-14), que substituiu o anterior, que era feio.
  */
 @Composable
 fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
     var passo by remember { mutableStateOf(0) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val passos = 6
+    val ultimo = passo == passos - 1
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 painter = painterResource(R.drawable.ic_marca),
                 contentDescription = null,
-                tint = androidx.compose.ui.graphics.Color.Unspecified,
+                tint = Color.Unspecified,
                 modifier = Modifier.size(30.dp),
             )
             Spacer(Modifier.size(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(
-                    stringResource(R.string.wizard_passo, passo + 1, passos),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Etiqueta(stringResource(R.string.wizard_passo, passo + 1, passos))
             }
             TextButton(onClick = onConcluir) { Text(stringResource(R.string.wizard_saltar)) }
         }
-        Spacer(Modifier.height(12.dp))
 
-        Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Spacer(Modifier.height(12.dp))
+        ProgressoPassos(passo, passos)
+        Spacer(Modifier.height(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             when (passo) {
                 0 -> BemVindo()
                 1 -> EscolhaDoModo(vm)
                 2 -> LigarMotor(vm)
                 3 -> DarAcesso(vm, ctx)
                 4 -> DarChave(vm)
-                5 -> EscolherPoderes(vm)
-                else -> Pronto()
+                else -> EscolherPoderes(vm)
             }
         }
 
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(10.dp))
+        Text(
+            stringResource(R.string.wizard_rodape),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             if (passo > 0) {
-                OutlinedButton(onClick = { passo-- }) { Text(stringResource(R.string.voltar)) }
+                OutlinedButton(onClick = { passo-- }, modifier = Modifier.weight(1f)) {
+                    Text("\u2190 " + stringResource(R.string.voltar))
+                }
             }
-            Spacer(Modifier.weight(1f))
-            if (passo < passos - 1) {
-                OutlinedButton(onClick = { passo++ }) { Text(stringResource(R.string.wizard_continuar)) }
-            } else {
-                OutlinedButton(onClick = onConcluir) { Text(stringResource(R.string.wizard_comecar)) }
+            Button(
+                onClick = { if (ultimo) onConcluir() else passo++ },
+                modifier = Modifier.weight(if (passo > 0) 1.6f else 1f),
+            ) {
+                Text(
+                    if (ultimo) stringResource(R.string.wizard_comecar)
+                    else stringResource(R.string.wizard_continuar) + "  \u2192",
+                )
             }
+        }
+        if (passo == 0) {
+            TextButton(onClick = onConcluir, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.wizard_ja_configurado))
+            }
+        }
+    }
+}
+
+/** Micro-etiqueta em maiúsculas com tracking — o rótulo do design («PASSO 2 DE 6»). */
+@Composable
+private fun Etiqueta(texto: String) {
+    Text(
+        texto.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.secondary,
+        letterSpacing = 1.sp,
+    )
+}
+
+/** Barra de progresso segmentada: um segmento por passo, os já feitos a teal. */
+@Composable
+private fun ProgressoPassos(atual: Int, total: Int) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        repeat(total) { i ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (i <= atual) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ),
+            )
         }
     }
 }
 
 @Composable
 private fun Passo(titulo: String, texto: String, conteudo: @Composable () -> Unit = {}) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(texto, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -112,11 +182,21 @@ private fun BemVindo() {
         titulo = stringResource(R.string.wizard_bemvindo_titulo),
         texto = stringResource(R.string.wizard_bemvindo_texto),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("• " + stringResource(R.string.wizard_bemvindo_p1), style = MaterialTheme.typography.bodySmall)
-            Text("• " + stringResource(R.string.wizard_bemvindo_p2), style = MaterialTheme.typography.bodySmall)
-            Text("• " + stringResource(R.string.wizard_bemvindo_p3), style = MaterialTheme.typography.bodySmall)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Beneficio(stringResource(R.string.wizard_bemvindo_p1))
+            Beneficio(stringResource(R.string.wizard_bemvindo_p2))
+            Beneficio(stringResource(R.string.wizard_bemvindo_p3))
         }
+    }
+}
+
+/** Uma linha de benefício: visto a teal e o texto ao lado (o design do passo 1). */
+@Composable
+private fun Beneficio(texto: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("\u2713", color = MaterialTheme.colorScheme.primaryContainer, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.size(10.dp))
+        Text(texto, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -164,6 +244,7 @@ private fun EscolhaDoModo(vm: MainViewModel) {
                     else R.string.wizard_modo_detectado_nada,
                 ),
                 style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
@@ -186,6 +267,10 @@ private fun OpcaoDeModo(
             containerColor = if (escolhido) MaterialTheme.colorScheme.primaryContainer
             else MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
+        border = BorderStroke(
+            1.dp,
+            if (escolhido) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant,
+        ),
     ) {
         // No cartão escolhido (fundo primaryContainer) o texto tem de usar a cor "on" desse fundo,
         // senão fica escuro sobre teal e não se lê — foi o que se viu à primeira.
@@ -194,15 +279,16 @@ private fun OpcaoDeModo(
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    (if (escolhido) "✓ " else "") + titulo,
+                    (if (escolhido) "\u2713 " else "") + titulo,
                     fontWeight = FontWeight.SemiBold,
                     color = corTexto,
                     modifier = Modifier.weight(1f),
                 )
                 if (recomendado) {
                     Text(
-                        stringResource(R.string.wizard_recomendado),
+                        stringResource(R.string.wizard_recomendado).uppercase(),
                         style = MaterialTheme.typography.labelSmall,
+                        letterSpacing = 1.sp,
                         color = if (escolhido) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -317,17 +403,12 @@ private fun EscolherPoderes(vm: MainViewModel) {
 }
 
 @Composable
-private fun Pronto() {
-    Passo(
-        titulo = stringResource(R.string.wizard_pronto_titulo),
-        texto = stringResource(R.string.wizard_pronto_texto),
-    )
-}
-
-@Composable
 private fun EstadoLinha(rotulo: String, feito: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(if (feito) "✓" else "•", color = if (feito) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
+        Text(
+            if (feito) "\u2713" else "\u2022",
+            color = if (feito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondary,
+        )
         Spacer(Modifier.size(8.dp))
         Text(rotulo, style = MaterialTheme.typography.bodySmall)
     }

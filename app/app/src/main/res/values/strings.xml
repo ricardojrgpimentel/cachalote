@@ -151,6 +151,7 @@
     <string name="wizard_chave_titulo">Your provider key</string>
     <string name="wizard_comecar">Start chatting</string>
     <string name="wizard_continuar">Continue</string>
+    <string name="wizard_ja_configurado">I already have everything set up</string>
     <string name="wizard_modo_detectado_nada">I found neither root nor Shizuku — the embedded mode works right away.</string>
     <string name="wizard_modo_detectado_root">I found root on this phone — it is the most capable option.</string>
     <string name="wizard_modo_detectado_shizuku">I found Shizuku running — you can do almost everything without root.</string>
@@ -178,5 +179,6 @@
     <string name="wizard_pronto_titulo">Ready</string>
     <string name="wizard_recomendado">RECOMMENDED</string>
     <string name="wizard_repetir">Run the first-time setup again</string>
+    <string name="wizard_rodape">None of this is mandatory: you can skip it and set things up later in Settings.</string>
     <string name="wizard_saltar">Skip</string>
 </resources>

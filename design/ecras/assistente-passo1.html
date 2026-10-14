@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote · Onboarding Passo 1 de 6</title>
+<!-- Material Symbols Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Brand Typography: Space Grotesk, JetBrains Mono, Geist -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-primary": "#006b55",
+            "secondary-container": "#00a7c0",
+            "inverse-on-surface": "#29313b",
+            "tertiary-container": "#5fedb0",
+            "on-primary-fixed": "#002118",
+            "secondary-fixed-dim": "#58d6f1",
+            "on-primary": "#00382b",
+            "on-error-container": "#ffdad6",
+            "background": "#0c141d",
+            "error-container": "#93000a",
+            "surface-container": "#182029",
+            "on-tertiary-fixed-variant": "#005236",
+            "error": "#ffb4ab",
+            "on-surface": "#dbe3f0",
+            "primary-container": "#38efc2",
+            "on-primary-container": "#006952",
+            "outline-variant": "#3b4a44",
+            "on-secondary-fixed": "#001f25",
+            "tertiary": "#c0ffdc",
+            "surface-variant": "#2d353f",
+            "tertiary-fixed": "#6ffbbe",
+            "primary": "#beffe7",
+            "on-secondary-fixed-variant": "#004e5b",
+            "secondary-fixed": "#a7edff",
+            "primary-fixed": "#4dfdcf",
+            "surface-tint": "#15e0b4",
+            "surface": "#0c141d",
+            "outline": "#84948d",
+            "on-tertiary": "#003824",
+            "on-primary-fixed-variant": "#00513f",
+            "tertiary-fixed-dim": "#4edea3",
+            "primary-fixed-dim": "#15e0b4",
+            "on-tertiary-container": "#006947",
+            "on-secondary-container": "#003640",
+            "surface-container-low": "#141c25",
+            "inverse-surface": "#dbe3f0",
+            "surface-container-high": "#232b34",
+            "surface-container-highest": "#2d353f",
+            "surface-container-lowest": "#070f17",
+            "surface-bright": "#323a44",
+            "on-secondary": "#00363f",
+            "surface-dim": "#0c141d",
+            "on-background": "#dbe3f0",
+            "on-surface-variant": "#bacac2",
+            "secondary": "#58d6f1",
+            "on-tertiary-fixed": "#002113"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-xs": "0.25rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "gutter": "0.75rem",
+            "space-md": "1rem",
+            "space-lg": "1.5rem"
+          },
+          "fontFamily": {
+            "label-md": ["JetBrains Mono"],
+            "body-sm": ["Geist"],
+            "body-md": ["Geist"],
+            "label-sm": ["JetBrains Mono"],
+            "headline-sm": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "headline-lg": ["Space Grotesk"],
+            "body-lg": ["Geist"],
+            "label-lg": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Native smooth scrolling and font rendering */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #0c141d;
+      color: #dbe3f0;
+      touch-action: manipulation;
+    }
+    
+    .glow-mint {
+      box-shadow: 0 0 16px -2px rgba(56, 239, 194, 0.45);
+    }
+    
+    .glow-card {
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col items-center justify-start antialiased selection:bg-primary-container selection:text-on-primary">
+<!-- Mobile Simulator Frame Shell (Max width ~420px for handheld accuracy) -->
+<main class="w-full max-w-[420px] min-h-screen flex flex-col justify-between px-4 pt-3 pb-6 relative overflow-hidden">
+<!-- Ambient subtle background depth gradients -->
+<div class="absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-primary-container/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+<div class="absolute bottom-0 right-0 w-64 h-64 bg-secondary/5 rounded-full blur-[90px] pointer-events-none -z-10"></div>
+<!-- UPPER NAVIGATION & PROGRESS SEGMENT -->
+<header class="w-full flex flex-col gap-3.5 pt-1">
+<!-- Top Bar: Brand, Step Counter, and Skip Action -->
+<div class="w-full flex items-center justify-between">
+<!-- Brand Lockup -->
+<div class="flex items-center gap-2.5">
+<!-- Squircle Logo Token matching Cachalote Identity -->
+<div class="w-9 h-9 rounded-xl bg-surface-container-high border border-outline-variant/40 flex items-center justify-center p-1.5 shadow-sm">
+<!-- Precise Minimalist Cachalote Whalemark Icon -->
+<svg class="w-full h-full text-primary-container" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<!-- Waterline Horizon -->
+<line stroke="currentColor" stroke-linecap="round" stroke-width="2.2" x1="3" x2="21" y1="6" y2="6"></line>
+<!-- Whale Body & Fluke -->
+<path d="M4 14.5C4 12.5 6 11 9.5 11C13.5 11 16.5 13 18.5 14.5C20 13 21 12 21 12C20.5 15 20.5 16 21 19C21 19 20 18 18.5 16.5C16.5 18 13.5 19 9.5 19C6 19 4 17 4 14.5Z" fill="currentColor" stroke="currentColor" stroke-width="0.5"></path>
+</svg>
+</div>
+<div class="flex flex-col -space-y-0.5">
+<span class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface">Cachalote</span>
+<span class="font-label-sm text-label-sm tracking-wider uppercase text-primary-container font-semibold">PASSO 1 DE 6</span>
+</div>
+</div>
+<!-- Saltar (Skip) Action -->
+<button class="font-label-md text-label-md text-outline hover:text-on-surface px-2.5 py-1.5 rounded-lg active:scale-95 transition-all">
+          Saltar
+        </button>
+</div>
+<!-- 6-Segment Progress Bar -->
+<div aria-label="Progresso do Onboarding: 1 de 6" class="w-full grid grid-cols-6 gap-1.5 py-1">
+<!-- Step 1: Active with Mint Container and subtle glow -->
+<div class="h-1.5 rounded-full bg-primary-container glow-mint"></div>
+<!-- Steps 2-6: Inactive muted bars -->
+<div class="h-1.5 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 rounded-full bg-surface-container-high"></div>
+<div class="h-1.5 rounded-full bg-surface-container-high"></div>
+</div>
+</header>
+<!-- CENTER CANVAS: HERO & MAIN VALUE CARDS -->
+<section class="w-full flex flex-col gap-4 my-auto pt-3 pb-2">
+<!-- Welcome Header Hero -->
+<div class="flex flex-col gap-2">
+<h1 class="font-headline-md text-headline-md font-semibold text-on-surface tracking-tight leading-tight">
+          Bem-vindo ao Cachalote
+        </h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          Um agente que corre dentro do teu telefone: fala com o motor DSH, vê o ecrã, toca e escreve por ti — sem nada sair do aparelho a não ser os prompts que aprovares.
+        </p>
+</div>
+<!-- Bento / Feature Highlights Card -->
+<div class="w-full bg-surface-container-low rounded-xl border border-white/5 p-4 flex flex-col gap-3.5 glow-card">
+<!-- Highlight Item 1: Motor DSH Runtime -->
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/30 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-primary-container text-[18px]">terminal</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium leading-snug">
+              Escolhe como o motor corre
+            </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+              Compatível com root, Shizuku ou processo isolado na aplicação.
+            </span>
+</div>
+</div>
+<div class="w-full h-px bg-white/[0.06]"></div>
+<!-- Highlight Item 2: Olhos & Dedos (Accessibility) -->
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/30 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-primary-container text-[18px]">visibility</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium leading-snug">
+              Dá-lhe olhos e dedos com a acessibilidade
+            </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+              Inspeciona nós visuais do ecrã e injeta gestos táteis em milissegundos.
+            </span>
+</div>
+</div>
+<div class="w-full h-px bg-white/[0.06]"></div>
+<!-- Highlight Item 3: Autorização granular -->
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/30 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-primary-container text-[18px]">shield_lock</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium leading-snug">
+              Autoriza só as capacidades que quiseres
+            </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+              Controlo cirúrgico sobre a área de transferência, rede e armazenamento.
+            </span>
+</div>
+</div>
+</div>
+<!-- Technical Telemetry Badges / Operational Architecture -->
+<div class="flex items-center flex-wrap gap-2 pt-0.5">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5 text-primary font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+          100% ON-DEVICE
+        </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[13px] text-outline">data_object</span>
+          SANDBOX POSIX
+        </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high border border-white/5 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[13px] text-outline">verified_user</span>
+          SEM TELEMETRIA
+        </span>
+</div>
+<!-- Privacy / Reassurance Disclaimer Card -->
+<div class="w-full rounded-xl bg-surface-container/60 border border-outline-variant/20 p-3 flex items-center gap-2.5">
+<span class="material-symbols-outlined text-outline text-[18px] shrink-0">info</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-snug">
+          Nada disto é obrigatório: podes saltar e configurar depois em <span class="text-on-surface font-medium">Ajustes</span>.
+        </p>
+</div>
+</section>
+<!-- DOCKED BOTTOM CONTROLS (Ergonomic Thumb Zone) -->
+<footer class="w-full flex flex-col items-center gap-2.5 pt-2">
+<!-- Primary Action CTA -->
+<button class="w-full h-14 bg-primary-container hover:bg-tertiary-fixed text-on-primary-fixed font-headline-sm text-headline-sm font-semibold rounded-xl flex items-center justify-center gap-2.5 px-4 glow-mint active:scale-[0.98] transition-all duration-150">
+<span>Continuar</span>
+<span class="material-symbols-outlined text-[20px] font-bold">arrow_forward</span>
+</button>
+<!-- Secondary Discrete Text Action -->
+<button class="w-full py-2.5 text-center text-outline hover:text-on-surface font-label-md text-label-md transition-colors active:scale-95">
+        Já tenho tudo configurado
+      </button>
+</footer>
+</main>
+</body></html>

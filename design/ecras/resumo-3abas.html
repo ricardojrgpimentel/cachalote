@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote · Resumo</title>
+<!-- Fontes do Sistema de Design -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS com Configuração Injetada -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-fixed-variant": "#005236",
+            "primary": "#beffe7",
+            "outline": "#84948d",
+            "on-surface": "#dbe3f0",
+            "outline-variant": "#3b4a44",
+            "on-secondary": "#00363f",
+            "on-primary": "#00382b",
+            "secondary": "#58d6f1",
+            "on-primary-fixed-variant": "#00513f",
+            "inverse-primary": "#006b55",
+            "surface": "#0c141d",
+            "on-primary-container": "#006952",
+            "surface-dim": "#0c141d",
+            "surface-bright": "#323a44",
+            "tertiary-container": "#5fedb0",
+            "surface-tint": "#15e0b4",
+            "on-secondary-fixed": "#001f25",
+            "background": "#0c141d",
+            "surface-container-highest": "#2d353f",
+            "error": "#ffb4ab",
+            "tertiary": "#c0ffdc",
+            "secondary-fixed": "#a7edff",
+            "on-secondary-fixed-variant": "#004e5b",
+            "surface-container-lowest": "#070f17",
+            "inverse-surface": "#dbe3f0",
+            "inverse-on-surface": "#29313b",
+            "on-tertiary-fixed": "#002113",
+            "surface-container-high": "#232b34",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-tertiary": "#003824",
+            "surface-variant": "#2d353f",
+            "on-surface-variant": "#bacac2",
+            "on-secondary-container": "#003640",
+            "primary-container": "#38efc2",
+            "tertiary-fixed": "#6ffbbe",
+            "on-tertiary-container": "#006947",
+            "on-primary-fixed": "#002118",
+            "on-background": "#dbe3f0",
+            "error-container": "#93000a",
+            "surface-container-low": "#141c25",
+            "surface-container": "#182029",
+            "primary-fixed": "#4dfdcf",
+            "on-error-container": "#ffdad6",
+            "secondary-fixed-dim": "#58d6f1",
+            "primary-fixed-dim": "#15e0b4",
+            "on-error": "#690005",
+            "secondary-container": "#00a7c0"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-lg": "1.5rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "margin": "1rem",
+            "space-xs": "0.25rem",
+            "space-md": "1rem",
+            "gutter": "0.75rem"
+          },
+          "fontFamily": {
+            "label-md": ["JetBrains Mono"],
+            "body-lg": ["Geist"],
+            "body-md": ["Geist"],
+            "headline-md": ["Space Grotesk"],
+            "label-sm": ["JetBrains Mono"],
+            "headline-lg": ["Space Grotesk"],
+            "body-sm": ["Geist"],
+            "headline-sm": ["Space Grotesk"],
+            "label-lg": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Suavização de scroll & estados de toque móvel */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #0c141d;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(1.08); }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2.4s ease-in-out infinite;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md select-none pb-24">
+<!-- CABEÇALHO DE TOPO (TopAppBar Ancorada) -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin h-16 bg-surface-container-low/95 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-3">
+<!-- Ícone Oficial Cachalote (Traço de Superfície & Baleia Minimalista Submersa) -->
+<div class="w-10 h-10 rounded-xl bg-surface-container-high/80 border border-outline-variant/40 flex items-center justify-center p-1.5 shadow-[0px_4px_16px_rgba(56,239,194,0.08)]">
+<svg class="w-full h-full text-primary-container fill-current" viewbox="0 0 100 100">
+<!-- Superfície Marítima -->
+<rect height="6" rx="3" width="64" x="18" y="32"></rect>
+<!-- Baleia Submersa Estilizada -->
+<path d="M 22 56 C 22 51, 62 48, 70 56 C 75 58, 80 52, 82 50 C 81 55, 81 63, 82 66 C 79 64, 75 59, 70 60 C 58 67, 24 67, 22 56 Z"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface">Cachalote</span>
+</div>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse-subtle shadow-[0_0_8px_#38efc2]"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-normal tracking-wide">
+            motor <span class="text-primary font-medium">DSH</span> no telefone · ligado
+          </span>
+</div>
+</div>
+</div>
+<!-- Cluster Direito: Badge ON-DEVICE & Botão Histórico -->
+<div class="flex items-center gap-2">
+<div class="px-2.5 py-1 rounded-full bg-surface-container-high/80 border border-outline-variant/50 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="font-label-sm text-label-sm font-semibold text-primary-container tracking-wider">ON-DEVICE</span>
+</div>
+<button aria-label="Histórico de Sessões" class="w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+</div>
+</header>
+<!-- ESPAÇADOR ESTRUTURAL DO CABEÇALHO -->
+<div class="h-16 w-full"></div>
+<!-- CONTEÚDO PRINCIPAL (Canvas Mobile com Padding Lateral de 16dp) -->
+<main class="flex-1 w-full max-w-2xl mx-auto px-margin pt-4 flex flex-col gap-4">
+<!-- SUB-CABEÇALHO / ETIQUETA DE SECÇÃO -->
+<div class="flex items-center justify-between px-0.5 pt-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px]" data-icon="terminal">terminal</span>
+<h1 class="font-label-md text-label-md font-semibold tracking-widest text-on-surface-variant uppercase">RESUMO DA APP</h1>
+</div>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-md bg-surface-container-high border border-outline-variant/30 text-outline">
+        v0.9.4-local
+      </span>
+</div>
+<!-- 1. CARTÃO «CONSUMO E SESSÃO» -->
+<section class="rounded-xl bg-surface-container-low border border-outline-variant/30 p-4 transition-all hover:border-primary-container/30">
+<!-- Cabeçalho do Cartão -->
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[18px]" data-icon="memory">memory</span>
+</div>
+<h2 class="font-headline-sm text-[16px] leading-5 font-medium text-on-surface">Consumo e sessão</h2>
+</div>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-primary-container/15 text-primary-container font-medium border border-primary-container/30">
+          9% do contexto
+        </span>
+</div>
+<!-- Medidor Volumétrico de Contexto -->
+<div class="mt-3.5 space-y-2">
+<div class="flex justify-between items-baseline font-label-md text-label-md">
+<span class="text-on-surface font-semibold text-[15px] tracking-tight">12,4k <span class="text-on-surface-variant font-normal text-body-sm">/ 128k tokens</span></span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">Janela Ativa Llama-CPP</span>
+</div>
+<!-- Barra de Progresso Tonal Estrita (4dp com preenchimento menta) -->
+<div class="w-full h-1.5 rounded-full bg-surface-container-highest overflow-hidden p-0">
+<div class="h-full rounded-full bg-primary-container shadow-[0_0_10px_#38efc2]" style="width: 9%;"></div>
+</div>
+</div>
+<!-- Tabela Telemetria Chave-Valor Monospace -->
+<div class="mt-4 pt-3 border-t border-outline-variant/20 grid grid-cols-1 gap-2 font-label-md text-label-md">
+<div class="flex items-center justify-between py-1 px-2 rounded-lg bg-surface-container/60">
+<span class="text-on-surface-variant">sessão</span>
+<span class="text-primary font-medium tracking-wide">269676d6</span>
+</div>
+<div class="flex items-center justify-between py-1 px-2 rounded-lg bg-surface-container/60">
+<span class="text-on-surface-variant">modelo</span>
+<span class="text-on-surface font-medium">deepseek-v4.1-flash</span>
+</div>
+<div class="flex items-center justify-between py-1 px-2 rounded-lg bg-surface-container/60">
+<span class="text-on-surface-variant">esforço</span>
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="text-primary-container font-medium">alto</span>
+</div>
+</div>
+<div class="flex items-center justify-between py-1 px-2 rounded-lg bg-surface-container/60">
+<span class="text-on-surface-variant">fila</span>
+<span class="text-on-surface font-medium">2 por fazer</span>
+</div>
+<div class="flex items-center justify-between py-1 px-2 rounded-lg bg-surface-container/60">
+<span class="text-on-surface-variant">imagens anexadas</span>
+<span class="text-on-surface font-medium">1</span>
+</div>
+</div>
+</section>
+<!-- 2. CARTÃO «DIAGNÓSTICO» -->
+<section class="rounded-xl bg-surface-container-low border border-outline-variant/30 p-4 transition-all hover:border-primary-container/30">
+<!-- Cabeçalho com Botão de Ação Secundária (Verificar) -->
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[18px]" data-icon="health_and_safety">health_and_safety</span>
+</div>
+<h2 class="font-headline-sm text-[16px] leading-5 font-medium text-on-surface">Diagnóstico</h2>
+</div>
+<button class="h-8 px-3 rounded-lg bg-surface-container border border-outline-variant text-primary-container font-label-sm text-label-sm flex items-center gap-1.5 hover:bg-surface-container-high active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[14px]" data-icon="refresh">refresh</span>
+<span>Verificar</span>
+</button>
+</div>
+<!-- Lista de Verificações de Integridade com Visto Teal Circular -->
+<div class="mt-3 divide-y divide-outline-variant/15 font-label-md text-label-md">
+<!-- Item 1 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">daemon instalado</span>
+</div>
+<span class="text-on-surface font-medium text-right font-label-sm">dsh v0.0.1 (pid 18740)</span>
+</div>
+<!-- Item 2 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">root concedido</span>
+</div>
+<span class="text-primary font-medium text-right font-label-sm">Magisk UID 0</span>
+</div>
+<!-- Item 3 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">token do canal</span>
+</div>
+<span class="text-on-surface font-medium text-right font-label-sm">unix:/dsh.sock</span>
+</div>
+<!-- Item 4 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">chave do provedor</span>
+</div>
+<span class="text-on-surface font-medium text-right font-label-sm">home/.env (600)</span>
+</div>
+<!-- Item 5 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">acessibilidade ligada</span>
+</div>
+<span class="text-primary font-medium text-right font-label-sm">a11y ativo</span>
+</div>
+<!-- Item 6 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">capacidades autorizadas</span>
+</div>
+<span class="text-on-surface font-medium text-right font-label-sm">10/10 ativas</span>
+</div>
+<!-- Item 7 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">plugin do kernel</span>
+</div>
+<span class="text-on-surface font-medium text-right font-label-sm">compatível</span>
+</div>
+<!-- Item 8 -->
+<div class="py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[16px] material-symbols-fill" data-icon="check_circle">check_circle</span>
+<span class="text-on-surface-variant">servidores MCP</span>
+</div>
+<span class="text-primary-container font-medium text-right font-label-sm">3 locais ativos</span>
+</div>
+</div>
+</section>
+<!-- 3. CARTÃO «FILA DE TAREFAS» -->
+<section class="rounded-xl bg-surface-container-low border border-outline-variant/30 p-4 transition-all hover:border-primary-container/30">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[18px]" data-icon="view_agenda">view_agenda</span>
+</div>
+<h2 class="font-headline-sm text-[16px] leading-5 font-medium text-on-surface">Fila de tarefas</h2>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 tarefas</span>
+</div>
+<div class="mt-3 space-y-2.5">
+<!-- Tarefa 1: Em Execução -->
+<div class="p-3 rounded-lg bg-surface-container/70 border border-primary-container/20 flex flex-col gap-2">
+<div class="flex items-start justify-between gap-2">
+<p class="font-label-md text-label-md text-on-surface font-medium leading-relaxed">
+              1. Gerar teste unitário para LifecycleService...
+            </p>
+<span class="shrink-0 px-2.5 py-1 rounded-md bg-on-primary-container/30 text-primary-container font-label-sm text-label-sm font-semibold flex items-center gap-1.5 border border-primary-container/30">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-ping"></span>
+              a correr
+            </span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span>Subprocesso: pytest-mock</span>
+<span>+142 linhas geradas</span>
+</div>
+</div>
+<!-- Tarefa 2: Em Espera de Autorização -->
+<div class="p-3 rounded-lg bg-surface-container/70 border border-outline-variant/30 flex flex-col gap-2">
+<div class="flex items-start justify-between gap-2">
+<p class="font-label-md text-label-md text-on-surface font-medium leading-relaxed">
+              2. Commit git com mensagem semântica feat(...
+            </p>
+<span class="shrink-0 px-2 py-1 rounded-md bg-[#3b2713]/80 text-[#f59e0b] font-label-sm text-label-sm font-medium border border-[#f59e0b]/30 flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]" data-icon="lock">lock</span>
+              espera de autorização
+            </span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span>Privilégio de Escrita: Magisk Root</span>
+<span>dsh.stage(git_commit)</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BARRA DE NAVEGAÇÃO INFERIOR (BottomNavBar - 3 Abas Estritas) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter h-16 bg-surface-container-low/95 backdrop-blur-md border-none shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+<!-- Aba 1: Conversa -->
+<a class="flex flex-col items-center justify-center gap-1 text-on-surface-variant font-label-sm py-1.5 px-3 hover:text-on-surface active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="terminal">terminal</span>
+<span>Conversa</span>
+</a>
+<!-- Aba 2: Resumo (ACTIVA) -->
+<a class="flex flex-col items-center justify-center gap-1 text-primary-container font-label-sm py-1.5 px-4 rounded-xl bg-surface-variant/40 border border-primary-container/20 active:scale-95 transition-all shadow-[0_0_12px_rgba(56,239,194,0.1)]" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary-container material-symbols-fill" data-icon="memory">memory</span>
+<span class="text-primary-container font-semibold">Resumo</span>
+</a>
+<!-- Aba 3: Ajustes -->
+<a class="flex flex-col items-center justify-center gap-1 text-on-surface-variant font-label-sm py-1.5 px-3 hover:text-on-surface active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="tune">tune</span>
+<span>Ajustes</span>
+</a>
+</nav>
+</body></html>
