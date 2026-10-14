@@ -612,7 +612,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**LMK sob pressão real**~~ | ✅ **feito em §32** | 97% de RAM durante 30 s: daemon, motor e app sobreviveram sem mudar de pid |
 | ~~**Clique do ✕ na UI**~~ | ✅ **feito em §35** | bug do diálogo corrigido (leitura da sessão activa no topo) + botão **Fechar a sessão activa**; verificado pela UI |
 | ~~**Visão em vídeo**~~ | ✅ **feito em §36** | `android_see` com `frames`/`intervalMs`: anexa N fotogramas ao mesmo resultado; o agente comparou-os no tempo |
-| **MCP servers configuráveis** | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado no motor (agente chamou `mcp__ping__ping` → pong) |
+| ~~**MCP servers configuráveis**~~ | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado **no motor e pela app** (`mcp__ping__ping` → pong) |
 | **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
 | **vscreen** (ecrã virtual) | bloqueado | decisão LGPL tua; reimplementar do zero são dias de trabalho |
 | ~~**SEA + snapshot V8**~~ | ✅ medido e rejeitado | § item 4: não ganha nada |
@@ -1266,10 +1266,11 @@ comando for o Node do daemon, tem de levar
 (ferramentas `ping`/`echo`) montado numa sessão → o agente chamou `mcp__ping__ping` e devolveu
 **pong**.
 
-**Limite honesto:** a ligação *pela app* (configurar no campo e ver o agente a usar a ferramenta)
-não ficou provada — a automação da UI falhou três vezes (escreveu no campo errado, a app perdeu a
-ligação quando mexi nas preferências, e o `BACK` para esconder o teclado fechou a app). O caminho
-do motor está provado; o da app tem o código e o campo visível, mas falta o clique.
+**Pela app (fechado):** com o servidor gravado nas preferências do cartão *Servidores MCP* e uma
+sessão nova, o transcript ficou
+`[user] chama a ferramenta mcp__ping__ping…` → **`[tool] mcp__ping__ping [completed]`** →
+**`[assistant] pong`**. (As três tentativas anteriores falharam por automação — o campo errado, a
+app desligada, e o `BACK` a fechar a app — não por código.)
 
 
 ---

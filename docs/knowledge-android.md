@@ -1161,8 +1161,10 @@ diferentes, e tratá-los como iguais era o erro:
 - **A testar:** o daemon tem **um só lugar de cliente ACP** (a app retoma-o sempre). Um cliente de
   teste pelo socket unix é expulso quando a app está a correr: para testar MCP/`session/list` por
   script, parar a app primeiro.
-- **Verificação:** servidor MCP mínimo (`tools/mcp-ping-server.mjs`, ferramentas `ping` e `echo`)
-  montado numa sessão → o agente chamou `mcp__ping__ping` e respondeu **pong**.
+- **Verificação (duas vezes):** servidor MCP mínimo (`tools/mcp-ping-server.mjs`, ferramentas
+  `ping` e `echo`) montado numa sessão → o agente chamou `mcp__ping__ping` e respondeu **pong**.
+  E **pela app**: com o servidor gravado no cartão *Servidores MCP*, sessão nova → transcript com
+  `[tool] mcp__ping__ping [completed]` e `[assistant] pong`.
 - **Origem:** **[LOCAL]**.
 
 ---
