@@ -5,6 +5,7 @@
 #   ./tools/bootstrap.sh --shizuku           # daemon em /data/local/tmp (sem root)
 #   ./tools/bootstrap.sh --skip-app          # só o motor/daemon
 #   ./tools/bootstrap.sh --dry-run           # mostra o plano e sai
+#   ./tools/bootstrap.sh --no-device         # só prepara as árvores (CI, sem telemóvel)
 #
 # Num emulador (x86_64, sem root), é a conjugação destas opções:
 #
@@ -35,6 +36,7 @@ SHIZUKU=0
 AUTOSTART=1
 SKIP_APP=0
 SKIP_DAEMON=0
+NO_DEVICE=0
 DO_KEY=0
 DRY=0
 
@@ -51,6 +53,8 @@ while [ $# -gt 0 ]; do
     --no-autostart) AUTOSTART=0; shift ;;
     --skip-app) SKIP_APP=1; shift ;;
     --skip-daemon) SKIP_DAEMON=1; shift ;;
+    # Sem telemóvel: só kernel + runtime (é o que a CI precisa de provar).
+    --no-device) NO_DEVICE=1; SKIP_DAEMON=1; SKIP_APP=1; shift ;;
     --key) DO_KEY=1; shift ;;
     --dry-run) DRY=1; shift ;;
     -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
@@ -117,7 +121,7 @@ say "1/6 pré-requisitos"
 need node "Node.js no computador (só para as ferramentas)"
 need npm "npm (para instalar o kernel)"
 need python3 "Python 3 (pipelines e testes)"
-need adb "Android platform-tools"
+[ "$NO_DEVICE" = 1 ] || need adb "Android platform-tools"
 [ "$SKIP_APP" = 1 ] || { need zip "zip (empacotar o kernel)"; need unzip "unzip (extrair o Gradle)"; }
 SDK="$(detect_sdk || true)"
 JAVA="$(detect_java "$SDK" || true)"
@@ -127,11 +131,16 @@ if [ "$SKIP_APP" != 1 ]; then
   echo "java: $JAVA"; echo "sdk : $SDK"
 fi
 
-if [ -z "$DEV" ]; then
-  DEV="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
-  [ -n "$DEV" ] || { echo "ERRO: nenhum telemóvel ligado (adb devices vazio). Liga por USB e autoriza a depuração."; exit 1; }
+if [ "$NO_DEVICE" = 1 ]; then
+  echo "dispositivo: (nenhum — --no-device)"
+  DEV="(sem dispositivo)"
+else
+  if [ -z "$DEV" ]; then
+    DEV="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
+    [ -n "$DEV" ] || { echo "ERRO: nenhum telemóvel ligado (adb devices vazio). Liga por USB e autoriza a depuração."; exit 1; }
+  fi
+  echo "dispositivo: $DEV"
 fi
-echo "dispositivo: $DEV"
 
 say "2/6 kernel do DSH (npm) + patches"
 if [ ! -f "$KERNEL/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" ] || [ ! -d "$KERNEL/dsh/node_modules/@deepseek-ai/dsh-tool-cachalote" ]; then

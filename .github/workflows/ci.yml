@@ -30,6 +30,19 @@ jobs:
       - name: Regressão do schema do plugin
         run: ./tools/plugin-schema-test.sh
 
+      # Os patches são substituições de texto: se a versão do kernel mudar, uma âncora pode
+      # deixar de existir e o patch passa a ser um no-op silencioso. Aqui isso falha o CI.
+      - name: As âncoras dos patches continuam a existir?
+        run: |
+          set -euo pipefail
+          node tools/extract-kernel.cjs --node-modules .work/dsh-install/node_modules --out .work/f0/kernel --trim
+          node tools/patch-android.cjs --tree .work/f0/kernel | tee /tmp/patch.log
+          if grep -q "AVISO" /tmp/patch.log; then
+            echo "::error::um patch deixou de encontrar a sua âncora — a versão do kernel mudou"
+            exit 1
+          fi
+          grep -q "guarda de caminhos instalada" /tmp/patch.log
+
   scripts:
     name: sintaxe dos scripts
     runs-on: ubuntu-latest
@@ -52,3 +65,46 @@ jobs:
             echo "node --check $f"
             node --check "$f"
           done
+
+  apk:
+    name: APK de debug a partir de um clone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+
+      - name: Ferramentas do sistema
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zip unzip python3 >/dev/null
+
+      # Este passo é a promessa do bootstrap: o runtime Node arm64/bionic vem dos pacotes do
+      # Termux e as bibliotecas embutidas saem do fecho de DT_NEEDED. Nada disto existe num
+      # clone — se falhar aqui, falha para qualquer pessoa.
+      - name: Runtime arm64 (Termux) e bibliotecas embutidas
+        run: |
+          ./tools/fetch-runtime.sh
+          ./tools/prepare-embed.sh
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Compilar a APK de debug
+        working-directory: app
+        env:
+          GRADLE_USER_HOME: ${{ github.workspace }}/.work/gradle-home
+          ANDROID_USER_HOME: ${{ github.workspace }}/.work/android-home
+        run: gradle --no-daemon --console=plain assembleDebug
+
+      - name: Guardar a APK como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: cachalote-debug-apk
+          path: app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

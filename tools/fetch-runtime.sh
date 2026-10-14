@@ -139,4 +139,10 @@ ls "$OUT/root/$TERMUX_PREFIX_IN_DEB/bin" "$OUT/root/$TERMUX_PREFIX_IN_DEB/lib" 2
 if command -v file >/dev/null 2>&1; then
   echo "arquitectura do node: $(file -b "$NODE" | cut -d, -f1-2)"
 fi
-echo "sha256 do node: $(shasum -a 256 "$NODE" | cut -c1-32)…"
+# `shasum` é do Perl (macOS traz sempre; Ubuntu tem o pacote perl). `sha256sum` é do coreutils.
+if command -v sha256sum >/dev/null 2>&1; then
+  NODE_SHA="$(sha256sum "$NODE" | cut -c1-32)"
+else
+  NODE_SHA="$(shasum -a 256 "$NODE" | cut -c1-32)"
+fi
+echo "sha256 do node: ${NODE_SHA}…"
