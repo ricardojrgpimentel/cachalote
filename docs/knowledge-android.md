@@ -1654,3 +1654,19 @@ todos invisíveis no dia-a-dia do modo root:
 - **Verificação:** no S10+, com a preferência nova a nascer a falso, o assistente apareceu; o passo
   da escolha do modo detectou o root e recomendou-o.
 - **Origem:** **[LOCAL]**.
+
+### 131. Aba *Resumo*: o `doctor` e o consumo, sem terminal
+- **Porque:** o diagnóstico existia só no terminal (`cachalote doctor`) e o consumo de contexto
+  vivia discreto no cabeçalho. Uma app destas precisa de um sítio onde se veja, de relance, se está
+  tudo de pé.
+- **Como:** a ponte ganhou `cachalote.doctor`, que **corre o próprio CLI** e devolve o resultado
+  **estruturado** (`resultado`, `problemas`, `avisos`, `secoes[]`). Duplicar as verificações em
+  JavaScript seria pedir que as duas listas divergissem; assim há uma só, a do CLI.
+- **Na app:** a terceira aba mostra o consumo (tokens, sessão, modelo, esforço, fila, imagens) e o
+  diagnóstico — mas **só os itens que não estão `ok`**, com o resto resumido em «tudo o resto está
+  verde (N secções verificadas)». Uma lista de vinte linhas verdes não se lê.
+- **Detalhe:** no modo embutido não há daemon, portanto não há doctor — a aba di-lo em vez de
+  mostrar um erro.
+- **Verificação:** no S10+, a aba mostrou `1 aviso(s), nenhum problema` com o aviso da
+  acessibilidade desligada (o que era verdade — a app tinha sido reinstalada).
+- **Origem:** **[LOCAL]**.

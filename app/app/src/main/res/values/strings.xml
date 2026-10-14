@@ -6,6 +6,7 @@
     <string name="aba_conversa">Chat</string>
     <string name="aba_estado">Status</string>
     <string name="aba_poderes">Powers</string>
+    <string name="aba_resumo">Summary</string>
     <string name="abrir_acessibilidade">Open Settings → Accessibility</string>
     <string name="accessibility_description">Gives the Cachalote agent eyes and fingers: reads the screen\'s control tree, taps, types, scrolls and takes screenshots, whenever you ask it to.</string>
     <string name="acessibilidade">Accessibility</string>

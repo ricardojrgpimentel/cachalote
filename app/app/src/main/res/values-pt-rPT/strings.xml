@@ -6,6 +6,7 @@
     <string name="aba_conversa">Conversa</string>
     <string name="aba_estado">Estado</string>
     <string name="aba_poderes">Poderes</string>
+    <string name="aba_resumo">Resumo</string>
     <string name="abrir_acessibilidade">Abrir Definições → Acessibilidade</string>
     <string name="accessibility_description">Dá ao agente Cachalote olhos e dedos: lê a árvore de controlos do ecrã, toca, escreve, faz scroll e captura o ecrã, quando lhe pedires.</string>
     <string name="acessibilidade">Acessibilidade</string>

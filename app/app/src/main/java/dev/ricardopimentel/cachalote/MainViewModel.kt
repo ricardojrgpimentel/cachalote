@@ -152,6 +152,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Consumo de contexto, como o motor o reporta (`usage_update`). */
     var uso by mutableStateOf<Uso?>(null)
 
+    /** Resumo do `cachalote doctor`, trazido pela ponte (estruturado). */
+    var doctor by mutableStateOf<JSONObject?>(null)
+
+    fun refreshDoctor() = run("diagnóstico") {
+        doctor = controller.client.callForResult("cachalote.doctor", JSONObject(), 60_000)
+    }
+
     /** O assistente de configuração inicial aparece enquanto isto for falso. */
     var wizardConcluido by mutableStateOf(Prefs(getApplication()).wizardConcluido)
 

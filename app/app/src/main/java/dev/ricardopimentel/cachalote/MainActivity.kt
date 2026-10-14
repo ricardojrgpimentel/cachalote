@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
@@ -148,6 +149,12 @@ fun CachaloteApp() {
                         NavigationBarItem(
                             selected = tab == 1,
                             onClick = { tab = 1 },
+                            icon = { Icon(Icons.Filled.MonitorHeart, null) },
+                            label = { Text(stringResource(R.string.aba_resumo)) },
+                        )
+                        NavigationBarItem(
+                            selected = tab == 2,
+                            onClick = { tab = 2 },
                             icon = { Icon(Icons.Filled.Settings, null) },
                             label = { Text(stringResource(R.string.aba_ajustes)) },
                         )
@@ -172,9 +179,13 @@ fun CachaloteApp() {
                             Text(vm.error, modifier = Modifier.padding(12.dp), color = Color(0xFFFFC9D0))
                         }
                     }
-                    LaunchedEffect(tab) { if (tab == 1) vm.refreshCapabilities() }
+                    LaunchedEffect(tab) {
+                        if (tab == 1) vm.refreshDoctor()
+                        if (tab == 2) vm.refreshCapabilities()
+                    }
                     when (tab) {
                         0 -> ChatScreen(vm)
+                        1 -> ResumoScreen(vm)
                         else -> AjustesScreen(vm)
                     }
                 }

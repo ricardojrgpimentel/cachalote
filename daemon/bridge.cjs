@@ -289,12 +289,50 @@ function control(method, params) {
       return vscreenInput(params?.displayId, params?.args);
     case "cachalote.vscreen.launch":
       return vscreenLaunch(params?.displayId, params?.componente);
+    case "cachalote.doctor":
+      return doctorResumo();
     case "cachalote.engine.restart":
       scheduleEngineRestart("pedido explícito");
       return { ok: true, note: "motor a reiniciar" };
     default:
       return undefined;
   }
+}
+
+/* ---------------- diagnóstico (doctor) ----------------
+ *
+ * A app ganha um resumo do `cachalote doctor` sem ninguém ter de abrir um terminal. Em vez de
+ * duplicar as verificações em JavaScript, corre-se o próprio CLI e lê-se o que ele imprime — o
+ * formato é regular (`-- secção` e `  [ok]  texto`), e assim há **uma só** lista de verificações.
+ * (Para o modo embutido isto não se aplica: lá não há daemon.)
+ */
+async function doctorResumo() {
+  const r = await executar(path.join(BASE, "bin", "cachalote"), ["doctor"], 60_000);
+  const texto = (r.stdout || "") + (r.stderr || "");
+  const secoes = [];
+  let atual = null;
+  let problemas = 0;
+  let avisos = 0;
+  for (const linha of texto.split("\n")) {
+    const sec = /^-- (.+)$/.exec(linha);
+    if (sec) { atual = { titulo: sec[1].trim(), itens: [] }; secoes.push(atual); continue; }
+    const item = /^\s+\[(ok|!!|XX)\]\s+(.+)$/.exec(linha);
+    if (item && atual) {
+      const estado = item[1] === "ok" ? "ok" : item[1] === "!!" ? "aviso" : "problema";
+      if (estado === "problema") problemas++;
+      if (estado === "aviso") avisos++;
+      atual.itens.push({ estado, texto: item[2].trim() });
+    }
+  }
+  const resultado = /resultado: (.+)$/m.exec(texto);
+  return {
+    base: BASE,
+    resultado: resultado ? resultado[1].trim() : "sem resposta do doctor",
+    problemas,
+    avisos,
+    secoes,
+    quando: new Date().toISOString(),
+  };
 }
 
 /* ---------------- ecrã virtual: injecção e lançamento ----------------

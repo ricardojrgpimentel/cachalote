@@ -83,6 +83,7 @@ versão monocromática (ícones temáticos) e o XML da cor de fundo — e o mani
 | Sessões (diálogo) | ✅ desenhado |
 | Primeiros passos (onboarding) | ✅ desenhado · **assistente implementado** (6 passos, ainda com o layout simples — o desenho aplica-se depois) |
 | ~~Poderes~~ | substituído por *Ajustes* (a IA mudou: a conversa é a primeira aba e os ajustes são um menu) |
+| Resumo (doctor + consumo) | ✅ **implementado** (ainda com o layout simples) |
 | Implementação das disposições em Compose | por fazer (a seguir, ecrã a ecrã) |
 
 ⚠️ **Nota:** os ecrãs desenhados antes da reorganização mostram a barra antiga de quatro itens
