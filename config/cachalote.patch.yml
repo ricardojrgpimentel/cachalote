@@ -45,6 +45,11 @@
     # plugin a partir da localização do ficheiro.
     - id: tool-cachalote
       name: '/data/adb/cachalote/kernel/dsh/node_modules/@deepseek-ai/dsh-tool-cachalote/lib/index.js'
+    # Exemplo de plugin de terceiros montado pela nossa camada (ver kernel-plugins/exemplo).
+    # Para montar outro: põe o pacote em kernel/dsh/node_modules/<pacote> e acrescenta aqui um
+    # insert com o caminho absoluto do lib/index.js.
+    - id: plugin-exemplo
+      name: '/data/adb/cachalote/kernel/dsh/node_modules/@exemplo/dsh-plugin-cachalote/lib/index.js'
 
 # Presets de permissão. O `sandboxMode` declarado pelo bash-local é
 # `workspace-write` (ver D10 do plano): no Android não há Landlock, portanto o

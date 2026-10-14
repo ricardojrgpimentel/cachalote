@@ -1707,3 +1707,21 @@ Documento para quem chega de fora: a ideia em três linhas, porque o motor corre
 (D2), os três motores, os canais da ponte (controlo, ACP e capacidades), as ferramentas do agente,
 onde vivem os segredos, o que trava o agente (**e o que não trava** com root), o ecrã virtual, o
 mapa dos directórios e como se verifica (as quatro suites). Ligado a partir do README.
+
+
+---
+
+## 57. Plugins do DSH: sim, correm (com prova)
+
+A pergunta *"conseguimos correr os plugins do DSH?"* tinha resposta afirmativa desde o início — a
+camada `android_*` **é** um plugin montado pela nossa camada — mas ficou provada com um plugin novo,
+escrito de fora: [`kernel-plugins/exemplo/`](kernel-plugins/exemplo/) registou a ferramenta
+`exemplo_ola` e o registo do motor mostra
+`[plugin-exemplo] activo: registei a ferramenta exemplo_ola` (com o `doctor` a dizer `tudo bem`).
+
+**Como se monta outro:** pacote em `kernel/dsh/node_modules/<pacote>` + um `insert` em
+`config/cachalote.patch.yml` com o **caminho absoluto** do `lib/index.js`.
+
+**Armadilha:** o patch é YAML sensível à indentação. Anexei o `insert` no sítio errado e o **motor
+morreu no arranque** (*bad indentation of a mapping entry*), com o daemon a reiniciá-lo em ciclo —
+o `doctor` apanhou-o logo ("motor em baixo"). Os `insert` vão dentro do `insert:` existente.

@@ -1556,3 +1556,23 @@ todos invisíveis no dia-a-dia do modo root:
 - **Limite honesto:** a fila corre enquanto a app estiver viva (o serviço em primeiro plano ajuda);
   se o processo morrer, o turno em curso perde-se e a tarefa volta a pendente.
 - **Origem:** **[LOCAL]**.
+
+### 126. Correr plugins do DSH: sim, e é assim
+- **A resposta curta:** já corremos. Toda a camada de capacidades Android **é** um plugin do DSH
+  (`@deepseek-ai/dsh-tool-cachalote`) montado pela nossa camada de patch — as ferramentas
+  `android_*` que o agente usa são disso.
+- **Para instalar outro plugin (de terceiros):** põe o pacote em
+  `kernel/dsh/node_modules/<pacote>` e acrescenta um `insert` em `config/cachalote.patch.yml` com o
+  **caminho absoluto** do `lib/index.js` (um caminho relativo **não** é resolvido: o
+  `bareModuleBaseUrl` do perfil não inclui a nossa pasta).
+- **Um plugin é isto:** exporta `name`, `inject` e `apply(ctx)`; o `apply` faz
+  `ctx.tools.register(defineTool({...}))`. O exemplo completo está em
+  [`kernel-plugins/exemplo/`](../kernel-plugins/exemplo/) e vem montado de fábrica.
+- **Provado no telefone:** montado o exemplo, o registo do motor mostra
+  `[plugin-exemplo] activo: registei a ferramenta exemplo_ola` e o `doctor` diz `tudo bem`.
+- **⚠ Armadilha que me deitou o motor abaixo:** o `cordis.patch.yml` é YAML com **níveis de
+  indentação que contam**. Anexei o `insert` novo depois de um bloco de 2 espaços, com 4 espaços, e
+  o motor morreu no arranque com *"bad indentation of a mapping entry"* — e o daemon reiniciou-o em
+  ciclo. O `doctor` apanhou-o à primeira ("motor em baixo"). **Regra:** os `insert` vão **dentro** do
+  `insert:` existente, com a mesma indentação dos vizinhos.
+- **Origem:** **[LOCAL]**.
