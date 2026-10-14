@@ -612,7 +612,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**LMK sob pressão real**~~ | ✅ **feito em §32** | 97% de RAM durante 30 s: daemon, motor e app sobreviveram sem mudar de pid |
 | **Clique do ✕ na UI** | meio | o fecho funciona (ACPP medido); o teste de UI não acerta nas linhas do diálogo |
 | **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
-| **MCP servers configuráveis** | por fazer | o `session/new` vai com `mcpServers: []`; dava para ligar ferramentas externas |
+| **MCP servers configuráveis** | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado no motor (agente chamou `mcp__ping__ping` → pong) |
 | **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
 | **vscreen** (ecrã virtual) | bloqueado | decisão LGPL tua; reimplementar do zero são dias de trabalho |
 | ~~**SEA + snapshot V8**~~ | ✅ medido e rejeitado | § item 4: não ganha nada |
@@ -1244,3 +1244,29 @@ Teste repetível: [`tools/lmk-pressure-test.sh`](tools/lmk-pressure-test.sh) —
 O aviso é a acessibilidade desligada (a reinstalação da app faz isso), não um efeito da pressão.
 A primeira versão do teste não valia nada — o alocador saía assim que alocava e a "pressão"
 durava milissegundos; só depois de o fazer **segurar** a memória é que o número acima é real.
+
+
+---
+
+## 33. Servidores MCP configuráveis
+
+| Peça | Como |
+|---|---|
+| App | campo **Servidores MCP** em Poderes (JSON no formato do ACP) + `Gravar MCP`; valida o JSON e diz quantos servidores ficaram |
+| Sessão | a lista configurada vai no `session/new` **e** no `session/resume` (antes ia sempre `[]`) |
+| Formato | stdio: `{name, command (absoluto), args?, env?}` · http: `{name, type:"http", url, headers?}` |
+| Nomes das ferramentas | `mcp__<servidor>__<ferramenta>` |
+
+**O que se aprendeu (e estava a falhar em silêncio):** o `env` do servidor MCP é próprio. Se o
+comando for o Node do daemon, tem de levar
+`LD_LIBRARY_PATH=/data/adb/cachalote/runtime/lib` — sem isso morre no linker e o agente responde
+*"não tenho nenhuma ferramenta chamada mcp__…"*, sem erro nenhum no registo.
+
+**Verificação:** servidor MCP mínimo em [`tools/mcp-ping-server.mjs`](tools/mcp-ping-server.mjs)
+(ferramentas `ping`/`echo`) montado numa sessão → o agente chamou `mcp__ping__ping` e devolveu
+**pong**.
+
+**Limite honesto:** a ligação *pela app* (configurar no campo e ver o agente a usar a ferramenta)
+não ficou provada — a automação da UI falhou três vezes (escreveu no campo errado, a app perdeu a
+ligação quando mexi nas preferências, e o `BACK` para esconder o teclado fechou a app). O caminho
+do motor está provado; o da app tem o código e o campo visível, mas falta o clique.

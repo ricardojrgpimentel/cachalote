@@ -275,6 +275,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     var kernelUrlText by mutableStateOf("")
+    var mcpJsonText by mutableStateOf("")
+    var mcpSaved by mutableStateOf("")
+
+    /** Grava a lista de servidores MCP (JSON do ACP) que vai em cada sessão nova. */
+    fun saveMcpServers() = run("servidores MCP") {
+        val txt = mcpJsonText.trim().ifBlank { "[]" }
+        val arr = runCatching { org.json.JSONArray(txt) }.getOrElse {
+            error("JSON inválido: ${it.message?.take(80)}")
+        }
+        controller.mcpServersJson = arr.toString()
+        mcpSaved = "gravado: ${arr.length()} servidor(es)"
+        transcript.add(ChatLine("system", "servidores MCP: ${arr.length()} configurado(s) — vale para sessões novas"))
+    }
 
     fun saveKernelUrl() = run("url do kernel") {
         controller.kernelUrl = kernelUrlText.trim()

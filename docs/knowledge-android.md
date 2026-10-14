@@ -1140,3 +1140,27 @@ diferentes, e tratá-los como iguais era o erro:
 - **Nota:** o registo do kernel não mostrou linhas de *lowmemorykiller* neste telefone
   (LineageOS 23 / kernel moderno usa outras vias); a evidência é a memória medida e os pids.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AF. Servidores MCP
+
+### 99. Ligar um servidor MCP ao agente — e a armadilha do `LD_LIBRARY_PATH`
+- **Forma aceite** (validada pelo ACP, `dsh-acp` → `resolveMcpConfigs`):
+  - stdio: `{name, command, args?, env?}` — **`command` tem de ser um caminho absoluto**;
+  - http: `{name, type:"http", url, headers?}`.
+  Vai no `session/new` e no `session/resume`. Os nomes das ferramentas ficam
+  **`mcp__<servidor>__<ferramenta>`**.
+- **A armadilha:** o `env` do servidor MCP é **próprio** (não herda o do motor). Se o comando for o
+  Node que vem com o daemon, ele precisa de `LD_LIBRARY_PATH=<base>/runtime/lib` — senão morre no
+  linker (`library libz.so.1 not found`) e o servidor **nunca regista ferramentas**. O sintoma é
+  cruel: o `session/new` é aceite (o processo chegou a arrancar), o agente diz
+  *"não tenho nenhuma ferramenta chamada mcp__…"* e não há erro nenhum no registo do motor.
+- **`failOnStartupError: true`:** só falha a sessão se o arranque falhar de forma detectável; um
+  servidor que arranca e morre não impede a sessão — daí a falha silenciosa.
+- **A testar:** o daemon tem **um só lugar de cliente ACP** (a app retoma-o sempre). Um cliente de
+  teste pelo socket unix é expulso quando a app está a correr: para testar MCP/`session/list` por
+  script, parar a app primeiro.
+- **Verificação:** servidor MCP mínimo (`tools/mcp-ping-server.mjs`, ferramentas `ping` e `echo`)
+  montado numa sessão → o agente chamou `mcp__ping__ping` e respondeu **pong**.
+- **Origem:** **[LOCAL]**.

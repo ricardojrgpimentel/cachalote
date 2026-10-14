@@ -180,13 +180,26 @@ class DaemonController(private val context: Context) {
         throw (last ?: IllegalStateException("o motor não respondeu"))
     }
 
+    /**
+     * Servidores MCP configurados (JSON do ACP). JSON inválido → lista vazia (e o erro fica
+     * visível no ecrã da app, onde o utilizador o pode corrigir).
+     */
+    private fun mcpServers(): org.json.JSONArray = runCatching {
+        val txt = prefs.mcpServersJson.trim().ifBlank { "[]" }
+        org.json.JSONArray(txt)
+    }.getOrDefault(org.json.JSONArray())
+
+    var mcpServersJson: String
+        get() = prefs.mcpServersJson
+        set(v) { prefs.mcpServersJson = v }
+
     suspend fun newSession(): JSONObject = comMotorPronto {
         ensureAcp()
         val res = client.callForResult(
             "session/new",
             // `workspace` (getter) respeita o modo: no embutido é um caminho que a app pode
             // ler/escrever; o do daemon é root-only.
-            JSONObject().put("cwd", workspace).put("mcpServers", org.json.JSONArray()),
+            JSONObject().put("cwd", workspace).put("mcpServers", mcpServers()),
         )
         res.optString("sessionId").takeIf { it.isNotBlank() }?.let { prefs.lastSessionId = it }
         res
@@ -210,7 +223,7 @@ class DaemonController(private val context: Context) {
         ensureAcp()
         return client.callForResult(
             "session/resume",
-            JSONObject().put("sessionId", sessionId).put("cwd", cwd).put("mcpServers", org.json.JSONArray()),
+            JSONObject().put("sessionId", sessionId).put("cwd", cwd).put("mcpServers", mcpServers()),
         )
     }
 

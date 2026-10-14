@@ -27,6 +27,14 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("sessionId", v).apply()
 
     /**
+     * Servidores MCP (JSON, formato do ACP: `[{name, command, args, env?}]` ou
+     * `[{name, type:"http", url}]`). Vão no `session/new` e no `session/resume`.
+     */
+    var mcpServersJson: String
+        get() = sp.getString("mcpServersJson", "[]")!!
+        set(v) = sp.edit().putString("mcpServersJson", v).apply()
+
+    /**
      * URL de onde descarregar o kernel (hospedagem própria; vazio = o que vier no
      * `assets/kernel.remote.json`). Serve para não meter 389 MB dentro da APK.
      */

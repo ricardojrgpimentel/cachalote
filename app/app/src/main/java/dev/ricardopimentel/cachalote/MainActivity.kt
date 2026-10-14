@@ -466,6 +466,35 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Servidores MCP", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "JSON no formato do ACP, enviado em cada sessão nova. Exemplo stdio:\n" +
+                        "[{\"name\":\"ping\",\"command\":\"/data/adb/cachalote/runtime/bin/node\"," +
+                        "\"args\":[\"/data/local/tmp/mcp-ping-server.mjs\"]," +
+                        "\"env\":[{\"name\":\"LD_LIBRARY_PATH\",\"value\":\"/data/adb/cachalote/runtime/lib\"}]}]\n" +
+                        "⚠ O comando tem de ser um caminho ABSOLUTO e, se usar o Node do daemon, precisa " +
+                        "do LD_LIBRARY_PATH no env (senão morre no linker).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                OutlinedTextField(
+                    value = vm.mcpJsonText,
+                    onValueChange = { vm.mcpJsonText = it },
+                    placeholder = { Text("[{\"name\":\"…\",\"command\":\"/caminho/absoluto\"}]") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 6,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = { vm.saveMcpServers() }, enabled = !vm.busy) { Text("Gravar MCP") }
+                    if (vm.mcpSaved.isNotBlank()) {
+                        Text(vm.mcpSaved, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+
         Text(
             "Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. " +
                 "Estes interruptores são a barreira real — desliga o que não precisares.",
