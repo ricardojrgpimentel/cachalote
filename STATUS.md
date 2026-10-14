@@ -1725,3 +1725,27 @@ escrito de fora: [`kernel-plugins/exemplo/`](kernel-plugins/exemplo/) registou a
 **Armadilha:** o patch é YAML sensível à indentação. Anexei o `insert` no sítio errado e o **motor
 morreu no arranque** (*bad indentation of a mapping entry*), com o daemon a reiniciá-lo em ciclo —
 o `doctor` apanhou-o logo ("motor em baixo"). Os `insert` vão dentro do `insert:` existente.
+
+
+---
+
+## 58. Skills e o Stitch: o que já está pronto e o que falta de ti
+
+**Skills.** O sistema já vinha montado do perfil base (`dsh-skill`, `dsh-skill-filesystem`,
+`dsh-tool-skill`); faltavam as *skills* na pasta `home/skills/`. Ficou
+[`tools/install-skills.sh`](tools/install-skills.sh), que instalou **11 skills de design do Stitch**
+(Google, Apache-2.0): `generate-design`, `code-to-design`, `extract-design-md`,
+`extract-static-html`, `manage-design-system`, `upload-to-stitch`, `design-md`, `enhance-prompt`,
+`site-md`, `stitch-loop`, `taste-design`. Os de *build* (React/shadcn/Remotion) ficaram de fora —
+geram web e o Cachalote é Compose.
+
+**Stitch MCP.** Não temos nenhum MCP configurado (nem o do Stitch). Ele **existe** e é oficial:
+[`google-labs-code/stitch-skills`](https://github.com/google-labs-code/stitch-skills) (Apache-2.0)
+aponta para <https://stitch.withgoogle.com/docs/mcp/setup/>, e é um MCP **remoto** — precisa de um
+**URL** e de credenciais. Falta o dono dar esses dois valores (a página de configuração é uma app
+JS e não a consegui ler; a minha pesquisa web está sem chave). Assim que os tiver, configuro o
+cartão *Servidores MCP* da app (aceita `type: http` com cabeçalhos) e o agente fica com o Stitch.
+
+**Por verificar:** a listagem das skills pelo agente — os turnos estão a falhar por transporte da
+API (`DeepSeek Messages transport failed`), portanto nada que precise de um turno pode ser provado
+agora.

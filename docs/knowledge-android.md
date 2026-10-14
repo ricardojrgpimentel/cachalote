@@ -1576,3 +1576,23 @@ todos invisíveis no dia-a-dia do modo root:
   ciclo. O `doctor` apanhou-o à primeira ("motor em baixo"). **Regra:** os `insert` vão **dentro** do
   `insert:` existente, com a mesma indentação dos vizinhos.
 - **Origem:** **[LOCAL]**.
+
+### 127. Skills no Cachalote: o sistema já estava montado, faltavam as skills
+- **Descoberta:** o perfil base já monta `dsh-skill`, `dsh-skill-filesystem`, `dsh-skill-badge` e
+  `dsh-tool-skill` — ou seja, o agente **tem** o sistema de skills. O que faltava era haver skills:
+  o `dsh-skill-filesystem` procura em `$DSH_HOME/skills` (e em `<projecto>/.dsh/skills`) e essa pasta
+  não existia.
+- **Instalar uma skill** é copiar uma pasta com `SKILL.md` (formato aberto *Agent Skills*) para
+  `home/skills/`. Nada de código.
+- **Feito:** [`tools/install-skills.sh`](../tools/install-skills.sh) instala as skills de **design**
+  do Stitch (Google, Apache-2.0) — 11: `generate-design`, `code-to-design`, `extract-design-md`,
+  `extract-static-html`, `manage-design-system`, `upload-to-stitch`, `design-md`, `enhance-prompt`,
+  `site-md`, `stitch-loop`, `taste-design`. Os de *build* (`react-*`, `shadcn`, `remotion`) ficaram
+  de fora de propósito: geram web/React e o Cachalote é Compose.
+- **Limite honesto:** as skills descobrem-se em runtime e o agente lista-as pela ferramenta de
+  skills — mas **não consegui provar a listagem**: os turnos estão a falhar por transporte da API
+  (*"DeepSeek Messages transport failed"*) e a automação de UI voltou a falhar no envio. O motor
+  está saudável (`doctor: tudo bem`) e as 11 pastas estão no sítio.
+- **As skills do Stitch precisam do MCP do Stitch** para gerar de facto (é um MCP **remoto**:
+  URL + credenciais, obtidos em <https://stitch.withgoogle.com/docs/mcp/setup/>).
+- **Origem:** **[LOCAL]**.
