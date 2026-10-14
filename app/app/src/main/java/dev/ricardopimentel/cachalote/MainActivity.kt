@@ -113,13 +113,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private val cachaloteColors = darkColorScheme(
-    primary = Color(0xFF7FC4FF),
-    onPrimary = Color(0xFF00243D),
-    secondary = Color(0xFF9FCFFF),
-    background = Color(0xFF0B1220),
-    surface = Color(0xFF141C2B),
-)
+// O tema vive em Tema.kt, gerado do design (tools/design-to-compose.py).
 
 @Composable
 fun CachaloteApp() {
@@ -132,7 +126,7 @@ fun CachaloteApp() {
         runCatching { rikka.shizuku.Shizuku.addRequestPermissionResultListener(listener) }
         onDispose { runCatching { rikka.shizuku.Shizuku.removeRequestPermissionResultListener(listener) } }
     }
-    MaterialTheme(colorScheme = cachaloteColors) {
+    MaterialTheme(colorScheme = cachaloteColors, typography = cachaloteTypography) {
         Surface(modifier = Modifier.fillMaxSize()) {
             var tab by rememberSaveable { mutableStateOf(0) }
             LaunchedEffect(Unit) { vm.refreshStatus() }

@@ -11,6 +11,7 @@ design que os mantém coerentes. A implementação é em Compose; aqui fica a re
 | `sistema/tema.json` | o tema completo: as 47 cores nomeadas (Material 3), tipografia por função, escala de espaçamento |
 | `sistema/diretrizes.md` | a orientação de estilo (personalidade, hierarquia, movimento) |
 | `ecras/<nome>.png` | o ecrã desenhado, em tamanho real |
+| `app/<nome>.png` | como a app está de facto (para comparar com o desenho) |
 | `ecras/<nome>.html` | o HTML do ecrã (referência de medidas e cores exactas para a implementação) |
 
 ## Como se reproduz (Google Stitch, MCP)
@@ -30,17 +31,30 @@ design que os mantém coerentes. A implementação é em Compose; aqui fica a re
    `=w1200` ao URL do `lh3.googleusercontent.com` dá a imagem em tamanho real.
 3. Os ecrãs seguintes devem reutilizar o **mesmo** `designSystem` (senão cada um inventa um estilo).
 
+## Do desenho para o código
+
+O tema da app é **gerado** do sistema de design, para não divergirem a cada iteração:
+
+```sh
+./tools/design-to-compose.py     # lê design/sistema/tema.json → app/.../Tema.kt
+```
+
+Isso produz o `darkColorScheme` (as cores nomeadas do design são nomes Material 3, o mapeamento é
+1:1), a escala tipográfica e a escala de espaçamento (`Espaco`). As fontes do design (Space Grotesk,
+Geist, JetBrains Mono) ainda não estão empacotadas: por agora usa-se a escala com as famílias do
+sistema — empacotar as fontes é um passo à parte (são OFL, dá para as trazer).
+
 ## Estado
 
 | Ecrã | Estado |
 |---|---|
-| Conversa (principal) | ✅ desenhado — `ecras/conversa.png` |
+| Conversa (principal) | ✅ desenhado — `ecras/conversa.png` · **tema já aplicado** (`app/tema-aplicado-conversa.png`) |
+| Aprovação (diálogo) | ✅ desenhado — `ecras/aprovacao.png` |
 | Estado | por desenhar |
 | Chave | por desenhar |
 | Poderes | por desenhar |
 | Sessões | por desenhar |
 | Ecrã virtual | por desenhar |
-| Aprovação (diálogo) | por desenhar |
 | Implementação em Compose | por fazer |
 
 **Nota de qualidade do primeiro ecrã:** o botão *Enviar* fica cortado na margem direita (a linha do

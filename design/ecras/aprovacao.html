@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote - Autorização</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Space Grotesk, Geist, JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-lowest": "#070f17",
+            "secondary-container": "#00a7c0",
+            "on-tertiary-container": "#006947",
+            "inverse-on-surface": "#29313b",
+            "surface-bright": "#323a44",
+            "on-primary-container": "#006952",
+            "secondary": "#58d6f1",
+            "inverse-surface": "#dbe3f0",
+            "surface-container-high": "#232b34",
+            "secondary-fixed": "#a7edff",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-error": "#690005",
+            "surface-tint": "#15e0b4",
+            "on-surface": "#dbe3f0",
+            "on-secondary-fixed": "#001f25",
+            "primary": "#beffe7",
+            "outline-variant": "#3b4a44",
+            "secondary-fixed-dim": "#58d6f1",
+            "inverse-primary": "#006b55",
+            "surface-dim": "#0c141d",
+            "background": "#0c141d",
+            "on-surface-variant": "#bacac2",
+            "surface": "#0c141d",
+            "tertiary-fixed": "#6ffbbe",
+            "outline": "#84948d",
+            "primary-container": "#38efc2",
+            "on-tertiary": "#003824",
+            "surface-container": "#182029",
+            "on-primary-fixed-variant": "#00513f",
+            "on-background": "#dbe3f0",
+            "on-tertiary-fixed": "#002113",
+            "primary-fixed": "#4dfdcf",
+            "primary-fixed-dim": "#15e0b4",
+            "on-primary-fixed": "#002118",
+            "tertiary-container": "#5fedb0",
+            "on-error-container": "#ffdad6",
+            "on-secondary": "#00363f",
+            "surface-container-low": "#141c25",
+            "on-secondary-fixed-variant": "#004e5b",
+            "error-container": "#93000a",
+            "on-primary": "#00382b",
+            "surface-variant": "#2d353f",
+            "on-tertiary-fixed-variant": "#005236",
+            "tertiary": "#c0ffdc",
+            "surface-container-highest": "#2d353f",
+            "on-secondary-container": "#003640",
+            "error": "#ffb4ab"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1.5rem",
+            "gutter": "0.75rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem"
+          },
+          "fontFamily": {
+            "body-sm": ["Geist", "sans-serif"],
+            "body-lg": ["Geist", "sans-serif"],
+            "headline-sm": ["Space Grotesk", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "body-md": ["Geist", "sans-serif"],
+            "label-md": ["JetBrains Mono", "monospace"],
+            "label-lg": ["JetBrains Mono", "monospace"],
+            "label-sm": ["JetBrains Mono", "monospace"]
+          },
+          "fontSize": {
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    /* Touch optimization */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea {
+      user-select: text;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased overflow-hidden font-body-md min-h-screen relative flex items-center justify-center">
+<!-- ========================================================================= -->
+<!-- BACKGROUND CONTEXT SCREEN (Simulated Chat / Runtime Session dimmed context) -->
+<!-- ========================================================================= -->
+<div class="absolute inset-0 w-full h-full flex flex-col justify-between overflow-hidden pointer-events-none select-none opacity-40 blur-[3px]">
+<!-- TopAppBar Mock -->
+<header class="h-14 px-margin bg-surface-container-low/95 flex items-center justify-between border-b border-outline-variant/30">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">terminal</span>
+<span class="text-headline-sm font-headline-sm font-semibold tracking-tight text-on-surface">Cachalote</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant font-label-sm">
+<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-variant/60">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+<span>NPU: 24 tok/s</span>
+</span>
+<span class="material-symbols-outlined text-xl">history</span>
+</div>
+</header>
+<!-- Chat Stream Scroll Mock -->
+<div class="flex-1 p-margin space-y-4 font-body-sm overflow-hidden">
+<!-- User message -->
+<div class="flex justify-end">
+<div class="bg-surface-variant/70 border border-outline-variant/30 rounded-2xl rounded-tr-sm p-3 max-w-[80%] text-on-surface">
+<p class="font-body-sm">Cria um ficheiro de teste com os dados de depuração na pasta pública do telefone.</p>
+</div>
+</div>
+<!-- Agent response & thinking -->
+<div class="flex flex-col gap-2 max-w-[92%]">
+<div class="flex items-center gap-2 font-label-sm text-primary">
+<span class="material-symbols-outlined text-sm">memory</span>
+<span>cachalote-local-7b-q4</span>
+<span class="text-on-surface-variant">• 120ms</span>
+</div>
+<div class="bg-surface-container-low border border-outline-variant/40 rounded-2xl rounded-tl-sm p-3.5 space-y-2">
+<p class="font-body-md text-on-surface">A analisar o pedido de escrita em sistema de ficheiros externo...</p>
+<div class="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30 font-label-sm text-secondary">
+            [Planeamento]: Requer criação de ficheiro fora do sandbox de aplicação.
+          </div>
+</div>
+</div>
+</div>
+<!-- Bottom Input Dock Mock -->
+<div class="p-margin bg-surface-container-low/90 border-t border-outline-variant/30">
+<div class="h-12 bg-surface-container rounded-2xl border border-outline-variant/40 px-4 flex items-center justify-between text-on-surface-variant">
+<span class="font-body-sm">Instrua o modelo local...</span>
+<span class="material-symbols-outlined text-primary">send</span>
+</div>
+</div>
+</div>
+<!-- Ambient Darkening Overlay Backdrop -->
+<div class="fixed inset-0 bg-[#070f17]/80 backdrop-blur-md z-40 transition-opacity duration-200"></div>
+<!-- ========================================================================= -->
+<!-- MODAL ALERT DIALOG ("Autorização")                                         -->
+<!-- ========================================================================= -->
+<div aria-labelledby="modal-title" aria-modal="true" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog">
+<div class="w-full max-w-[390px] bg-[#121b26] border border-amber-500/35 rounded-3xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.85)] flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-200">
+<!-- Top Subtle Indicator / Bar -->
+<div class="w-10 h-1 bg-outline-variant/50 rounded-full mx-auto -mt-1 mb-1"></div>
+<!-- Header Section -->
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+<span class="material-symbols-outlined text-xl" data-icon="security" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface leading-snug" id="modal-title">
+              Autorização
+            </h2>
+<div class="inline-flex items-center gap-1.5 mt-0.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+<span>Fora da sandbox</span>
+</div>
+</div>
+</div>
+<button aria-label="Fechar" class="text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container-high transition-colors active:scale-95" type="button">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<!-- Command Execution Block -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-body-sm font-medium">O agente quer correr:</span>
+<span class="font-label-sm text-outline">POSIX Shell</span>
+</div>
+<div class="bg-[#070f17] border border-outline-variant/40 rounded-xl p-3 flex items-center justify-between gap-2 overflow-hidden shadow-inner">
+<div class="flex items-center gap-2 font-label-sm text-primary/95 overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
+<span class="text-amber-400 font-bold select-none">$</span>
+<code class="tracking-tight text-xs font-label-md">touch /sdcard/Documentos/teste-cachalote.txt</code>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-container shrink-0 active:scale-90" title="Copiar comando" type="button">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Explanation & Security Guarantee -->
+<p class="font-body-sm text-on-surface-variant leading-relaxed px-0.5">
+        Fora das áreas permitidas, nada corre sem tu aprovares. Este pedido fica no registo do dispositivo.
+      </p>
+<!-- Scope Options (Radio Rows) -->
+<fieldset class="flex flex-col gap-2.5 my-1" id="scope-selector">
+<legend class="sr-only">Escolha o nível de autorização</legend>
+<!-- Option 1: Permitir uma vez (Selected by default) -->
+<label class="scope-card group relative flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer bg-surface-container border-primary-container/70 shadow-[0_0_16px_rgba(56,239,194,0.12)]" for="scope-once">
+<input checked="" class="sr-only" id="scope-once" name="auth-scope" type="radio" value="once"/>
+<div class="radio-indicator mt-0.5 w-4 h-4 rounded-full border-2 border-primary-container bg-primary-container flex items-center justify-center shrink-0">
+<div class="w-1.5 h-1.5 rounded-full bg-[#0d131a]"></div>
+</div>
+<div class="flex-1 min-w-0">
+<span class="block font-headline-sm text-xs font-semibold text-on-surface tracking-tight">Permitir uma vez</span>
+<span class="block font-body-sm text-on-surface-variant text-[11px] leading-tight mt-0.5">Apenas para esta chamada de ferramenta</span>
+</div>
+<span class="material-symbols-outlined text-xs text-primary-container shrink-0 mt-0.5">lock_clock</span>
+</label>
+<!-- Option 2: Permitir sempre neste workspace -->
+<label class="scope-card group relative flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer bg-surface-container-low border-outline-variant/40 hover:bg-surface-container hover:border-outline-variant/80" for="scope-always">
+<input class="sr-only" id="scope-always" name="auth-scope" type="radio" value="always"/>
+<div class="radio-indicator mt-0.5 w-4 h-4 rounded-full border-2 border-outline-variant group-hover:border-on-surface-variant flex items-center justify-center shrink-0">
+<div class="w-1.5 h-1.5 rounded-full bg-transparent"></div>
+</div>
+<div class="flex-1 min-w-0">
+<span class="block font-headline-sm text-xs font-semibold text-on-surface tracking-tight">Permitir sempre neste workspace</span>
+<span class="block font-body-sm text-on-surface-variant text-[11px] leading-tight mt-0.5">Cria regra persistente na política de segurança</span>
+</div>
+<span class="material-symbols-outlined text-xs text-outline shrink-0 mt-0.5">shield</span>
+</label>
+<!-- Option 3: Recusar -->
+<label class="scope-card group relative flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer bg-surface-container-low border-outline-variant/40 hover:bg-surface-container hover:border-outline-variant/80" for="scope-deny">
+<input class="sr-only" id="scope-deny" name="auth-scope" type="radio" value="deny"/>
+<div class="radio-indicator mt-0.5 w-4 h-4 rounded-full border-2 border-outline-variant group-hover:border-error flex items-center justify-center shrink-0">
+<div class="w-1.5 h-1.5 rounded-full bg-transparent"></div>
+</div>
+<div class="flex-1 min-w-0">
+<span class="block font-headline-sm text-xs font-semibold text-on-surface tracking-tight">Recusar</span>
+<span class="block font-body-sm text-on-surface-variant text-[11px] leading-tight mt-0.5">Bloqueia a execução imediata deste passo</span>
+</div>
+<span class="material-symbols-outlined text-xs text-error/70 shrink-0 mt-0.5">block</span>
+</label>
+</fieldset>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-2 pt-1">
+<!-- Primary Action: Autorizar -->
+<button class="w-full h-12 rounded-xl bg-primary-container text-on-primary-container hover:bg-primary transition-all duration-150 flex items-center justify-center gap-2 font-label-md font-semibold text-sm shadow-[0_4px_16px_rgba(56,239,194,0.25)] active:scale-[0.98]" id="btn-confirm" type="button">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+<span>Autorizar</span>
+</button>
+<!-- Ghost Action: Recusar o turno -->
+<button class="w-full h-10 rounded-xl text-error/90 hover:text-error hover:bg-error-container/20 transition-all duration-150 flex items-center justify-center gap-1.5 font-label-sm font-medium text-xs active:scale-95" type="button">
+<span class="material-symbols-outlined text-sm">cancel</span>
+<span>Recusar o turno</span>
+</button>
+</div>
+<!-- Telemetry Footer Note -->
+<div class="pt-1 border-t border-outline-variant/20 flex items-center justify-between text-outline font-label-sm">
+<span>PID: 10428 • on-device</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-primary">verified_user</span>
+<span>Políticas de Kernel Ativas</span>
+</span>
+</div>
+</div>
+</div>
+<!-- Interactive script to handle custom radio styling seamlessly -->
+<script>
+    document.querySelectorAll('input[name="auth-scope"]').forEach((input) => {
+      input.addEventListener('change', (e) => {
+        document.querySelectorAll('.scope-card').forEach((card) => {
+          card.classList.remove('bg-surface-container', 'border-primary-container/70', 'shadow-[0_0_16px_rgba(56,239,194,0.12)]', 'border-error/70', 'shadow-[0_0_16px_rgba(239,68,68,0.12)]');
+          card.classList.add('bg-surface-container-low', 'border-outline-variant/40');
+          
+          const dot = card.querySelector('.radio-indicator div');
+          const indicator = card.querySelector('.radio-indicator');
+          if (dot && indicator) {
+            dot.className = 'w-1.5 h-1.5 rounded-full bg-transparent';
+            indicator.className = 'radio-indicator mt-0.5 w-4 h-4 rounded-full border-2 border-outline-variant flex items-center justify-center shrink-0';
+          }
+        });
+
+        const selectedCard = e.target.closest('.scope-card');
+        const confirmBtn = document.getElementById('btn-confirm');
+        const selectedIndicator = selectedCard.querySelector('.radio-indicator');
+        const selectedDot = selectedCard.querySelector('.radio-indicator div');
+
+        if (e.target.value === 'deny') {
+          selectedCard.classList.remove('bg-surface-container-low', 'border-outline-variant/40');
+          selectedCard.classList.add('bg-surface-container', 'border-error/70', 'shadow-[0_0_16px_rgba(239,68,68,0.12)]');
+          selectedIndicator.className = 'radio-indicator mt-0.5 w-4 h-4 rounded-full border-2 border-error bg-error flex items-center justify-center shrink-0';
+          selectedDot.className = 'w-1.5 h-1.5 rounded-full bg-[#0d131a]';
+          confirmBtn.innerHTML = '<span class="material-symbols-outlined text-lg">block</span><span>Confirmar Bloqueio</span>';
+          confirmBtn.className = 'w-full h-12 rounded-xl bg-error text-[#0d131a] hover:bg-error/90 transition-all duration-150 flex items-center justify-center gap-2 font-label-md font-semibold text-sm shadow-[0_4px_16px_rgba(239,68,68,0.25)] active:scale-[0.98]';
+        } else {
+          selectedCard.classList.remove('bg-surface-container-low', 'border-outline-variant/40');
+          selectedCard.classList.add('bg-surface-container', 'border-primary-container/70', 'shadow-[0_0_16px_rgba(56,239,194,0.12)]');
+          selectedIndicator.className = 'radio-indicator mt-0.5 w-4 h-4 rounded-full border-2 border-primary-container bg-primary-container flex items-center justify-center shrink-0';
+          selectedDot.className = 'w-1.5 h-1.5 rounded-full bg-[#0d131a]';
+          confirmBtn.innerHTML = '<span class="material-symbols-outlined text-lg">check_circle</span><span>Autorizar</span>';
+          confirmBtn.className = 'w-full h-12 rounded-xl bg-primary-container text-on-primary-container hover:bg-primary transition-all duration-150 flex items-center justify-center gap-2 font-label-md font-semibold text-sm shadow-[0_4px_16px_rgba(56,239,194,0.25)] active:scale-[0.98]';
+        }
+      });
+    });
+  </script>
+</body></html>
