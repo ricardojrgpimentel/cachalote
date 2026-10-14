@@ -957,46 +957,105 @@ private fun KeyScreen(vm: MainViewModel) {
     var visible by remember { mutableStateOf(false) }
 
     // Sem scroll próprio: quem rola é o contentor da secção (ver AjustesScreen).
+    // A forma segue o ecrã «Chave de API» do Stitch: etiqueta + título, cartão da chave com o
+    // chip «HTTPS ONLY», botão principal a toda a largura e o cartão de privacidade.
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.chave_provedor), fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (vm.keyPresent) "presente · ${vm.keyLength} caracteres · ${vm.keyUpdatedAt}"
-                    else "ainda não há chave guardada",
-                )
+        Etiqueta(stringResource(R.string.chave_sistema))
+        Text(
+            stringResource(R.string.chave_acesso),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.chave_provedor),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Chip(stringResource(R.string.chave_https))
+                }
                 Text(
                     stringResource(R.string.chave_explicacao),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it.trim() },
+                    label = { Text("DEEPSEEK_API_KEY") },
+                    placeholder = { Text("sk-…") },
+                    singleLine = true,
+                    visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {}),
+                    supportingText = { Text(stringResource(R.string.chave_segredo)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (vm.keyPresent) stringResource(R.string.chave_presente, vm.keyLength, vm.keyUpdatedAt)
+                        else stringResource(R.string.chave_ausente),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { visible = !visible }) {
+                        Text(stringResource(if (visible) R.string.esconder else R.string.mostrar))
+                    }
+                }
             }
         }
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = { value = it.trim() },
-            label = { Text("DEEPSEEK_API_KEY") },
-            singleLine = true,
-            visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {}),
+        // O botão principal é o que interessa neste ecrã: largura toda, como no design.
+        Button(
+            onClick = { vm.saveKey(value); value = "" },
+            enabled = !vm.busy && value.length >= 8,
             modifier = Modifier.fillMaxWidth(),
-        )
+        ) { Text(stringResource(R.string.guardar_no_daemon)) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { vm.saveKey(value); value = "" },
-                enabled = !vm.busy && value.length >= 8,
-            ) { Text(stringResource(R.string.guardar_no_daemon)) }
-            OutlinedButton(onClick = { visible = !visible }) { Text(if (visible) "Esconder" else "Mostrar") }
+            OutlinedButton(
+                onClick = { vm.refreshKeyStatus() },
+                enabled = !vm.busy,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.verificar_estado)) }
+            OutlinedButton(
+                onClick = { vm.removeKey() },
+                enabled = !vm.busy,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.remover_chave)) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { vm.refreshKeyStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.verificar_estado)) }
-            TextButton(onClick = { vm.removeKey() }, enabled = !vm.busy) { Text(stringResource(R.string.remover_chave)) }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Etiqueta(stringResource(R.string.chave_privacidade), Modifier.weight(1f))
+                    Chip(stringResource(R.string.chave_auditavel))
+                }
+                Text(
+                    stringResource(R.string.chave_privacidade_texto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LinhaValor(stringResource(R.string.chave_posix), "0600 (-rw-------)")
+                LinhaValor(stringResource(R.string.chave_telemetria), stringResource(R.string.chave_zero))
+                LinhaValor(stringResource(R.string.chave_armazenamento), stringResource(R.string.chave_efemero))
+            }
         }
     }
 }

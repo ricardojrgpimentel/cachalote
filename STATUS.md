@@ -1885,4 +1885,34 @@ i18n verde: **201 chaves iguais**, 176 usadas. Verificação no aparelho depois 
 botão principal a toda a largura e o cartão de privacidade) e os **cartões de ferramenta na
 conversa** (estado «a correr»/«concluído», payload em monospace, a linha de telemetria do turno).
 
+---
+
+## 63. O design, parte 3: o ecrã da Chave
+
+Feito a seguir à §62, com o desenho [`design/ecras/chave.png`](design/ecras/chave.png) em mão.
+
+O ecrã da Chave deixou de ser um formulário solto e passou a ter a forma do design: micro-etiqueta
+**«SISTEMA LOCAL E CREDENCIAIS»**, título **«Acesso ao provedor»**, cartão da chave com o chip
+**«HTTPS ONLY»**, a explicação (a chave vai para o daemon, que a escreve em `home/.env` com modo
+600 — a app não a guarda), o campo `DEEPSEEK_API_KEY` com a nota **«Segredo seguro»**, o estado em
+monospace («presente · 35 caracteres · 2026-10-14T09:09:31.035Z») com o **Mostrar**, o botão
+principal **«Guardar no daemon» a toda a largura**, «Verificar estado» e «Remover chave» lado a
+lado, e o cartão **«PRIVACIDADE E TRÁFEGO»** (chip «AUDITÁVEL») com as três linhas do desenho:
+`Permissões POSIX 0600 (-rw-------)`, `Telemetria externa zero rastreio`,
+`Armazenamento da app efémero na RAM`. Visto no telefone:
+[`design/app/chave-3abas.png`](design/app/chave-3abas.png).
+
+**Strings:** mais 17 chaves nos dois idiomas (as do ecrã da Chave e as da fila com estado) — i18n
+verde: **214 chaves iguais**, 192 usadas. Verificação no aparelho depois da mudança: 3 abas +
+8 secções + assistente → **0 crashes**.
+
+**Enviado para o `origin`:** os commits desta ronda de design (`9e74f53`, `996867d` e este) e o dos
+crashes (`2279573`) — `72928d3..996867d` no primeiro envio.
+
+**Fica por fazer (última peça do design):** os **cartões de ferramenta na conversa** — estado
+«a correr»/«concluído», payload em monospace e a linha de telemetria do turno. Precisa de mexer no
+modelo: o `ChatLine` só tem `role` e `text`, não guarda o nome da ferramenta, o estado nem o
+resultado em separado; sem isso, um cartão de ferramenta a sério seria adivinhar a partir do texto.
+
+
 
