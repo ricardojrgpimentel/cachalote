@@ -12,6 +12,9 @@ design que os mantém coerentes. A implementação é em Compose; aqui fica a re
 | `sistema/diretrizes.md` | a orientação de estilo (personalidade, hierarquia, movimento) |
 | `ecras/<nome>.png` | o ecrã desenhado, em tamanho real |
 | `app/<nome>.png` | como a app está de facto (para comparar com o desenho) |
+| `logo/folha-de-marca.{png,html}` | a folha de marca: ícone, teste de legibilidade, monocromático, wordmark e lockup |
+| `logo/icone-fonte.png` | o ícone isolado, 1024×1024 (a fonte de todos os tamanhos) |
+| `logo/marca.png` | a marca recortada, com transparência (para o ícone e para dentro da app) |
 | `ecras/<nome>.html` | o HTML do ecrã (referência de medidas e cores exactas para a implementação) |
 
 ## Como se reproduz (Google Stitch, MCP)
@@ -44,10 +47,27 @@ Isso produz o `darkColorScheme` (as cores nomeadas do design são nomes Material
 Geist, JetBrains Mono) ainda não estão empacotadas: por agora usa-se a escala com as famílias do
 sistema — empacotar as fontes é um passo à parte (são OFL, dá para as trazer).
 
+## Logo e ícone
+
+A marca é uma **baleia (cachalote) a mergulhar sob a linha de superfície** — o mergulho autónomo em
+profundidade técnica e o regresso com o que encontrou. Sem gradientes, geométrica, legível a 48 px.
+
+O ícone da app é gerado dela:
+
+```sh
+python3 tools/make-icon.py --logo design/logo/marca.png --background 0C141D
+```
+
+Isso escreve as cinco densidades (`mipmap-*`), a variante redonda, a frente do ícone adaptativo, a
+versão monocromática (ícones temáticos) e o XML da cor de fundo — e o manifesto aponta para
+`@mipmap/ic_launcher`. **Precisa do Pillow**: no harness, o Python que o traz está em
+`.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3`.
+
 ## Estado
 
 | Ecrã | Estado |
 |---|---|
+| Logo e ícone | ✅ feitos e **no telefone** (`app/icone-no-lancador.png`) |
 | Conversa (principal) | ✅ desenhado — `ecras/conversa.png` · **tema já aplicado** (`app/tema-aplicado-conversa.png`) |
 | Aprovação (diálogo) | ✅ desenhado — `ecras/aprovacao.png` |
 | Estado | por desenhar |
