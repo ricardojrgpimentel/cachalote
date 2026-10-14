@@ -31,6 +31,21 @@ import androidx.compose.ui.unit.dp
  * knowledge 114.
  */
 
+/**
+ * Consumo de contexto, discreto, no cabeçalho. Não desenha nada enquanto o motor não tiver dito
+ * nada (`uso == null`) — nas primeiras trocas de mensagens é normal não haver números.
+ */
+@Composable
+fun ConsumoDeContexto(uso: Uso?) {
+    if (uso == null) return
+    Text(
+        uso.texto(),
+        style = MaterialTheme.typography.bodySmall,
+        fontFamily = FontFamily.Monospace,
+        color = MaterialTheme.colorScheme.secondary,
+    )
+}
+
 /** Lista de sessões: ✓ na activa, ✕ só nela (o motor só fecha a sessão activa), retomar ao tocar. */
 @Composable
 fun SessionsList(

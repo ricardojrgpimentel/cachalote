@@ -18,6 +18,8 @@ object Notificacoes {
 
     private const val CANAL = "cachalote-turno"
     const val ID_FIM_DE_TURNO = 1001
+    const val ID_AUTORIZACAO = 1002
+    const val ID_ACESSIBILIDADE = 1003
 
     /** Marcado pelo `MainActivity` (onResume/onPause) — é o que decide se há notificação. */
     var appEmPrimeiroPlano: Boolean = false
@@ -34,6 +36,36 @@ object Notificacoes {
     /** Avisa que o turno acabou. `resumo` é o início da resposta do agente (ou o erro). */
     fun fimDeTurno(ctx: Context, titulo: String, resumo: String) {
         if (appEmPrimeiroPlano) return
+        publicar(ctx, ID_FIM_DE_TURNO, titulo, resumo)
+    }
+
+    /**
+     * Avisa que o agente está **parado à espera** de uma autorização.
+     *
+     * É a lacuna que mais se nota: com a app em segundo plano, o diálogo de aprovação não é visto
+     * por ninguém e o turno fica pendurado à espera. Aqui, o telemóvel diz que é preciso decidir.
+     * Ao tocar na notificação, a app abre no diálogo (o `PendingIntent` aponta para a MainActivity).
+     */
+    fun pedidoDeAutorizacao(ctx: Context, titulo: String, detalhe: String) {
+        if (appEmPrimeiroPlano) return
+        publicar(ctx, ID_AUTORIZACAO, titulo, detalhe)
+    }
+
+    /** A autorização foi respondida (ou o turno acabou): a notificação deixa de fazer sentido. */
+    fun cancelarPedidoDeAutorizacao(ctx: Context) {
+        runCatching {
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(ID_AUTORIZACAO)
+        }
+    }
+
+    /** O serviço de acessibilidade caiu: sem ele o agente perde olhos e dedos no ecrã. */
+    fun acessibilidadeDesligada(ctx: Context, titulo: String, texto: String) {
+        if (appEmPrimeiroPlano) return
+        publicar(ctx, ID_ACESSIBILIDADE, titulo, texto)
+    }
+
+    private fun publicar(ctx: Context, id: Int, titulo: String, texto: String) {
         val nome = ctx.getString(R.string.notif_canal_nome)
         canal(ctx, nome, ctx.getString(R.string.notif_canal_descricao))
         val abrir = PendingIntent.getActivity(
@@ -45,14 +77,14 @@ object Notificacoes {
         val n = NotificationCompat.Builder(ctx, CANAL)
             .setSmallIcon(android.R.drawable.stat_notify_chat)
             .setContentTitle(titulo)
-            .setContentText(resumo.take(140))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(resumo.take(600)))
+            .setContentText(texto.take(140))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(texto.take(600)))
             .setContentIntent(abrir)
             .setAutoCancel(true)
             .build()
         runCatching {
             val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.notify(ID_FIM_DE_TURNO, n)
+            nm.notify(id, n)
         }
     }
 }

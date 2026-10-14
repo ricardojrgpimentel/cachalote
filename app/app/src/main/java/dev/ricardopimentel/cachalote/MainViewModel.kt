@@ -92,6 +92,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * `false` enquanto `android_screen` funciona (o valor tem de ser o que o agente vê).
      */
     var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
+
+    /** Consumo de contexto, como o motor o reporta (`usage_update`). */
+    var uso by mutableStateOf<Uso?>(null)
+
+    private val vigia = VigiaAcessibilidade(CachaloteAccessibilityService.isEnabled())
     var a11yTicks by mutableStateOf(0)
 
     /** Que motor está em uso: daemon com root, daemon via Shizuku, ou motor embutido. */
@@ -490,6 +495,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val res = controller.newSession()
             sid = res.optString("sessionId")
             sessionId = sid
+            uso = null
             applyConfigOptions(res)
         }
         val shown = when {
@@ -559,6 +565,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val sid = params.optString("sessionId")
         if (sessionId != null && sid.isNotEmpty() && sid != sessionId) return
         val update = params.optJSONObject("update") ?: return
+        Uso.de(update)?.let { uso = it; return }
         when (update.optString("sessionUpdate")) {
             "agent_message_chunk" -> append("assistant", textOf(update))
             "agent_thought_chunk" -> append("thought", textOf(update))
@@ -807,12 +814,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             options = list,
         )
         transcript.add(ChatLine("system", "o agente pede autorização: " + (tool?.optString("title") ?: "?")))
+        // Com a app em segundo plano ninguém vê o diálogo: o turno fica à espera em silêncio.
+        val app = getApplication<Application>()
+        Notificacoes.pedidoDeAutorizacao(
+            app,
+            app.getString(R.string.notif_autorizacao_titulo),
+            app.getString(R.string.notif_autorizacao_texto, (tool?.optString("title") ?: "?")),
+        )
     }
 
     /** Resposta ao pedido de aprovação. `optionId` nulo = cancelar o turno. */
     fun answerApproval(optionId: String?) = run("aprovação") {
         val req = approval ?: return@run
         approval = null
+        Notificacoes.cancelarPedidoDeAutorizacao(getApplication())
         val outcome = if (optionId == null) {
             JSONObject().put("outcome", "cancelled")
         } else {
@@ -877,6 +892,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---------------------------------------------------------------- utilitário
+
+    init {
+        // Vigia a acessibilidade a cada 5 s: se cair a meio da sessão, avisa na conversa (e por
+        // notificação, se a app não estiver à frente). Sem isto o agente só o descobre ao falhar.
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(5000)
+                val agora = CachaloteAccessibilityService.isEnabled()
+                accessibilityOn = agora
+                if (vigia.observar(agora) != null) {
+                    val app = getApplication<Application>()
+                    transcript.add(ChatLine("system", app.getString(R.string.acessibilidade_caiu)))
+                    // Persistir: o aviso tem de sobreviver a fechar e reabrir a app (foi por não
+                    // gravar que ele não aparecia na leitura do instantâneo).
+                    saveState()
+                    Notificacoes.acessibilidadeDesligada(
+                        app,
+                        app.getString(R.string.notif_acessibilidade_titulo),
+                        app.getString(R.string.notif_acessibilidade_texto),
+                    )
+                } else if (agora && vigia.ligada) {
+                    // Voltou a ligar-se depois de ter caído: diz-se uma vez, sem alarme.
+                    if (vigia.quedas > 0 && transcript.lastOrNull()?.text == getApplication<Application>().getString(R.string.acessibilidade_caiu)) {
+                        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.acessibilidade_voltou)))
+                        saveState()
+                    }
+                }
+            }
+        }
+    }
 
     private fun run(label: String, block: suspend () -> Unit) {
         viewModelScope.launch {

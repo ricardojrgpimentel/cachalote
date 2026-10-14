@@ -208,6 +208,9 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
+            // Consumo de contexto: o motor já o enviava em cada turno e a app deitava fora.
+            // Fica discreto, mas permanente — é a única noção de custo que o utilizador tem.
+            ConsumoDeContexto(vm.uso)
         }
         if (busy) CircularProgressIndicator(modifier = Modifier.width(22.dp).height(22.dp), strokeWidth = 2.dp)
     }

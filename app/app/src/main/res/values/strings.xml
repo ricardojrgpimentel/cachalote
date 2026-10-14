@@ -8,6 +8,8 @@
     <string name="abrir_acessibilidade">Open Settings → Accessibility</string>
     <string name="accessibility_description">Gives the Cachalote agent eyes and fingers: reads the screen\'s control tree, taps, types, scrolls and takes screenshots, whenever you ask it to.</string>
     <string name="acessibilidade">Accessibility</string>
+    <string name="acessibilidade_caiu">accessibility turned off: the agent lost its eyes and fingers on the screen (Settings → Accessibility → Cachalote)</string>
+    <string name="acessibilidade_voltou">accessibility is back on</string>
     <string name="acesso">Access</string>
     <string name="anexar">Attach</string>
     <string name="anexar_imagem">Attach image</string>
@@ -74,6 +76,10 @@
     <string name="motor_shizuku">Shizuku</string>
     <string name="negar_todas">Deny all</string>
     <string name="nenhuma">none</string>
+    <string name="notif_acessibilidade_texto">Without the accessibility service the agent cannot see or tap the screen. Turn it on in Settings → Accessibility → Cachalote.</string>
+    <string name="notif_acessibilidade_titulo">Accessibility turned off</string>
+    <string name="notif_autorizacao_texto">waiting for a decision: %1$s</string>
+    <string name="notif_autorizacao_titulo">The agent needs your approval</string>
     <string name="notif_canal_descricao">Tells you when the agent finishes a turn while the app is in the background.</string>
     <string name="notif_canal_nome">Turn finished</string>
     <string name="notif_sem_texto">(no text in the reply)</string>

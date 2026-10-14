@@ -260,3 +260,24 @@ class InterfaceEnTest {
         compose.onNodeWithText("✕").assertIsDisplayed()
     }
 }
+
+/** O indicador de consumo de contexto no cabeçalho. */
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [34], qualifiers = "pt-rPT")
+class ConsumoTest {
+
+    @get:Rule
+    val compose = createComposeRule()
+
+    @Test
+    fun mostra_o_consumo_quando_o_motor_o_diz() {
+        compose.setContent { ConsumoDeContexto(Uso(120000, 1000000)) }
+        compose.onNodeWithText("contexto: 120\u202F000 / 1\u202F000\u202F000 · 12%").assertIsDisplayed()
+    }
+
+    @Test
+    fun nao_mostra_nada_antes_de_haver_numeros() {
+        compose.setContent { ConsumoDeContexto(null) }
+        compose.onAllNodesWithText("contexto", substring = true).assertCountEquals(0)
+    }
+}

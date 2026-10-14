@@ -1412,3 +1412,39 @@ diferentes, e tratá-los como iguais era o erro:
 - **Verificação:** `BackupTest` (4 testes, na JVM) — exporta/importa e confirma que os segredos não
   saem.
 - **Origem:** **[LOCAL]**.
+
+### 116. O agente ficava parado à espera de uma decisão que ninguém sabia que era precisa
+- **O sintoma:** o diálogo de aprovação só existe **dentro da app**. Com a app em segundo plano,
+  o agente ficava pendurado num `session/request_permission` sem nada a avisar o utilizador.
+- **A correcção:** `Notificacoes.pedidoDeAutorizacao(...)` no momento em que o pedido nasce e
+  `cancelarPedidoDeAutorizacao(...)` quando é respondido (id próprio, `1002`). Tocar na notificação
+  abre a app — onde está o diálogo.
+- **Cuidado:** cada aviso tem o **seu id** (`1001` fim de turno, `1002` autorização, `1003`
+  acessibilidade). Com um id partilhado, uma notificação apagava a outra — há um teste para isso.
+- **Verificação:** `AvisosTest` (8 testes, JVM/Robolectric): aparece com a app atrás, **não**
+  aparece com a app à frente, desaparece ao responder, e os avisos são independentes.
+- **Origem:** **[LOCAL]**.
+
+### 117. O consumo de contexto era recebido e deitado fora
+- **O que se descobriu:** o motor envia `usage_update` (`used`/`size`) em cada turno — estava nos
+  registos desde o início — e a app **ignorava-o**. Era a única noção de custo disponível, de graça.
+- **O que se fez:** `Uso.kt` (parsing + formatação com separador de milhares fino, como manda o
+  português) e `ConsumoDeContexto` no cabeçalho: `contexto: 6 290 / 1 000 000 · 1%`. Não desenha
+  nada enquanto não houver números.
+- **Detalhe que os testes fixaram:** `0,629%` arredonda para `1` (e não para `0`) — a expectativa
+  errada era minha, não do código.
+- **Verificação:** `UsoTest` (5) + `ConsumoTest` (2, Compose).
+- **Origem:** **[LOCAL]**.
+
+### 118. A acessibilidade caía e o agente só descobria ao falhar
+- **O sintoma:** o serviço desliga-se em reinstalações e depois de o telefone dormir. O agente
+  tentava usar o ecrã, falhava, e o utilizador via um erro estranho em vez de um aviso.
+- **A correcção:** `VigiaAcessibilidade` observa a cada 5 s e avisa **na conversa** (e por
+  notificação, se a app não estiver à frente). Só avisa na transição ligada → desligada: leituras
+  repetidas do mesmo estado não geram avisos, e voltar a ligar não é alarme.
+- **Bug apanhado na verificação:** o aviso não aparecia na leitura do instantâneo porque **não era
+  persistido** (`transcript.add` sem `saveState()`). Corrigido — o aviso sobrevive a fechar a app.
+- **Verificação:** no aparelho, com a app a correr: desligar a acessibilidade →
+  *"a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã"* no transcript (gravado).
+  `AvisosTest` cobre a lógica de transição (só cai, não repete, conta quedas).
+- **Origem:** **[LOCAL]**.

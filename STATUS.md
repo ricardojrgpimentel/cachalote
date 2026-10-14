@@ -1520,3 +1520,24 @@ sessões, modo desconhecido é ignorado. `BackupTest`: 4 testes.
 | Interface (Robolectric, JVM, CI) | `app/src/test` | 11 |
 | Backup (Robolectric, JVM, CI) | `app/src/test` | 4 |
 | Recursos e notificação (aparelho) | `app/src/androidTest` | 9 |
+
+
+---
+
+## 47. Três melhorias de uso diário
+
+| Item | O que estava mal | O que ficou | Testes |
+|---|---|---|---|
+| **Aviso de autorização pendente** | o diálogo só existe dentro da app: com a app atrás, o agente ficava **parado em silêncio** | notificação ao nascer o pedido (id `1002`), cancelada ao responder; tocar abre a app no diálogo | `AvisosTest` (8) |
+| **Consumo de contexto** | o motor envia `usage_update` em cada turno e a app **deitava fora** | `contexto: 6 290 / 1 000 000 · 1%` no cabeçalho (separador de milhares fino, como manda o português) | `UsoTest` (5) + `ConsumoTest` (2) |
+| **Vigilância da acessibilidade** | o serviço caía e o agente só descobria **ao falhar** | vigia a cada 5 s: aviso na conversa (persistido) e notificação se a app estiver atrás; só na transição ligada→desligada | `AvisosTest` + verificação no aparelho |
+
+**Detalhes que valem a pena:** cada aviso tem o **seu id** (com um id partilhado, uma notificação
+apagava a outra — há teste); e o aviso da acessibilidade **não era persistido**, o que só se
+descobriu ao ir lê-lo no instantâneo (corrigido).
+
+**Verificação no aparelho:** desligar a acessibilidade com a app a correr produziu
+*"a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade
+→ Cachalote)"* no transcript. A captura do cabeçalho com o consumo **não** foi possível: a
+automação de UI voltou a falhar no campo de escrita (é o problema crónico que os testes na JVM
+vieram resolver) — o indicador está coberto pelo `ConsumoTest`.

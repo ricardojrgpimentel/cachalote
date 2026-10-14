@@ -8,6 +8,8 @@
     <string name="abrir_acessibilidade">Abrir Definições → Acessibilidade</string>
     <string name="accessibility_description">Dá ao agente Cachalote olhos e dedos: lê a árvore de controlos do ecrã, toca, escreve, faz scroll e captura o ecrã, quando lhe pedires.</string>
     <string name="acessibilidade">Acessibilidade</string>
+    <string name="acessibilidade_caiu">a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)</string>
+    <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
     <string name="acesso">Acesso</string>
     <string name="anexar">Anexar</string>
     <string name="anexar_imagem">Anexar imagem</string>
@@ -74,6 +76,10 @@
     <string name="motor_shizuku">Shizuku</string>
     <string name="negar_todas">Negar todas</string>
     <string name="nenhuma">nenhuma</string>
+    <string name="notif_acessibilidade_texto">Sem o serviço de acessibilidade o agente não vê nem toca no ecrã. Liga-o em Definições → Acessibilidade → Cachalote.</string>
+    <string name="notif_acessibilidade_titulo">A acessibilidade desligou-se</string>
+    <string name="notif_autorizacao_texto">está à espera de decisão: %1$s</string>
+    <string name="notif_autorizacao_titulo">O agente precisa da tua autorização</string>
     <string name="notif_canal_descricao">Avisa quando o agente acaba um turno com a app em segundo plano.</string>
     <string name="notif_canal_nome">Fim de turno</string>
     <string name="notif_sem_texto">(sem texto na resposta)</string>
