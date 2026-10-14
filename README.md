@@ -21,6 +21,9 @@ Uma app Android que corre o [DeepSeek Harness](https://www.npmjs.com/package/@de
   diálogo no ecrã para autorizar ou recusar.
 - **Capacidades Android** dadas ao agente por um plugin nosso: notificações, ver o ecrã, tocar,
   escrever, teclas e capturas — através de um serviço de acessibilidade.
+- **Ecrã virtual** (reimplementado com APIs do AOSP, sem LGPL): uma segunda tela onde o agente
+  abre apps, vê e toca **sem mexer no teu ecrã** — com pré-visualização na app. Não precisa do
+  serviço de acessibilidade.
 - **Chave do provedor introduzida na app** e nunca copiada de outro sítio.
 
 ## Três motores, um interruptor

@@ -78,8 +78,14 @@ Medido: empacotar o núcleo fixo por esbuild ⇒ −68 % no arranque; somar snap
 ### D7 — Base de conhecimento obrigatória
 As ~25 armadilhas já pagas por eles ficam em [`docs/knowledge-android.md`](docs/knowledge-android.md), cada uma com sintoma/causa/solução/origem. Regra do projecto: **nenhum bug de plataforma resolvido duas vezes**.
 
-### D8 — Licenças
-Kernel DSH (MIT), Node (MIT), plugins deles (MIT) → reutilizáveis com atribuição. **Excepção**: `vscreen/` (virtual display) é derivado do Operit e é **LGPL-3.0**; se adoptarmos virtual display, ou cumprimos LGPL (ficheiro + fonte + aviso) ou reimplementamos. Virtual display fica para F4+ e é decisão explícita.
+### D8 — Licenças — ✅ **decidido: opção A (reimplementar)**
+Kernel DSH (MIT), Node (MIT), plugins deles (MIT) → reutilizáveis com atribuição. **Excepção**: o
+*virtual display* do Operit é **LGPL-3.0**.
+**Decisão do utilizador (2026-10-14):** o vscreen foi **reimplementado do zero** com APIs do AOSP
+(`DisplayManager.createVirtualDisplay` + `ImageReader`; injecção por `input -d`), **sem uma linha
+de LGPL** — ver STATUS §37-39 e knowledge 103-106. Os avisos de terceiros enumeram as 9
+bibliotecas redistribuídas com as suas licenças; falta juntar os **textos integrais** numa área da
+app (tarefa registada).
 
 ### D10 — Aviso de segurança: o confinamento no Android é *declarativo*
 O motor corre como **root** e no Android **não há Landlock**. O `sandboxMode` que o
