@@ -609,7 +609,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 |---|---|---|
 | ~~**`cachalote doctor`**~~ | ✅ **feito em §30** | verifica ficheiros, chave, daemon, `oom_score_adj`, watchdog, canal, motor, app ponta a ponta, disco e registos; `exit=1` se houver problemas |
 | **Títulos de sessão** | ✅ **feito em §31** | o motor gera mas **não expõe** no `session/list`; a app deriva o título do primeiro prompt (o do motor tem prioridade se vier) |
-| **LMK sob pressão real** | meio | `oom_score_adj` e watchdog feitos (§26); falta encher a RAM e ver o comportamento |
+| ~~**LMK sob pressão real**~~ | ✅ **feito em §32** | 97% de RAM durante 30 s: daemon, motor e app sobreviveram sem mudar de pid |
 | **Clique do ✕ na UI** | meio | o fecho funciona (ACPP medido); o teste de UI não acerta nas linhas do diálogo |
 | **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
 | **MCP servers configuráveis** | por fazer | o `session/new` vai com `mcpServers: []`; dava para ligar ferramentas externas |
@@ -1223,3 +1223,24 @@ O que ficou, e é o que se vê na lista:
 **Limite honesto:** a lista do diálogo começa nas sessões mais antigas (sem título, criadas antes
 disto), por isso não consegui ver a linha nova no ecrã — o que está provado é o que fica gravado e
 a ordem de preferência no código.
+
+
+---
+
+## 32. LMK sob pressão: 97% da memória, nada perdido
+
+Teste repetível: [`tools/lmk-pressure-test.sh`](tools/lmk-pressure-test.sh) — aloca a memória com
+`oom_score_adj=1000` (o mais matável), **segura-a** e observa quem sobrevive.
+
+| Medição | Resultado |
+|---|---|
+| Memória durante o teste | **7 225 / 7 422 MB (97%)** sustentados 30 s |
+| Alocador sacrificial (+1000) | morto em <5 s (era o escolhido, como planeado) |
+| Daemon (-800) | **vivo, mesmo pid** (3409) |
+| Motor (-500) | **vivo, mesmo pid** (3420) |
+| App (serviço em primeiro plano) | **viva** (15145) |
+| Depois da pressão | `cachalote doctor` → `1 aviso(s), nenhum problema` |
+
+O aviso é a acessibilidade desligada (a reinstalação da app faz isso), não um efeito da pressão.
+A primeira versão do teste não valia nada — o alocador saía assim que alocava e a "pressão"
+durava milissegundos; só depois de o fazer **segurar** a memória é que o número acima é real.

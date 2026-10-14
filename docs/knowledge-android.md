@@ -1120,3 +1120,23 @@ diferentes, e tratá-los como iguais era o erro:
   disto), por isso não consegui ver a linha nova no ecrã; o que está provado é o que fica gravado
   e a ordem de preferência no código.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AE. Pressão de memória a sério
+
+### 98. Encher a RAM para testar o LMK (e o que se aprende com isso)
+- **Como se faz sem ferramentas extra:** um processo Node que aloca 64 MB de cada vez até um
+  tecto, com `oom_score_adj = 1000` (o mais matável possível). O kernel mata-o **a ele** — que é
+  precisamente o que se quer verificar: com o daemon em **-800** e o motor em **-500**, a vítima
+  escolhida é o alocador.
+- **Primeira versão do teste estava errada:** o alocador saía mal acabava de alocar, e a "pressão"
+  durava milissegundos (a observação via tudo vivo sem stress nenhum). Agora ele **segura** a
+  memória 40 s.
+- **Resultado medido (S10+, 7.4 GB):** 7.2 GB usados (97%) durante 30 s, e
+  **daemon, motor e app sobreviveram todos, sem mudar de pid**; depois da pressão, o
+  `cachalote doctor` diz `1 aviso(s), nenhum problema` (o aviso é a acessibilidade, que a
+  reinstalação da app desliga — não é do teste).
+- **Nota:** o registo do kernel não mostrou linhas de *lowmemorykiller* neste telefone
+  (LineageOS 23 / kernel moderno usa outras vias); a evidência é a memória medida e os pids.
+- **Origem:** **[LOCAL]**.
