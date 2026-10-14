@@ -28,7 +28,12 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
 
     companion object {
         const val CHANNEL_ID = "cachalote_agent"
-        val CAPABILITIES = listOf("notify", "screen", "tap", "type", "key", "screenshot")
+        val CAPABILITIES = listOf(
+            "notify", "screen", "tap", "type", "key", "screenshot",
+            // Ecrã virtual (reimplementado com APIs AOSP — ver VirtualScreen.kt). Desligadas por
+            // omissão, como as outras: o utilizador autoriza no separador Poderes.
+            "vscreen_start", "vscreen_status", "vscreen_frame", "vscreen_stop",
+        )
     }
 
     suspend fun execute(capability: String, params: JSONObject): JSONObject = withContext(Dispatchers.IO) {
@@ -54,6 +59,15 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
             "type" -> type(params)
             "key" -> key(params)
             "screenshot" -> screenshot(params)
+            "vscreen_start" -> VirtualScreen.start(
+                context,
+                params.optInt("width", 720),
+                params.optInt("height", 1280),
+                params.optInt("density", 320),
+            )
+            "vscreen_status" -> VirtualScreen.status()
+            "vscreen_frame" -> VirtualScreen.frame(params.optInt("maxWidth", 720))
+            "vscreen_stop" -> VirtualScreen.stop()
             else -> throw IllegalArgumentException("capacidade desconhecida: $capability")
         }
     }

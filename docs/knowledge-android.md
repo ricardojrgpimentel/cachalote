@@ -1212,3 +1212,34 @@ diferentes, e tratá-los como iguais era o erro:
 - **Cuidado com o schema:** `attachmentRefs` tem de ser `{type:"array", items:{type:"json"}}` —
   um `{}` sem `type` desliga o plugin inteiro (item 82).
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AH. Ecrã virtual (vscreen) reimplementado com APIs AOSP
+
+### 103. `createVirtualDisplay` + `ImageReader` numa app normal: funciona, e sem permissões
+- **Decisão do utilizador:** opção (a) — reimplementar do zero, **zero LGPL**. Nada aqui vem do
+  Operit; usa-se API pública do AOSP (Apache-2.0).
+- **O que basta:**
+  1. `DisplayManager.createVirtualDisplay("cachalote-vscreen", w, h, dpi, surface, flags)` com o
+     `Surface` de um `ImageReader.newInstance(w, h, PixelFormat.RGBA_8888, 2)`; flags
+     `VIRTUAL_DISPLAY_FLAG_PUBLIC or OWN_CONTENT_ONLY`. **Não precisou de permissão nenhuma** numa
+     app normal (ao contrário do que eu temia: não é preciso `CAPTURE_VIDEO_OUTPUT`).
+  2. Cada fotograma sai no `ImageReader` como `Image` RGBA; converter em `Bitmap` exige tratar o
+     **`rowStride`** (cria-se o bitmap largo e corta-se a margem).
+  3. O PNG resultante é o **mesmo formato** da capacidade `screenshot` (`data` base64 + `mediaType`)
+     — entra no caminho de anexos do `android_see` sem código novo.
+- **Lançar apps no ecrã:** `am start --display <id> -n <pkg>/<activity>` (ou
+  `ActivityOptions.setLaunchDisplayId`). Se a app já estiver a correr, o Android avisa
+  *"intent has been delivered to currently running top-most instance"* e traz a instância para ali
+  — que é o que se quer.
+- **Injectar toques/teclas:** `input -d <displayId> tap x y` **como root** (é o daemon que o faz).
+  Consequência importante: no ecrã virtual **não é preciso o serviço de acessibilidade** — a
+  captura vem do `ImageReader` e o toque vem do `input`.
+- **Verificação no S10+ (com prova visual):** `displayId=2`, 720×1280 @320; calculadora lançada
+  com `--display 2`; fotograma em
+  [`docs/screenshots/vscreen-calculadora.png`](../docs/screenshots/vscreen-calculadora.png)
+  (mostra **512**); depois de `input -d 2 tap 105 838` (a tecla «7»), novo fotograma em
+  [`docs/screenshots/vscreen-toque-registado.png`](../docs/screenshots/vscreen-toque-registado.png)
+  (mostra **5 127**) — o toque registou-se no ecrã virtual.
+- **Origem:** **[LOCAL]**.

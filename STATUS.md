@@ -1336,3 +1336,24 @@ Ou seja: comparou imagens **no tempo** — que é exactamente o que a visão em 
 
 **Pelo caminho:** a primeira tentativa falhou porque a acessibilidade estava desligada — e o
 `cachalote doctor` (feito nesta ronda) já o tinha avisado com `1 aviso`; bastava tê-lo lido.
+
+
+---
+
+## 37. vscreen (ecrã virtual) — opção A, reimplementado: as peças difíceis provadas
+
+Decisão do utilizador: **reimplementar do zero com APIs do AOSP**, sem uma linha de LGPL.
+
+| Peça | Como | Prova |
+|---|---|---|
+| Criar o ecrã | `DisplayManager.createVirtualDisplay` + `Surface` de um `ImageReader` RGBA | `displayId=2`, 720×1280 @320, **sem permissões** |
+| Ver o que lá se desenha | `ImageReader` → `Bitmap` (com tratamento de `rowStride`) → PNG base64 | [captura com 512](docs/screenshots/vscreen-calculadora.png) |
+| Pôr apps lá | `am start --display <id>` (`ActivityOptions.setLaunchDisplayId`) | a calculadora desenhou-se no ecrã virtual |
+| Tocar lá | `input -d <id> tap x y` como root (feito pelo daemon) | [captura com 5 127](docs/screenshots/vscreen-toque-registado.png) depois do toque na tecla «7» |
+
+**Vantagem arquitectural que apareceu:** no ecrã virtual **não é preciso o serviço de
+acessibilidade** — a imagem vem do `ImageReader` e o toque do `input -d`. O agente pode portanto
+trabalhar numa segunda tela mesmo com a acessibilidade desligada, e o telefone fica livre.
+
+**Falta (próximas etapas):** ferramentas do agente para o ecrã virtual (S3) e a pré-visualização
+na app (S4).
