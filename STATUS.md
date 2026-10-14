@@ -613,9 +613,9 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**Clique do ✕ na UI**~~ | ✅ **feito em §35** | bug do diálogo corrigido (leitura da sessão activa no topo) + botão **Fechar a sessão activa**; verificado pela UI |
 | ~~**Visão em vídeo**~~ | ✅ **feito em §36** | `android_see` com `frames`/`intervalMs`: anexa N fotogramas ao mesmo resultado; o agente comparou-os no tempo |
 | ~~**MCP servers configuráveis**~~ | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado **no motor e pela app** (`mcp__ping__ping` → pong) |
-| **Notificação no fim do turno** | por fazer | hoje um turno longo que acaba com a app em segundo plano não avisa ninguém; é uma linha no `CachaloteAgentService` |
-| **Testes de UI instrumentados** (`androidTest`) | por fazer | os três scripts de teste conduzem a app por `uiautomator` e são **flaky por natureza** (campos errados, teclado, `BACK`); umas quantas asserções Compose resolviam isso de vez |
-| **Inglês / i18n** | decisão | a app tem os textos **em português e dentro do Kotlin** (não há `strings.xml`); para um repo público vale decidir: manter PT, ou extrair + traduzir |
+| ~~**Notificação no fim do turno**~~ | ✅ **feito em §41** | avisa com a app em segundo plano (e só aí); canal próprio para poder silenciar |
+| ~~**Testes instrumentados**~~ | ✅ **feito em §42** | 9 testes no aparelho (i18n, licenças, notificação), sem um único toque; + `tools/i18n-check.sh` na CI |
+| ~~**Inglês / i18n**~~ | ✅ **feito em §43** | 106 textos em `values/` (inglês, omissão) e `values-pt-rPT/` (pt-PT); pt-BR cai no pt-PT e nunca apanha formas brasileiras |
 | **vscreen: polimento** | por fazer | `tap`/`key`/`text` próprios no ecrã virtual (hoje o agente usa `bash input -d`), pré-visualização ao vivo (auto-refresh) e `vscreen_launch` dentro da ferramenta |
 | ~~**Ecrã de licenças na app**~~ | ✅ **feito em §40** | 13 entradas com os **textos integrais** em `assets/licenses.json` + diálogo em Poderes |
 | ~~**Publicar o kernel e a APK de release**~~ | ✅ **preparado** (§3 do `PUBLICAR.md`) | release `kernel-77fa6785a4e4` com `kernel.zip` (211 MB) + APK assinada (42 MB); falta **tornares o repo público** |
@@ -1430,3 +1430,39 @@ fugas — `dumpsys display` fica limpo).
 
 **Armadilha:** o `LICENSE` do repositório do Node tem 154 KB e **não** é o texto MIT — inclui as
 licenças de todas as dependências embutidas. Para o MIT usa-se o texto canónico.
+
+
+---
+
+## 41. Notificação no fim do turno
+
+Um turno longo que acaba com a app em segundo plano passa a avisar — é o que torna o agente
+usável "em paralelo": lanças o trabalho e voltas ao que estavas a fazer. Com a app à frente não
+notifica (seria ruído). Canal próprio (`cachalote-turno`) para se poder silenciar só isto.
+
+## 42. Testes instrumentados (substituem os toques cegos)
+
+`app/src/androidTest` — **9 testes**, a correr no aparelho com `connectedDebugAndroidTest`, sem um
+único toque de ecrã:
+
+| Teste | O que garante |
+|---|---|
+| i18n (5) | inglês por omissão · pt-PT correcto · **pt-BR nunca apanha formas brasileiras** · nenhuma string vazia · a maioria traduzida |
+| licenças (2) | carregam com texto integral · os textos são os verdadeiros (`Apache License`, garantia do MIT, `as-is` do zlib) |
+| notificação (2) | aparece com a app atrás · **não** aparece com a app à frente |
+
+**Apanharam um pt-BR-ismo real:** o texto em pt-PT dizia "segunda **tela**". Corrigido para "um
+segundo ecrã" — sem os testes, isto ia para o telefone.
+
+## 43. Duas línguas: pt-PT e inglês
+
+| Peça | Como |
+|---|---|
+| Inglês (omissão) | `res/values/strings.xml` — 106 textos |
+| Português europeu | `res/values-pt-rPT/strings.xml` — os mesmos 106 |
+| Idiomas declarados | `res/xml/locales_config.xml` + `android:localeConfig` |
+| pt-BR | cai no pt-PT (não há `values-pt-rBR`), sempre **sem** formas brasileiras |
+| Guarda na CI | `tools/i18n-check.sh`: chaves iguais nos dois ficheiros, `R.string.*` todas definidas, zero formas brasileiras |
+
+O extractor (`.work/i18n-extract.py`) ficou guardado contra apagar chaves: à primeira tentativa
+apagou o `strings.xml` que já existia (`app_name`, `accessibility_description`) e o build apanhou-o.

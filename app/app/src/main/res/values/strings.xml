@@ -69,6 +69,11 @@
     <string name="motor_shizuku">Shizuku</string>
     <string name="negar_todas">Deny all</string>
     <string name="nenhuma">none</string>
+    <string name="notif_canal_descricao">Tells you when the agent finishes a turn while the app is in the background.</string>
+    <string name="notif_canal_nome">Turn finished</string>
+    <string name="notif_sem_texto">(no text in the reply)</string>
+    <string name="notif_turno_falhou">the turn failed: %1$s</string>
+    <string name="notif_turno_titulo">The agent finished the turn</string>
     <string name="nova_sessao">New session</string>
     <string name="obter_token">Get token (root)</string>
     <string name="parar">Stop</string>

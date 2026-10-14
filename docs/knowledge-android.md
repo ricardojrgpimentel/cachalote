@@ -1303,3 +1303,33 @@ diferentes, e tratá-los como iguais era o erro:
 - **Verificação:** diálogo com a lista e o texto do Apache-2.0 em
   [`docs/screenshots/app-licencas.png`](../docs/screenshots/app-licencas.png).
 - **Origem:** **[LOCAL]**.
+
+### 108. Notificação no fim do turno (e porque é que a app tem de saber se está à frente)
+- **O que faz:** quando um turno acaba e a app **não** está em primeiro plano, aparece uma
+  notificação com o início da resposta (ou o erro). Com a app à frente não notifica nada — seria
+  ruído.
+- **Como se sabe se está à frente:** um sinal em `Notificacoes.appEmPrimeiroPlano`, marcado no
+  `onResume`/`onPause` do `MainActivity`. Não se usa `getRunningAppProcesses` (mentia desde o
+  Android 5) nem se olha para o ciclo de vida do serviço (o serviço vive sempre).
+- **Canal próprio** (`cachalote-turno`) para o utilizador poder silenciar só isto.
+- **Verificação:** testes instrumentados — a notificação aparece com o sinal a falso e **não**
+  aparece com o sinal a verdadeiro (`RecursosTest`).
+
+### 109. Testes instrumentados a substituir os toques cegos
+- **O problema:** os testes de UI por `uiautomator` falhavam por tudo e por nada (campo sem foco,
+  teclado a tapar o botão, `BACK` a fechar a app, texto escrito no campo errado). Verificavam mal e
+  custavam tempo.
+- **O que se fez:** `app/src/androidTest` com JUnit + `androidx.test`, a correr **no aparelho** com
+  `gradle connectedDebugAndroidTest`. Nove testes, sem um único toque:
+  - i18n: inglês por omissão, pt-PT correcto, **pt-BR nunca apanha formas brasileiras**, nenhuma
+    string vazia, e a maioria traduzida (se tudo fosse igual, o pt-PT estaria por traduzir);
+  - licenças: carregam, têm texto, e os textos são os verdadeiros (`Apache License`, cláusula de
+    garantia do MIT, `as-is` do zlib);
+  - notificação: aparece com a app atrás, não aparece com a app à frente.
+- **Bónus:** os testes **apanharam um pt-BR-ismo real** que me tinha escapado — o texto do ecrã
+  virtual em pt-PT dizia "segunda tela". Passou a "um segundo ecrã". Sem os testes, isso ia para o
+  telefone.
+- **CI:** `tools/i18n-check.sh` compara as chaves dos dois ficheiros (uma tradução em falta cai
+  silenciosamente no inglês, por isso só uma comparação de ficheiros a apanha), confirma que todas
+  as `R.string.*` usadas existem e recusa formas brasileiras no pt-PT.
+- **Origem:** **[LOCAL]**.

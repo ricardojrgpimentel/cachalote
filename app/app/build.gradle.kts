@@ -12,6 +12,7 @@ android {
         applicationId = "dev.ricardopimentel.cachalote"
         minSdk = 26
         targetSdk = 35
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 1
         versionName = "0.3.0-f2"
     }
@@ -78,4 +79,11 @@ dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // Testes instrumentados: a app a sério, no aparelho, sem toques cegos de uiautomator.
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

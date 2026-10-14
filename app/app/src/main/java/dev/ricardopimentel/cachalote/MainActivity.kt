@@ -84,6 +84,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        Notificacoes.appEmPrimeiroPlano = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Notificacoes.appEmPrimeiroPlano = false
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Sem isto, o Compose desenha por baixo do teclado e o botão Enviar fica

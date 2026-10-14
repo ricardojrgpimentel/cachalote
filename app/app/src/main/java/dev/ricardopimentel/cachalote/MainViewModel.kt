@@ -475,8 +475,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // de erro), para se perceber o que aconteceu ao turno.
         try {
             controller.prompt(sid!!, text, img?.bytes, img?.mime ?: "image/png")
+            // Turno acabado. Com a app em segundo plano, avisa-se por notificação (é o que
+            // permite lançar trabalho e ir fazer outra coisa).
+            val resposta = transcript.lastOrNull { it.role == "assistant" }?.text.orEmpty()
+            Notificacoes.fimDeTurno(
+                getApplication(),
+                getApplication<Application>().getString(R.string.notif_turno_titulo),
+                resposta.ifBlank { getApplication<Application>().getString(R.string.notif_sem_texto) },
+            )
         } catch (t: Throwable) {
             transcript.add(ChatLine("error", "turno falhou: ${t.message ?: t::class.java.simpleName}"))
+            Notificacoes.fimDeTurno(
+                getApplication(),
+                getApplication<Application>().getString(R.string.notif_turno_titulo),
+                getApplication<Application>().getString(R.string.notif_turno_falhou, t.message ?: "?"),
+            )
         }
     }
 
