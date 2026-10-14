@@ -1,0 +1,142 @@
+{
+ "colorMode": "DARK",
+ "font": "SPACE_GROTESK",
+ "roundness": "ROUND_EIGHT",
+ "customColor": "#38efc2",
+ "headlineFont": "SPACE_GROTESK",
+ "bodyFont": "GEIST",
+ "labelFont": "JETBRAINS_MONO",
+ "namedColors": {
+  "tertiary": "#c0ffdc",
+  "inverse_surface": "#dbe3f0",
+  "surface_container_low": "#141c25",
+  "surface_container": "#182029",
+  "secondary_fixed_dim": "#58d6f1",
+  "inverse_on_surface": "#29313b",
+  "on_error": "#690005",
+  "on_primary": "#00382b",
+  "outline": "#84948d",
+  "surface_container_high": "#232b34",
+  "surface_container_lowest": "#070f17",
+  "primary": "#beffe7",
+  "surface_bright": "#323a44",
+  "tertiary_fixed": "#6ffbbe",
+  "on_primary_fixed": "#002118",
+  "surface_tint": "#15e0b4",
+  "tertiary_container": "#5fedb0",
+  "on_error_container": "#ffdad6",
+  "error": "#ffb4ab",
+  "on_tertiary_container": "#006947",
+  "on_tertiary_fixed": "#002113",
+  "on_surface": "#dbe3f0",
+  "surface_dim": "#0c141d",
+  "on_surface_variant": "#bacac2",
+  "on_tertiary_fixed_variant": "#005236",
+  "on_primary_fixed_variant": "#00513f",
+  "on_secondary_container": "#003640",
+  "tertiary_fixed_dim": "#4edea3",
+  "secondary": "#58d6f1",
+  "on_secondary": "#00363f",
+  "on_primary_container": "#006952",
+  "primary_fixed": "#4dfdcf",
+  "surface_container_highest": "#2d353f",
+  "primary_fixed_dim": "#15e0b4",
+  "inverse_primary": "#006b55",
+  "secondary_fixed": "#a7edff",
+  "surface": "#0c141d",
+  "error_container": "#93000a",
+  "outline_variant": "#3b4a44",
+  "background": "#0c141d",
+  "on_secondary_fixed_variant": "#004e5b",
+  "on_tertiary": "#003824",
+  "surface_variant": "#2d353f",
+  "primary_container": "#38efc2",
+  "on_background": "#dbe3f0",
+  "secondary_container": "#00a7c0",
+  "on_secondary_fixed": "#001f25"
+ },
+ "designMd": "---\nname: Cachalote Native Runtime\ncolors:\n  surface: '#0c141d'\n  surface-dim: '#0c141d'\n  surface-bright: '#323a44'\n  surface-container-lowest: '#070f17'\n  surface-container-low: '#141c25'\n  surface-container: '#182029'\n  surface-container-high: '#232b34'\n  surface-container-highest: '#2d353f'\n  on-surface: '#dbe3f0'\n  on-surface-variant: '#bacac2'\n  inverse-surface: '#dbe3f0'\n  inverse-on-surface: '#29313b'\n  outline: '#84948d'\n  outline-variant: '#3b4a44'\n  surface-tint: '#15e0b4'\n  primary: '#beffe7'\n  on-primary: '#00382b'\n  primary-container: '#38efc2'\n  on-primary-container: '#006952'\n  inverse-primary: '#006b55'\n  secondary: '#58d6f1'\n  on-secondary: '#00363f'\n  secondary-container: '#00a7c0'\n  on-secondary-container: '#003640'\n  tertiary: '#c0ffdc'\n  on-tertiary: '#003824'\n  tertiary-container: '#5fedb0'\n  on-tertiary-container: '#006947'\n  error: '#ffb4ab'\n  on-error: '#690005'\n  error-container: '#93000a'\n  on-error-container: '#ffdad6'\n  primary-fixed: '#4dfdcf'\n  primary-fixed-dim: '#15e0b4'\n  on-primary-fixed: '#002118'\n  on-primary-fixed-variant: '#00513f'\n  secondary-fixed: '#a7edff'\n  secondary-fixed-dim: '#58d6f1'\n  on-secondary-fixed: '#001f25'\n  on-secondary-fixed-variant: '#004e5b'\n  tertiary-fixed: '#6ffbbe'\n  tertiary-fixed-dim: '#4edea3'\n  on-tertiary-fixed: '#002113'\n  on-tertiary-fixed-variant: '#005236'\n  background: '#0c141d'\n  on-background: '#dbe3f0'\n  surface-variant: '#2d353f'\ntypography:\n  headline-lg:\n    fontFamily: Space Grotesk\n    fontSize: 30px\n    fontWeight: '600'\n    lineHeight: 38px\n    letterSpacing: -0.02em\n  headline-md:\n    fontFamily: Space Grotesk\n    fontSize: 24px\n    fontWeight: '500'\n    lineHeight: 32px\n    letterSpacing: -0.015em\n  headline-sm:\n    fontFamily: Space Grotesk\n    fontSize: 20px\n    fontWeight: '500'\n    lineHeight: 26px\n    letterSpacing: -0.01em\n  body-lg:\n    fontFamily: Geist\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n    letterSpacing: 0em\n  body-md:\n    fontFamily: Geist\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n    letterSpacing: 0.01em\n  body-sm:\n    fontFamily: Geist\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: 0.02em\n  label-lg:\n    fontFamily: JetBrains Mono\n    fontSize: 13px\n    fontWeight: '500'\n    lineHeight: 18px\n    letterSpacing: -0.01em\n  label-md:\n    fontFamily: JetBrains Mono\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 16px\n    letterSpacing: 0em\n  label-sm:\n    fontFamily: JetBrains Mono\n    fontSize: 10px\n    fontWeight: '400'\n    lineHeight: 14px\n    letterSpacing: 0.02em\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  gutter: 0.75rem\n  margin: 1rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2rem\n---\n\n## Brand & Style\n\nThis design system establishes an on-device, dark-first operational environment for mobile software engineering. The brand personality evokes extreme technical competence, silent execution power, and absolute privacy. Like a deep-diving organism navigating intense pressures, the interface remains calm, deliberate, and structurally robust under heavy computational loads.\n\nThe visual direction synthesizes Material 3 structural foundations with high-density developer tooling aesthetics. It discards decorative fluff in favor of razor-sharp data legibility, low thermal distraction, and rapid contextual switching. The emotional signature is calm mastery: zero latency anxiety, clear telemetry, and reliable autonomous tool orchestration.\n\nEuropean Portuguese (pt-PT) serves as the primary system voice. Terminology is natural, technically accurate, and standard among Portuguese software engineers (e.g., *depuração*, *registo de eventos*, *contexto ativo*, *executar*, *encadear ferramentas*), avoiding localized colloquialisms or awkward machine translations.\n\n## Colors\n\nThe palette is engineered specifically for OLED displays and extended low-light terminal interaction. The surface stack relies on deep blue-grey luminance shifts to signify depth without triggering backlight fatigue.\n\n- **Background & Canvas (`#0d131a`):** The absolute baseline. Anchors the viewport, status bar, and root scaffolding.\n- **Surface Container Lowest (`#131b24`):** Base container for recessed areas, log traces, and background panels.\n- **Surface Container (`#1b2431`):** Default card tier, inspector surfaces, and collapsed process trees.\n- **Surface Container High (`#222e3e`):** Elevated overlays, modal bottom sheets, contextual menus, and active tool nodes.\n- **Primary Accent (`#38efc2`):** Crisp neon teal. Represents user prompts, primary dispatch actions, and active local inference loops. High-contrast against all surface tiers.\n- **Secondary Accent (`#48cae4`):** Soft luminous cyan. Reserved for syntax highlights, diff modifications, and agent reasoning streams.\n- **Status Emerald (`#10b981`):** On-device hardware status, active weights verification, zero-error validation, and low memory pressure states.\n- **Warning & Error Red (`#ef4444`):** Model stalls, context overflow, file permission locks, and runtime exceptions.\n- **On-Surface High Emphasis (`#f1f5f9`):** Primary readable content, diff additions, and core metrics.\n- **On-Surface Low Emphasis (`#64748b`):** Metadata timestamps, token limits, line numbering, and dormant flags.\n\n## Typography\n\nThe typographic hierarchy distinguishes operational text from functional telemetry through deliberate structural divergence.\n\n- **Display & Headings:** Set in *Space Grotesk*. Provides geometric precision and modern architectural authority without overwhelming small mobile viewports.\n- **Narrative & System Copy:** Set in *Geist*. Built for supreme screen clarity, neutral rendering, and comfortable multi-line reasoning traces.\n- **Code, Telemetry, and Metrology:** Set strictly in *JetBrains Mono*. All token meters (`tk/s`), hardware utilization metrics (`RAM 4.2/8.0 GB`), AST tool payloads, and raw shell captures must use this family to ensure absolute tabular alignment and instant terminal parsing.\n\nAll code viewports must disable artificial font smoothing anomalies and enforce proportional line heights to guarantee strict baseline vertical rhythm across dense diff inspections.\n\n## Layout & Spacing\n\nThe layout is built for fluid touch ergonomics on handheld portrait viewports, adapting effortlessly to foldables and tablet splits. \n\n- **Grid Architecture:** 4-column layout on compact mobile devices (<600dp), expanding to an 8-column layout on medium/foldable screens. The lateral margins are strictly `16dp` (`1rem`) to maximize visible horizontal line length for code buffers.\n- **Spatial Rhythm:** Built strictly around an 8dp baseline grid (with 4dp sub-steps for atomic inline badges and status dots).\n- **Physical Touch Target Guarantee:** Every interactive node—from small terminal toggles to tool abort chips—must measure at minimum `48x48dp` in accessible bounds, using transparent touch expansions if the visual target is compact.\n- **Thumb Zone Anchoring:** Input bars, action execution buttons, and stream interruptions are docked directly above the system navigation bar or virtual keyboard, eliminating upper-screen reach stress.\n\n## Elevation & Depth\n\nVisual hierarchy uses pure tonal stepping coupled with ultra-subtle ambient illumination rather than standard diffuse drop shadows.\n\n- **Tonal Stepping:** Surfaces ascend physically by lightening their blue-grey values (`#0d131a` base → `#131b24` surface low → `#1b2431` card → `#222e3e` overlay).\n- **Hairline Outlines:** Floating panels, code blocks, and context cards feature a 1dp crisp boundary with `rgba(255, 255, 255, 0.08)` to maintain absolute separation without lighting blur. Active panels transition their border to `rgba(56, 239, 194, 0.35)`.\n- **Primary Ambient Glow:** Modals, floating action docks, and executing states cast an ultra-diffused, directional luminescence: `0px 8px 24px rgba(38, 208, 206, 0.12)`. This conveys active on-device neural processing without visual clutter.\n\n## Shapes\n\nThe design system enforces a disciplined `16dp` (`1rem`) base curvature across all primary structural containers and dialog elements, ensuring a tactile, ergonomic Material 3 feel that softens intense engineering data.\n\n- **Primary Cards and Sheets:** Standardized at `16dp` (`rounded-lg`).\n- **Interactive Buttons & Input Bars:** Configured with `16dp` corners or full continuous pill curvature (`rounded-xl` / fully rounded) depending on terminal grouping context.\n- **Code Blocks & Tool Payloads:** Scaled down to `8dp` (`rounded`) interior nests to retain rigid terminal-like structure while sitting seamlessly within `16dp` parent containers.\n\n## Components\n\n### Botões (Buttons)\n- **Ação Principal (Primary Action):** Filled container (`#38efc2`), text and iconography in dark charcoal (`#0d131a`, `JetBrains Mono` medium). Height: `48dp`. High-priority commands: *Executar Agente*, *Aplicar Alterações*.\n- **Ação Secundária (Secondary Action):** Outlined with 1dp `#222e3e`, background `#131b24`, text in `#38efc2`. Standard commands: *Depurar*, *Ver Registo*.\n- **Interrupção Crítica (Destructive/Halt):** Surface container with `#ef4444` border and text. Minimum height `48dp`: *Abortar Processo*.\n\n### Fichas Informativas & Filtros (Chips)\n- Compact telemetry badges (`height: 32dp`, touch bounds `48dp`).\n- Inactive state: `#131b24` background, `#64748b` text.\n- Active hardware state: `#1b2431` background with `#10b981` pulsing indicator dot (`6dp`) and monospace readout (ex: `NPU: Ativa • 24 tok/s`).\n\n### Blocos de Código e Diferenças (Code Blocks & Diffs)\n- Recessed `#131b24` surface with an upper control strip displaying filename, active syntax, and line metrics in `JetBrains Mono`.\n- Added lines: Background tinted `rgba(16, 185, 129, 0.12)`, text `#10b981`.\n- Removed lines: Background tinted `rgba(239, 68, 68, 0.12)`, text `#ef4444`.\n\n### Campos de Entrada (Input Fields)\n- Base background `#1b2431` with `16dp` rounded corners.\n- Placeholder text in `#64748b` (*Instrua o modelo local...*).\n- Active focus state: 1.5dp border in `#38efc2`, zero outer shadow, cursor tinted `#38efc2`. Integrated suffix action for audio or direct file context binding.\n\n### Cartões de Execução de Ferramentas (Tool Call Cards)\n- Modular cards placed inline within the agent stream.\n- Header showcases the tool status (*A Ler Ficheiro*, *A Escrever Diff*, *Terminal Shell*), an animated emerald spinner or tick icon, and execution duration.\n- Body displays collapsible monospaced arguments and output limits to preserve screen space.\n\n### Medidor de Contexto (Context Window Gauge)\n- Linear progress track spanning the bottom sheet or app bar (`height: 4dp`, background `#1b2431`).\n- Fill tracks dynamically from `#38efc2` (low context) to `#ef4444` (context exhaustion at >90% token window). Accompanied by inline monospace readouts (`ex: 14.2k / 16k tokens`).",
+ "colorVariant": "FIDELITY",
+ "overridePrimaryColor": "#38efc2",
+ "overrideSecondaryColor": "#48cae4",
+ "overrideTertiaryColor": "#10b981",
+ "overrideNeutralColor": "#131b24",
+ "spacingScale": 2,
+ "typography": {
+  "headline-sm": {
+   "fontFamily": "Space Grotesk",
+   "fontSize": "20px",
+   "fontWeight": "500",
+   "lineHeight": "26px",
+   "letterSpacing": "-0.01em"
+  },
+  "body-md": {
+   "fontFamily": "Geist",
+   "fontSize": "14px",
+   "fontWeight": "400",
+   "lineHeight": "20px",
+   "letterSpacing": "0.01em"
+  },
+  "label-md": {
+   "fontFamily": "JetBrains Mono",
+   "fontSize": "11px",
+   "fontWeight": "500",
+   "lineHeight": "16px",
+   "letterSpacing": "0em"
+  },
+  "headline-lg": {
+   "fontFamily": "Space Grotesk",
+   "fontSize": "30px",
+   "fontWeight": "600",
+   "lineHeight": "38px",
+   "letterSpacing": "-0.02em"
+  },
+  "body-sm": {
+   "fontFamily": "Geist",
+   "fontSize": "12px",
+   "fontWeight": "400",
+   "lineHeight": "16px",
+   "letterSpacing": "0.02em"
+  },
+  "label-sm": {
+   "fontFamily": "JetBrains Mono",
+   "fontSize": "10px",
+   "fontWeight": "400",
+   "lineHeight": "14px",
+   "letterSpacing": "0.02em"
+  },
+  "headline-md": {
+   "fontFamily": "Space Grotesk",
+   "fontSize": "24px",
+   "fontWeight": "500",
+   "lineHeight": "32px",
+   "letterSpacing": "-0.015em"
+  },
+  "label-lg": {
+   "fontFamily": "JetBrains Mono",
+   "fontSize": "13px",
+   "fontWeight": "500",
+   "lineHeight": "18px",
+   "letterSpacing": "-0.01em"
+  },
+  "body-lg": {
+   "fontFamily": "Geist",
+   "fontSize": "16px",
+   "fontWeight": "400",
+   "lineHeight": "24px",
+   "letterSpacing": "0em"
+  }
+ },
+ "spacing": {
+  "space-xs": "0.25rem",
+  "space-sm": "0.5rem",
+  "gutter": "0.75rem",
+  "space-md": "1rem",
+  "space-lg": "1.5rem",
+  "space-xl": "2rem",
+  "margin": "1rem"
+ },
+ "headlineFontFamily": "Space Grotesk",
+ "bodyFontFamily": "Geist",
+ "labelFontFamily": "JetBrains Mono"
+}

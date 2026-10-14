@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote · Agente de Código no Dispositivo</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#2d353f",
+            "surface-dim": "#0c141d",
+            "on-tertiary-container": "#006947",
+            "on-background": "#dbe3f0",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-container-low": "#141c25",
+            "on-surface-variant": "#bacac2",
+            "outline-variant": "#3b4a44",
+            "surface-tint": "#15e0b4",
+            "secondary-fixed": "#a7edff",
+            "error-container": "#93000a",
+            "primary-fixed-dim": "#15e0b4",
+            "surface": "#0c141d",
+            "surface-container-highest": "#2d353f",
+            "outline": "#84948d",
+            "tertiary-fixed-dim": "#4edea3",
+            "secondary-fixed-dim": "#58d6f1",
+            "on-tertiary": "#003824",
+            "inverse-primary": "#006b55",
+            "secondary-container": "#00a7c0",
+            "on-tertiary-fixed": "#002113",
+            "on-secondary": "#00363f",
+            "tertiary": "#c0ffdc",
+            "secondary": "#58d6f1",
+            "primary-fixed": "#4dfdcf",
+            "surface-container-high": "#232b34",
+            "on-primary-fixed-variant": "#00513f",
+            "on-secondary-fixed": "#001f25",
+            "on-primary-fixed": "#002118",
+            "surface-bright": "#323a44",
+            "on-secondary-container": "#003640",
+            "on-primary-container": "#006952",
+            "on-primary": "#00382b",
+            "primary": "#beffe7",
+            "on-error": "#690005",
+            "on-secondary-fixed-variant": "#004e5b",
+            "inverse-surface": "#dbe3f0",
+            "background": "#0c141d",
+            "on-error-container": "#ffdad6",
+            "on-tertiary-fixed-variant": "#005236",
+            "surface-container-lowest": "#070f17",
+            "surface-container": "#182029",
+            "tertiary-container": "#5fedb0",
+            "error": "#ffb4ab",
+            "primary-container": "#38efc2",
+            "on-surface": "#dbe3f0",
+            "inverse-on-surface": "#29313b"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "3xl": "1.25rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "space-lg": "1.5rem",
+            "gutter": "0.75rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-xl": "2rem",
+            "margin": "1rem"
+          },
+          "fontFamily": {
+            "label-sm": ["JetBrains Mono"],
+            "body-sm": ["Geist"],
+            "body-md": ["Geist"],
+            "label-md": ["JetBrains Mono"],
+            "label-lg": ["JetBrains Mono"],
+            "headline-sm": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "headline-lg": ["Space Grotesk"],
+            "body-lg": ["Geist"]
+          },
+          "fontSize": {
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Custom scrollbar suppression for crisp mobile canvas */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex justify-center selection:bg-primary-container selection:text-on-primary-container">
+<!-- Main Mobile Container (390px viewport simulation) -->
+<div class="w-full max-w-[420px] min-h-screen bg-background flex flex-col relative pb-20 shadow-2xl overflow-x-hidden border-x border-surface-container-high/40">
+<!-- 1. TOP APP BAR (Sticky Top Header with Context Gauge) -->
+<header class="sticky top-0 z-40 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-variant/30 transition-all">
+<div class="px-margin pt-2.5 pb-2 flex items-center justify-between gap-2">
+<!-- Brand & Subtitle -->
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-container text-headline-sm" data-icon="terminal">terminal</span>
+<span class="text-headline-sm font-headline-sm font-semibold tracking-tight text-on-surface">Cachalote</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container-high border border-outline-variant/40 text-primary font-label-sm text-[9px] tracking-wider uppercase ml-1">
+              Local
+            </span>
+</div>
+<!-- Status telemetry -->
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary-container"></span>
+</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+              motor DSH no telefone <span class="text-outline">·</span> <span class="text-primary-container">ligado</span>
+</span>
+</div>
+</div>
+<!-- Right Quick Actions -->
+<div class="flex items-center gap-1">
+<button class="min-h-[48px] min-w-[48px] flex items-center justify-center px-2 py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" type="button">
+<span class="font-label-md text-label-md text-on-surface-variant">Sessões</span>
+</button>
+<button class="min-h-[48px] flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-primary-container border border-outline-variant/40 transition-all active:scale-95" type="button">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+<span class="font-label-md text-label-md">Nova</span>
+</button>
+<!-- Active execution spinner badge -->
+<div class="min-h-[48px] min-w-[48px] flex items-center justify-center">
+<div class="w-7 h-7 rounded-full border-2 border-outline-variant/40 border-t-primary-container animate-spin flex items-center justify-center" title="Agente em processamento autónomo"></div>
+</div>
+</div>
+</div>
+<!-- Telemetry Context Gauge Strip -->
+<div class="px-margin pb-2 pt-0.5 bg-surface-container-low/80">
+<div class="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant mb-1">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-primary" data-icon="data_usage">data_usage</span>
+            contexto: 6 290 / 1 000 000
+          </span>
+<span class="text-primary-container font-medium">1%</span>
+</div>
+<!-- Sleek subtle progress bar -->
+<div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(56,239,194,0.6)]" style="width: 1%"></div>
+</div>
+</div>
+</header>
+<!-- 2. SCROLLABLE TRANSCRIPT (Chat Feed) -->
+<main class="flex-1 px-margin pt-3 pb-4 space-y-4 overflow-y-auto">
+<!-- Session Created Notice Pill -->
+<div class="flex justify-center my-1">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm shadow-sm">
+<span class="material-symbols-outlined text-xs text-primary" data-icon="tag">tag</span>
+<span>sessão <span class="text-primary-container font-mono">269676d6</span> criada</span>
+</div>
+</div>
+<!-- User Message Bubble (Right aligned, subtle raised #1e2632) -->
+<div class="flex flex-col items-end pl-8">
+<div class="bg-[#1e2632] border border-outline-variant/40 text-on-surface rounded-2xl rounded-tr-sm p-3.5 shadow-sm max-w-[92%]">
+<p class="font-body-md text-body-md leading-relaxed text-on-surface">
+            Analisa o crash no LifecycleService e adiciona fallback com logs no logcat
+          </p>
+<div class="flex items-center justify-end gap-1.5 mt-2 font-label-sm text-label-sm text-on-surface-variant">
+<span>14:02 · local</span>
+<span class="material-symbols-outlined text-xs text-primary" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+</div>
+<!-- Assistant Stream Section -->
+<div class="flex flex-col space-y-3 pr-2">
+<!-- Agent Reasoning Block (Collapsible) -->
+<details class="group bg-surface-container rounded-2xl border border-outline-variant/30 overflow-hidden transition-all duration-200 open:border-outline-variant/60" open="">
+<summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer select-none bg-surface-container-high/40 hover:bg-surface-container-high transition-colors list-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-base text-primary-container animate-pulse" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-label-md text-label-md text-primary font-medium tracking-tight">Raciocínio do agente (0.8s)</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant transition-transform duration-200 group-open:rotate-180" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="px-3.5 py-2.5 bg-surface-container-low/40 border-t border-outline-variant/20">
+<p class="font-body-sm text-body-sm italic text-on-surface-variant/90 leading-relaxed">
+              Verificar manifest e permissões em primeiro lugar; invocar <code class="font-label-sm text-primary-container not-italic bg-surface-variant/70 px-1 py-0.5 rounded">android_see</code> para capturar o ecrã atual e inspecionar o logcat em background...
+            </p>
+</div>
+</details>
+<!-- Tool Call Cards (High density, technical telemetry) -->
+<div class="space-y-2">
+<!-- Card 1: bash -->
+<div class="bg-surface-container rounded-2xl p-3 border border-outline-variant/40 flex flex-col gap-1.5 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<span class="font-label-md text-label-md font-medium text-on-surface">bash</span>
+</div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-on-tertiary-container/30 border border-tertiary-container/30 text-tertiary font-label-sm text-[10px]">
+<span class="material-symbols-outlined text-xs" data-icon="check">check</span>
+                concluído
+              </span>
+</div>
+<div class="bg-surface-container-lowest px-2.5 py-1.5 rounded-lg border border-outline-variant/20 font-label-sm text-label-sm text-on-surface-variant overflow-x-auto whitespace-nowrap">
+<code>logcat -d -s LifecycleService:E</code>
+</div>
+</div>
+<!-- Card 2: android_see -->
+<div class="bg-surface-container rounded-2xl p-3 border border-outline-variant/40 flex flex-col gap-1.5 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
+</div>
+<span class="font-label-md text-label-md font-medium text-on-surface">android_see</span>
+</div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-on-tertiary-container/30 border border-tertiary-container/30 text-tertiary font-label-sm text-[10px]">
+<span class="material-symbols-outlined text-xs" data-icon="check">check</span>
+                concluído
+              </span>
+</div>
+<div class="bg-surface-container-lowest px-2.5 py-1.5 rounded-lg border border-outline-variant/20 font-label-sm text-label-sm text-on-surface-variant overflow-x-auto whitespace-nowrap">
+<code>{"target": "current_view", "extract_hierarchy": true}</code>
+</div>
+</div>
+<!-- Card 3: android_vscreen (Running) -->
+<div class="bg-surface-container rounded-2xl p-3 border border-primary-container/40 shadow-[0_0_12px_rgba(56,239,194,0.08)] flex flex-col gap-1.5 transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-lg bg-primary-container/20 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-sm" data-icon="phone_android">phone_android</span>
+</div>
+<span class="font-label-md text-label-md font-medium text-primary">android_vscreen</span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-container/20 border border-primary-container/40 text-primary-container font-label-sm text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-ping"></span>
+                a correr
+              </span>
+</div>
+<div class="bg-surface-container-lowest px-2.5 py-1.5 rounded-lg border border-outline-variant/20 font-label-sm text-label-sm text-primary overflow-x-auto whitespace-nowrap">
+<code>display_id=0 action=touch x=540 y=1120</code>
+</div>
+</div>
+</div>
+<!-- Error Callout Block -->
+<div class="bg-surface-container rounded-2xl p-3 border-l-4 border-error border-y border-r border-outline-variant/30 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-error text-lg mt-0.5" data-icon="warning">warning</span>
+<div class="space-y-0.5">
+<p class="font-body-sm text-body-sm text-on-surface font-medium leading-tight">
+              Falha temporária ao ler buffer de acessibilidade; a tentar novamente
+            </p>
+<p class="font-label-sm text-label-sm text-error/90 font-mono">
+              Código: E_ACCESS_TIMEOUT · retentativa 1/3
+            </p>
+</div>
+</div>
+<!-- Centered System Alert Chip -->
+<div class="flex justify-center my-1">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container/40 border border-error/40 text-error font-label-sm text-label-sm shadow-sm">
+<span class="material-symbols-outlined text-xs" data-icon="accessibility">accessibility</span>
+<span>a acessibilidade desligou-se</span>
+</div>
+</div>
+<!-- Assistant Text Message Body -->
+<div class="bg-surface-container rounded-2xl p-4 border border-outline-variant/30 text-on-surface space-y-2">
+<p class="font-body-md text-body-md leading-relaxed">
+            Identifiquei uma <code class="font-label-sm text-primary bg-surface-variant/50 px-1 py-0.5 rounded">NullPointerException</code> não tratada ao libertar o observador de ciclo de vida durante o teardown assíncrono.
+          </p>
+<p class="font-body-md text-body-md leading-relaxed text-on-surface-variant">
+            A preparar o bloco defensivo com emissão estruturada para o logcat e a programar os testes de regressão na fila autónoma abaixo.
+          </p>
+</div>
+</div>
+<!-- 3. TASK QUEUE CARD ("Fila de tarefas") -->
+<section class="bg-surface-container rounded-2xl p-3.5 border border-outline-variant/40 shadow-sm mt-4">
+<!-- Header -->
+<div class="flex items-start justify-between gap-2 mb-2">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-[16px] leading-5 font-semibold text-on-surface">Fila de tarefas</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high border border-outline-variant/40 font-label-sm text-label-sm text-primary">
+                2 na fila
+              </span>
+<span class="px-1.5 py-0.2 rounded bg-primary-container/20 text-primary-container font-label-sm text-[9px] uppercase tracking-wider font-semibold">
+                autónomo
+              </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              Tarefas pendentes para execução autónoma em lote
+            </p>
+</div>
+</div>
+<!-- Pill Action Buttons -->
+<div class="flex items-center gap-1.5 py-1 mb-2.5 overflow-x-auto">
+<button class="min-h-[36px] flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-high hover:bg-surface-variant border border-outline-variant/40 text-on-surface font-label-sm text-label-sm transition-all active:scale-95" type="button">
+<span class="material-symbols-outlined text-xs" data-icon="add">add</span>
+<span>Juntar à fila</span>
+</button>
+<button class="min-h-[36px] flex items-center gap-1 px-3.5 py-1 rounded-full bg-primary-container text-on-primary-container font-label-sm text-label-sm font-semibold transition-all active:scale-95 shadow-[0_0_10px_rgba(56,239,194,0.3)]" type="button">
+<span class="material-symbols-outlined text-xs" data-icon="play_arrow">play_arrow</span>
+<span>Correr a fila</span>
+</button>
+<button class="min-h-[36px] flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm transition-all active:scale-95" type="button">
+<span>Limpar concluídas</span>
+</button>
+</div>
+<!-- Task Items -->
+<div class="space-y-1.5">
+<!-- Task 1 -->
+<div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
+<div class="flex items-center gap-2 overflow-hidden">
+<span class="material-symbols-outlined text-xs text-primary-container" data-icon="reorder">reorder</span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">
+                1. Gerar teste unitário para LifecycleServiceTest.kt
+              </span>
+</div>
+<button class="min-h-[32px] min-w-[32px] flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Remover tarefa" type="button">
+<span class="material-symbols-outlined text-base" data-icon="close">close</span>
+</button>
+</div>
+<!-- Task 2 -->
+<div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
+<div class="flex items-center gap-2 overflow-hidden">
+<span class="material-symbols-outlined text-xs text-primary-container" data-icon="reorder">reorder</span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">
+                2. Commit git com mensagem semântica feat(service): fallback
+              </span>
+</div>
+<button class="min-h-[32px] min-w-[32px] flex items-center justify-center text-on-surface-variant hover:text-error transition-colors" title="Remover tarefa" type="button">
+<span class="material-symbols-outlined text-base" data-icon="close">close</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- 4. COMPOSER (Docked above bottom nav bar) -->
+<div class="sticky bottom-16 z-30 px-margin py-2 bg-surface-container-lowest/90 backdrop-blur-md border-t border-outline-variant/20">
+<div class="flex items-center gap-2 bg-surface-container p-1.5 rounded-2xl border border-outline-variant/50 focus-within:border-primary-container transition-all shadow-lg">
+<!-- Input Field -->
+<input class="flex-1 bg-transparent px-3 py-2 text-on-surface placeholder:text-on-surface-variant/60 font-body-md text-body-md focus:outline-none border-none ring-0 focus:ring-0 min-h-[44px]" placeholder="Escreve uma tarefa para o agente..." type="text"/>
+<!-- Attachment Action -->
+<button class="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" title="Anexar captura de ecrã" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="add_photo_alternate">add_photo_alternate</span>
+</button>
+<!-- Voice Command Button -->
+<button class="min-h-[44px] flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" title="Comando de voz" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="mic">mic</span>
+<span class="font-label-md text-label-md hidden sm:inline">Falar</span>
+</button>
+<!-- Prominent Filled Action Button (Enviar) -->
+<button class="min-h-[44px] px-4 py-2 rounded-xl bg-primary-container text-on-primary-container font-label-md font-semibold flex items-center gap-1.5 hover:bg-tertiary-fixed transition-all active:scale-95 shadow-[0_2px_12px_rgba(56,239,194,0.35)]" type="button">
+<span>Enviar</span>
+<span class="material-symbols-outlined text-base" data-icon="arrow_upward">arrow_upward</span>
+</button>
+</div>
+</div>
+<!-- 5. BOTTOM NAVIGATION BAR (Exact Match to Shared Component JSON) -->
+<!-- Destination count: 4, labels: ["Estado", "Chave", "Conversa", "Poderes"], Active: "Conversa" -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter h-16 bg-surface-container-low/95 backdrop-blur-md border-t border-outline-variant/30">
+<!-- 1. Estado (Inactive) -->
+<a class="flex flex-col items-center justify-center gap-1 text-on-surface-variant font-label-sm py-1.5 px-3 hover:text-on-surface transition-colors duration-150 active:scale-95" href="#estado">
+<span class="material-symbols-outlined text-xl" data-icon="memory">memory</span>
+<span class="font-label-sm text-label-sm">Estado</span>
+</a>
+<!-- 2. Chave (Inactive) -->
+<a class="flex flex-col items-center justify-center gap-1 text-on-surface-variant font-label-sm py-1.5 px-3 hover:text-on-surface transition-colors duration-150 active:scale-95" href="#chave">
+<span class="material-symbols-outlined text-xl" data-icon="vpn_key">vpn_key</span>
+<span class="font-label-sm text-label-sm">Chave</span>
+</a>
+<!-- 3. Conversa (Active - Mapped via Semantic Intent to the Chat screen) -->
+<a class="flex flex-col items-center justify-center gap-1 text-primary-container font-label-sm py-1.5 px-3 rounded-xl bg-surface-variant/40 hover:text-on-surface transition-colors duration-150 active:scale-95" href="#conversa">
+<span class="material-symbols-outlined text-xl" data-icon="terminal" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<span class="font-label-sm text-label-sm font-medium">Conversa</span>
+</a>
+<!-- 4. Poderes (Inactive) -->
+<a class="flex flex-col items-center justify-center gap-1 text-on-surface-variant font-label-sm py-1.5 px-3 hover:text-on-surface transition-colors duration-150 active:scale-95" href="#poderes">
+<span class="material-symbols-outlined text-xl" data-icon="bolt">bolt</span>
+<span class="font-label-sm text-label-sm">Poderes</span>
+</a>
+</nav>
+</div>
+</body></html>
