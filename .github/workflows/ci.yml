@@ -71,11 +71,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
-      - uses: android-actions/setup-android@v3
+
+      # Sem `android-actions/setup-android`: a v3 pede o pacote legacy "tools" (que já não
+      # existe no repositório) e falha. A imagem do runner já traz o SDK — só falta a
+      # plataforma que a app declara (compileSdk 35) e as build-tools.
+      - name: Plataforma Android 35 e build-tools
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/cmdline-tools/*/bin/sdkmanager | tail -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Ferramentas do sistema
         run: |
