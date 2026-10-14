@@ -211,6 +211,14 @@ function apply(ctx) {
         type: "integer",
         description: "Downscale the capture to this width before attaching (default 720; use 1080+ to read small text).",
       },
+      frames: {
+        type: "integer",
+        description: "How many captures to take (default 1, max 12). Use 3-8 with intervalMs to see motion/animation.",
+      },
+      intervalMs: {
+        type: "integer",
+        description: "Milliseconds between captures when frames > 1 (default 400, max 5000).",
+      },
     },
     output: {
       schema: {
@@ -228,52 +236,84 @@ function apply(ctx) {
           // sem `type` é recusado pelo compilador e derrubava o plugin INTEIRO (ficávamos
           // sem nenhuma ferramenta android_*). Não usar `object` sem `additionalProperties`.
           attachmentRef: { type: "json" },
+          // Vários fotogramas (visão em vídeo): um anexo por captura.
+          attachmentRefs: { type: "array", items: { type: "json" } },
+          frames: { type: "integer" },
+          capturedAt: { type: "array", items: { type: "string" } },
           hint: { type: "string" },
         },
       },
       render: (_args, value) => {
+        const n = Array.isArray(value.attachmentRefs) ? value.attachmentRefs.length : 0;
         const parts = [{
           type: "text",
-          text: `captura ${value.width ?? "?"}×${value.height ?? "?"}, ` +
-            `${Math.round((value.bytes ?? 0) / 1024)} KB, guardada em ${value.path}` +
-            (value.attached ? " (imagem em anexo)" : "") +
+          text: (n > 1
+            ? `sequência de ${n} capturas ${value.width ?? "?"}×${value.height ?? "?"} ` +
+              `(${Math.round((value.bytes ?? 0) / 1024)} KB cada, intervalo ${value.intervalMs ?? "?"} ms)` +
+              `, primeira em ${value.path}`
+            : `captura ${value.width ?? "?"}×${value.height ?? "?"}, ` +
+              `${Math.round((value.bytes ?? 0) / 1024)} KB, guardada em ${value.path}`) +
+            (value.attached ? " (imagens em anexo, por ordem)" : "") +
             (value.hint ? ` — ${value.hint}` : ""),
         }];
-        if (value.attachmentRef) parts.push({ type: "image", attachment: value.attachmentRef });
+        for (const ref of value.attachmentRefs ?? []) parts.push({ type: "image", attachment: ref });
+        if (!value.attachmentRefs && value.attachmentRef) parts.push({ type: "image", attachment: value.attachmentRef });
         return parts;
       },
       presentationMeta: () => ({ title: "Screenshot (ver o ecrã)" }),
     },
     async execute(args) {
       const maxWidth = Number.isFinite(args.maxWidth) ? args.maxWidth : 720;
-      const raw = await hostCall("screenshot", { maxWidth });
+      const frames = Math.max(1, Math.min(Number.isFinite(args.frames) ? args.frames : 1, 12));
+      const intervalMs = Math.max(0, Math.min(Number.isFinite(args.intervalMs) ? args.intervalMs : 400, 5000));
+      const attachments = ctx.get("attachments");
+      const refs = [];
+      const capturedAt = [];
       const value = {
-        path: raw.path,
-        bytes: raw.bytes,
-        width: raw.width,
-        height: raw.height,
-        mediaType: raw.mediaType || "image/png",
+        path: null,
+        bytes: 0,
+        width: 0,
+        height: 0,
+        mediaType: "image/png",
+        frames: 0,
+        intervalMs: frames > 1 ? intervalMs : 0,
         attached: false,
         attachmentRef: null,
+        attachmentRefs: [],
+        capturedAt,
       };
-      // A app devolve o PNG em base64; transformamo-lo num anexo do harness para que o modelo
-      // veja a imagem. O `render` é síncrono, logo o anexo tem de ser criado aqui.
-      const attachments = ctx.get("attachments");
-      if (attachments === void 0) {
-        value.hint = "não há serviço de anexos nesta composição: a imagem não chega ao modelo";
-      } else if (typeof raw.data !== "string" || raw.data.length === 0) {
-        value.hint = "a app não devolveu os pixels";
-      } else {
-        try {
-          value.attachmentRef = await attachments.saveImage({
-            data: Buffer.from(raw.data, "base64"),
-            mediaType: value.mediaType,
-          });
-          value.attached = true;
-        } catch (error) {
-          value.hint = "falhou o anexo da imagem: " + (error?.message ?? String(error));
+      for (let i = 0; i < frames; i++) {
+        if (i > 0 && intervalMs > 0) await new Promise((r) => setTimeout(r, intervalMs));
+        const raw = await hostCall("screenshot", { maxWidth });
+        if (i === 0) {
+          value.path = raw.path;
+          value.width = raw.width;
+          value.height = raw.height;
+          value.mediaType = raw.mediaType || "image/png";
+        }
+        value.bytes = raw.bytes ?? value.bytes;
+        capturedAt.push(new Date().toISOString());
+        // A app devolve o PNG em base64; transformamo-lo num anexo do harness para o modelo ver.
+        // O `render` é síncrono, logo os anexos têm de ser criados aqui.
+        if (attachments === void 0) {
+          value.hint = "não há serviço de anexos nesta composição: as imagens não chegam ao modelo";
+        } else if (typeof raw.data !== "string" || raw.data.length === 0) {
+          value.hint = "a app não devolveu os pixels";
+        } else {
+          try {
+            refs.push(await attachments.saveImage({
+              data: Buffer.from(raw.data, "base64"),
+              mediaType: raw.mediaType || "image/png",
+            }));
+          } catch (error) {
+            value.hint = "falhou o anexo da imagem: " + (error?.message ?? String(error));
+          }
         }
       }
+      value.attachmentRefs = refs;
+      value.attachmentRef = refs[0] ?? null;
+      value.frames = refs.length;
+      value.attached = refs.length > 0;
       return value;
     },
   }));

@@ -1197,3 +1197,16 @@ diferentes, e tratá-los como iguais era o erro:
   o id ficava em `lastSessionId` e o arranque (ou a troca de modo) retomava-o. Fechar passa a
   **esquecer** a última sessão.
 - **Origem:** **[LOCAL]**.
+
+### 102. Visão em vídeo sem `ffmpeg`: fotogramas anexados
+- **O que se fez:** o `android_see` ganhou `frames` (1–12) e `intervalMs` (até 5 s). Repete a captura
+  e anexa **uma imagem por fotograma** ao mesmo resultado da ferramenta; o `render` devolve-as por
+  ordem. Sem `screenrecord`/`ffmpeg` (que o Android não traz) e sem custo extra de API.
+- **Limites do harness:** o ACP aceita até 20 imagens por mensagem e a política de normalização
+  aguenta 4 MP por imagem; 3–8 fotogramas a 720 px ficam confortáveis.
+- **Verificado no S10+:** com `frames=3, intervalMs=2000` o agente respondeu que *o relógio
+  avançou de 10:03:15 para 10:03:20, o indicador de carregamento rodou e o cursor de texto
+  desapareceu* — ou seja, comparou imagens no tempo, que é o que se pede a "visão em vídeo".
+- **Cuidado com o schema:** `attachmentRefs` tem de ser `{type:"array", items:{type:"json"}}` —
+  um `{}` sem `type` desliga o plugin inteiro (item 82).
+- **Origem:** **[LOCAL]**.

@@ -611,7 +611,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | **Títulos de sessão** | ✅ **feito em §31** | o motor gera mas **não expõe** no `session/list`; a app deriva o título do primeiro prompt (o do motor tem prioridade se vier) |
 | ~~**LMK sob pressão real**~~ | ✅ **feito em §32** | 97% de RAM durante 30 s: daemon, motor e app sobreviveram sem mudar de pid |
 | ~~**Clique do ✕ na UI**~~ | ✅ **feito em §35** | bug do diálogo corrigido (leitura da sessão activa no topo) + botão **Fechar a sessão activa**; verificado pela UI |
-| **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
+| ~~**Visão em vídeo**~~ | ✅ **feito em §36** | `android_see` com `frames`/`intervalMs`: anexa N fotogramas ao mesmo resultado; o agente comparou-os no tempo |
 | **MCP servers configuráveis** | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado no motor (agente chamou `mcp__ping__ping` → pong) |
 | **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
 | **vscreen** (ecrã virtual) | bloqueado | decisão LGPL tua; reimplementar do zero são dias de trabalho |
@@ -1314,3 +1314,24 @@ diálogo, e o título mostra-o (`activa: 17c839db`).
 **Verificação pela UI:** tocar em *Fechar a sessão activa* → `session/close` enviado, o diálogo
 passa a **`nenhuma sessão activa`** e a lista é refrescada. Pelo caminho apanhou-se um bug do
 próprio fluxo: a sessão fechada voltava a ficar activa porque o id continuava em `lastSessionId`.
+
+
+---
+
+## 36. Visão em vídeo: N fotogramas no mesmo resultado
+
+Sem `screenrecord` nem `ffmpeg` (que o Android não traz): o `android_see` ganhou **`frames`**
+(1–12) e **`intervalMs`** (até 5 s), repete a captura e anexa **uma imagem por fotograma** ao
+mesmo resultado da ferramenta — o `render` devolve-as por ordem.
+
+**Verificação no S10+** (pedido: *"usa android_see com frames 3 e intervalMs 2000 e diz o que muda
+entre a primeira e a última imagem"*), resposta do agente:
+
+> *Entre a primeira e a última imagem (10:03:15 → 10:03:20) o indicador de carregamento no canto
+> superior direito mudou de posição na sua rotação, o relógio avançou 5 segundos (com a velocidade
+> de rede a variar) e o cursor de texto no campo de escrita deixou de estar visível.*
+
+Ou seja: comparou imagens **no tempo** — que é exactamente o que a visão em vídeo tinha de provar.
+
+**Pelo caminho:** a primeira tentativa falhou porque a acessibilidade estava desligada — e o
+`cachalote doctor` (feito nesta ronda) já o tinha avisado com `1 aviso`; bastava tê-lo lido.
