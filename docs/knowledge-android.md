@@ -1663,10 +1663,36 @@ todos invisíveis no dia-a-dia do modo root:
   **estruturado** (`resultado`, `problemas`, `avisos`, `secoes[]`). Duplicar as verificações em
   JavaScript seria pedir que as duas listas divergissem; assim há uma só, a do CLI.
 - **Na app:** a terceira aba mostra o consumo (tokens, sessão, modelo, esforço, fila, imagens) e o
-  diagnóstico — mas **só os itens que não estão `ok`**, com o resto resumido em «tudo o resto está
-  verde (N secções verificadas)». Uma lista de vinte linhas verdes não se lê.
+  diagnóstico. Na primeira versão mostrava **só os itens que não estão `ok`**, com o resto resumido
+  em «tudo o resto está verde (N secções verificadas)»; **desde o STATUS 62 mostra a tabela toda**
+  (✓/⚠/✕ e o valor técnico à direita, em monospace) porque é assim que o ecrã «Resumo» do Stitch a
+  desenha — e porque, com valores à vista, a lista verde também informa (versões, pids, modos).
 - **Detalhe:** no modo embutido não há daemon, portanto não há doctor — a aba di-lo em vez de
   mostrar um erro.
 - **Verificação:** no S10+, a aba mostrou `1 aviso(s), nenhum problema` com o aviso da
   acessibilidade desligada (o que era verdade — a app tinha sido reinstalada).
 - **Origem:** **[LOCAL]**.
+
+### 132. Instalar a APK desliga o serviço de acessibilidade (e não é só na desinstalação)
+
+- **Sintoma:** depois de cada `tools/install-app.sh`, o `doctor` passa a dizer
+  `[!!] acessibilidade desligada — liga em Definições → Acessibilidade → Cachalote` e o agente fica
+  sem olhos nem dedos. Aconteceu **duas vezes** na mesma noite (S10+, 2026-10-14), uma na
+  desinstalação e outra numa actualização normal (`adb install -r`).
+- **Causa:** é o **Android**, não a app — quando um pacote é instalado/actualizado, o sistema
+  desliga os seus serviços de acessibilidade (é uma defesa contra apps que se auto-activam). O
+  `settings get secure enabled_accessibility_services` volta a `null`.
+- **Como repor** (com root; a app não pode fazer isto por si):
+  ```sh
+  adb shell su -c 'settings put secure enabled_accessibility_services \
+      dev.ricardopimentel.cachalote/dev.ricardopimentel.cachalote.CachaloteAccessibilityService'
+  adb shell su -c 'settings put secure accessibility_enabled 1'
+  ```
+  Confirmação: `dumpsys accessibility | grep label=Cachalote` (tem de aparecer *bound*) e
+  `cachalote doctor` a terminar em `resultado: tudo bem`.
+- **Na app:** o `VigiaAcessibilidade` já avisa quando o serviço cai («o agente perdeu olhos e dedos
+  no ecrã») e o assistente/doctor explicam como ligar — é o comportamento certo, mas **quem
+  instala por script tem de contar com isto**: depois de instalar, ou se liga à mão, ou se aceita
+  que o primeiro aviso do doctor é este.
+- **Origem:** **[LOCAL]**.
+
