@@ -6,6 +6,8 @@
 #   ./tools/install-app.sh --no-build   # instala o APK que já existe
 #   ./tools/install-app.sh --no-root    # não mexe nas políticas do Magisk (emulador/sem root)
 #   ./tools/install-app.sh --device emulator-5554
+#   ./tools/install-app.sh --release    # assina com a chave de release (actualiza uma app já
+#                                       # instalada por release sem perder preferências)
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,22 +31,34 @@ if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME:-}/bin/java" ]; then
   done
 fi
 export JAVA_HOME
-APK="$WS/app/app/build/outputs/apk/debug/app-debug.apk"
 ADB=(adb -s "$DEV")
-BUILD=1; ROOT=1
+BUILD=1; ROOT=1; VARIANT="debug"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --no-build) BUILD=0; shift ;;
     --no-root) ROOT=0; shift ;;
+    # Uma app instalada por release **não** aceita `install -r` de uma APK assinada com a chave
+    # de debug: o Android recusa com INSTALL_FAILED_UPDATE_INCOMPATIBLE e substituí-la obrigaria
+    # a desinstalar (perdendo token, capacidades autorizadas e auditoria). Com --release
+    # actualiza-se em cima, mantendo tudo.
+    --release) VARIANT="release"; shift ;;
     --device) DEV="$2"; ADB=(adb -s "$DEV"); shift 2 ;;
     *) echo "opção desconhecida: $1" >&2; exit 2 ;;
   esac
 done
 
+APK="$WS/app/app/build/outputs/apk/$VARIANT/app-$VARIANT.apk"
 if [ "$BUILD" = 1 ]; then
-  echo "== a compilar =="
-  ( cd "$WS/app" && JAVA_HOME="$JAVA_HOME" PATH="$JAVA_HOME/bin:$PATH" "$GRADLE" --no-daemon --console=plain assembleDebug | tail -12 )
+  echo "== a compilar ($VARIANT) =="
+  if [ "$VARIANT" = "release" ]; then
+    export CACHALOTE_KEYSTORE="${CACHALOTE_KEYSTORE:-$WS/.work/cachalote-release.jks}"
+    [ -f "$CACHALOTE_KEYSTORE" ] || { echo "ERRO: falta a chave de release em $CACHALOTE_KEYSTORE (corre tools/build-release.sh)"; exit 1; }
+    TASK="assembleRelease"
+  else
+    TASK="assembleDebug"
+  fi
+  ( cd "$WS/app" && JAVA_HOME="$JAVA_HOME" PATH="$JAVA_HOME/bin:$PATH" "$GRADLE" --no-daemon --console=plain "$TASK" | tail -12 )
 fi
 [ -f "$APK" ] || { echo "ERRO: APK não existe em $APK"; exit 1; }
 ls -lh "$APK"
