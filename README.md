@@ -10,6 +10,10 @@ própria app).
 > O plano completo está em [`PLANO.md`](PLANO.md) e o que já foi verificado, com provas, em
 > [`STATUS.md`](STATUS.md).
 
+**Só queres usar a app?** [`docs/COMO-USAR.md`](docs/COMO-USAR.md) (português europeu) ·
+[`docs/HOW-TO-USE.md`](docs/HOW-TO-USE.md) (English). O resto deste README é para quem quer
+perceber ou mexer no código.
+
 ## O que isto faz
 
 Uma app Android que corre o [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)
