@@ -1,0 +1,158 @@
+package dev.ricardopimentel.cachalote
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+/**
+ * Pedaços de interface **sem estado próprio**: recebem dados e devolvem acções por lambda.
+ *
+ * Porque é que isto existe: os diálogos e cartões estavam colados ao `MainViewModel`, o que
+ * obrigava a testá-los com toques cegos de `uiautomator` (e falhava por tudo e por nada). Assim
+ * qualquer um deles se compõe num teste com dados inventados e sem aparelho a responder. Ver
+ * knowledge 114.
+ */
+
+/** Lista de sessões: ✓ na activa, ✕ só nela (o motor só fecha a sessão activa), retomar ao tocar. */
+@Composable
+fun SessionsList(
+    sessions: List<SessionRow>,
+    ativo: String?,
+    enabled: Boolean,
+    onResume: (String) -> Unit,
+    onClose: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (sessions.isEmpty()) {
+        Text(stringResource(R.string.sem_sessoes))
+        return
+    }
+    LazyColumn(modifier = modifier.heightIn(max = 420.dp)) {
+        itemsIndexed(sessions) { _, row ->
+            val atual = row.id == ativo
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { onResume(row.id) }, modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            (if (atual) "✓ " else "") + row.title,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (atual) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        )
+                        Text(
+                            row.id.take(8) + "  ·  " + row.updatedAt.replace("T", " ").take(19),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                }
+                if (atual) {
+                    TextButton(onClick = { onClose(row.id) }, enabled = enabled) {
+                        Text("✕", color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Interruptores por capacidade — é aqui que o dono decide o que o agente pode fazer. */
+@Composable
+fun CapabilityToggles(
+    nomes: List<String>,
+    autorizadas: Map<String, Boolean>,
+    onToggle: (String, Boolean) -> Unit,
+) {
+    Column {
+        nomes.forEach { cap ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(cap, modifier = Modifier.weight(1f))
+                Switch(checked = autorizadas[cap] == true, onCheckedChange = { onToggle(cap, it) })
+            }
+        }
+    }
+}
+
+/** Botões do ecrã virtual e o interruptor da pré-visualização ao vivo. */
+@Composable
+fun VscreenControls(
+    rodando: Boolean,
+    aoVivo: Boolean,
+    enabled: Boolean,
+    onStart: () -> Unit,
+    onRefresh: () -> Unit,
+    onStop: () -> Unit,
+    onAoVivo: (Boolean) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(onClick = onStart, enabled = enabled) { Text(stringResource(R.string.iniciar)) }
+        OutlinedButton(onClick = onRefresh, enabled = enabled) { Text(stringResource(R.string.ver_fotograma)) }
+        OutlinedButton(onClick = onStop, enabled = enabled) { Text(stringResource(R.string.parar)) }
+        Text(stringResource(R.string.ao_vivo), style = MaterialTheme.typography.bodySmall)
+        // Só faz sentido ligar "ao vivo" com o ecrã virtual a correr.
+        Switch(checked = aoVivo, onCheckedChange = onAoVivo, enabled = rodando)
+    }
+}
+
+/** Corpo do diálogo das licenças: a lista ou o texto integral da escolhida. */
+@Composable
+fun LicensesBody(
+    licencas: List<Licenca>,
+    aberta: Licenca?,
+    onAbrir: (Licenca) -> Unit,
+) {
+    if (aberta == null) {
+        LazyColumn(modifier = Modifier.heightIn(max = 460.dp)) {
+            itemsIndexed(licencas) { _, lic ->
+                TextButton(onClick = { onAbrir(lic) }) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(lic.nome, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            lic.licenca,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
+    Column {
+        Text(aberta.nome, fontWeight = FontWeight.SemiBold)
+        Text(
+            aberta.licenca + " · " + aberta.url,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        LazyColumn(modifier = Modifier.padding(top = 8.dp).heightIn(max = 420.dp)) {
+            item {
+                Text(
+                    aberta.texto,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        }
+    }
+}

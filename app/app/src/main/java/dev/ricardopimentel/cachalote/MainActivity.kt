@@ -290,49 +290,21 @@ private fun SessionsDialog(vm: MainViewModel) {
             Column {
                 Text(stringResource(R.string.seccoes))
                 Text(
-                    if (atual.isNullOrBlank()) "nenhuma sessão activa" else "activa: " + atual.take(8),
+                    if (atual.isNullOrBlank()) stringResource(R.string.sessao_nenhuma_activa)
+                    else stringResource(R.string.sessao_activa, atual.take(8)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
         },
         text = {
-            if (vm.sessions.isEmpty()) {
-                Text(stringResource(R.string.sem_sessoes))
-            } else {
-                LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
-                    itemsIndexed(vm.sessions) { _, row ->
-                        val current = row.id == atual
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(
-                                onClick = { vm.resumeSession(row.id) },
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        (if (current) "✓ " else "") + row.title,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (current) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                                    )
-                                    Text(
-                                        row.id.take(8) + "  ·  " + row.updatedAt.replace("T", " ").take(19),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                    )
-                                }
-                            }
-                            // O motor só fecha a sessão **activa** (`session/close` responde
-                            // "unknown session" às do histórico): o ✕ aparece só na linha da
-                            // sessão actual (ver knowledge 93).
-                            if (current) {
-                                TextButton(onClick = { vm.closeSession(row.id) }, enabled = !vm.busy) {
-                                    Text("✕", color = MaterialTheme.colorScheme.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            SessionsList(
+                sessions = vm.sessions,
+                ativo = atual,
+                enabled = !vm.busy,
+                onResume = { vm.resumeSession(it) },
+                onClose = { vm.closeSession(it) },
+            )
         },
         confirmButton = {},
         dismissButton = {
@@ -419,15 +391,11 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-                vm.capabilityNames.forEach { cap ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(cap, modifier = Modifier.weight(1f))
-                        Switch(
-                            checked = vm.capabilityToggles[cap] == true,
-                            onCheckedChange = { vm.setCapability(cap, it) },
-                        )
-                    }
-                }
+                CapabilityToggles(
+                    nomes = vm.capabilityNames,
+                    autorizadas = vm.capabilityToggles,
+                    onToggle = { cap, ligado -> vm.setCapability(cap, ligado) },
+                )
             }
         }
 
@@ -517,17 +485,15 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { vm.vscreenStart() }, enabled = !vm.busy) { Text(stringResource(R.string.iniciar)) }
-                    OutlinedButton(onClick = { vm.vscreenRefresh() }, enabled = !vm.busy) { Text(stringResource(R.string.ver_fotograma)) }
-                    OutlinedButton(onClick = { vm.vscreenStop() }, enabled = !vm.busy) { Text(stringResource(R.string.parar)) }
-                    Text(stringResource(R.string.ao_vivo), style = MaterialTheme.typography.bodySmall)
-                    Switch(
-                        checked = vm.vscreenAoVivo,
-                        onCheckedChange = { vm.vscreenAoVivo = it },
-                        enabled = vm.vscreenRunning,
-                    )
-                }
+                VscreenControls(
+                    rodando = vm.vscreenRunning,
+                    aoVivo = vm.vscreenAoVivo,
+                    enabled = !vm.busy,
+                    onStart = { vm.vscreenStart() },
+                    onRefresh = { vm.vscreenRefresh() },
+                    onStop = { vm.vscreenStop() },
+                    onAoVivo = { vm.vscreenAoVivo = it },
+                )
                 // Ao vivo: um fotograma a cada 1,5 s enquanto o interruptor estiver ligado e o
                 // ecrã virtual existir. É o que deixa o dono *ver* o agente a trabalhar.
                 if (vm.vscreenAoVivo && vm.vscreenRunning) {
@@ -980,46 +946,11 @@ private fun LicensesDialog(vm: MainViewModel) {
         onDismissRequest = { vm.mostrarLicencas = false; vm.licencaAberta = null },
         title = { Text(stringResource(R.string.licencas_titulo)) },
         text = {
-            val aberta = vm.licencaAberta
-            if (aberta == null) {
-                if (vm.licencas.isEmpty()) {
-                    Text(stringResource(R.string.sem_pedidos))
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 460.dp)) {
-                        itemsIndexed(vm.licencas) { _, lic ->
-                            TextButton(onClick = { vm.licencaAberta = lic }) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(lic.nome, fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        lic.licenca,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                Column {
-                    Text(aberta.nome, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        aberta.licenca + " · " + aberta.url,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
-                        item {
-                            Text(
-                                aberta.texto,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                            )
-                        }
-                    }
-                }
-            }
+            LicensesBody(
+                licencas = vm.licencas,
+                aberta = vm.licencaAberta,
+                onAbrir = { vm.licencaAberta = it },
+            )
         },
         confirmButton = {
             if (vm.licencaAberta != null) {

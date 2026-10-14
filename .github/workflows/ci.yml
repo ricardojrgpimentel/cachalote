@@ -110,6 +110,13 @@ jobs:
           ANDROID_USER_HOME: ${{ github.workspace }}/.work/android-home
         run: gradle --no-daemon --console=plain assembleDebug
 
+      # Testes de interface na JVM (Robolectric): a app compõe-se a sério, com dados inventados,
+      # em pt-PT e em inglês — sem emulador e sem toques de ecrã. No aparelho isto não corre (o
+      # Espresso usa APIs que as ROMs recentes escondem — ver knowledge 114).
+      - name: Testes de interface (JVM, pt-PT + inglês)
+        working-directory: app
+        run: gradle --no-daemon --console=plain testDebugUnitTest
+
       - name: Guardar a APK como artefacto
         uses: actions/upload-artifact@v4
         with:

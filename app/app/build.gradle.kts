@@ -13,6 +13,11 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testOptions {
+            unitTests {
+                isIncludeAndroidResources = true   // o Robolectric precisa dos recursos (textos)
+            }
+        }
         versionCode = 1
         versionName = "0.3.0-f2"
     }
@@ -85,5 +90,28 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    // O Espresso que vem por arrasto usa `InputManager.getInstance()` (API oculta removida nas
+    // ROMs recentes) e os testes Compose rebentavam em `onIdle`. Fixar uma versão que já não o faz.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+
+    // Testes de interface na JVM (Robolectric): o Espresso não consegue correr nesta ROM (usa
+    // `InputManager.getInstance()`, API oculta) e, assim, os testes de UI correm também na CI,
+    // sem aparelho nenhum. Os testes que precisam do telefone (notificação, i18n) continuam
+    // instrumentados. Ver knowledge 114.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// O Robolectric quer escrever no `$HOME` do utilizador (cache e ficheiro de fecho): fora do
+// workspace isso é recusado. Aponta-se para dentro do build, que é sempre escrevível.
+tasks.withType<Test>().configureEach {
+    val base = layout.buildDirectory.dir("robolectric").get().asFile
+    base.mkdirs()
+    systemProperty("user.home", base.absolutePath)
+    // Sem `robolectric.dependency.dir`: com ele o Robolectric espera os jars já lá postos e não
+    // descarrega nada. Com o `user.home` redireccionado, ele descarrega para dentro do build.
+    testLogging { events("failed") }
 }
