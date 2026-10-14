@@ -81,7 +81,7 @@ versão monocromática (ícones temáticos) e o XML da cor de fundo — e o mani
 | Chave de API | ✅ desenhado |
 | Ecrã virtual | ✅ desenhado |
 | Sessões (diálogo) | ✅ desenhado |
-| Primeiras passos (onboarding) | ✅ desenhado |
+| Primeiros passos (onboarding) | ✅ desenhado · **assistente implementado** (6 passos, ainda com o layout simples — o desenho aplica-se depois) |
 | ~~Poderes~~ | substituído por *Ajustes* (a IA mudou: a conversa é a primeira aba e os ajustes são um menu) |
 | Implementação das disposições em Compose | por fazer (a seguir, ecrã a ecrã) |
 

@@ -137,7 +137,8 @@ fun CachaloteApp() {
             Scaffold(
                 modifier = Modifier.imePadding(),
                 bottomBar = {
-                    NavigationBar {
+                    // Durante o assistente não há barra: há um caminho a seguir, não abas.
+                    if (vm.wizardConcluido) NavigationBar {
                         NavigationBarItem(
                             selected = tab == 0,
                             onClick = { tab = 0 },
@@ -154,6 +155,10 @@ fun CachaloteApp() {
                 },
             ) { pad ->
                 Column(modifier = Modifier.padding(pad).fillMaxSize()) {
+                    // Configuração inicial: o assistente ocupa o ecrã todo enquanto não estiver feita.
+                    if (!vm.wizardConcluido) {
+                        Assistente(vm) { vm.concluirWizard() }
+                    }
                     Header(vm, busy = vm.busy)
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
@@ -353,6 +358,7 @@ private fun AjustesScreen(vm: MainViewModel) {
                 LinhaDeMenu(stringResource(R.string.mcp_titulo)) { secao = "mcp" }
                 LinhaDeMenu(stringResource(R.string.vscreen_titulo)) { secao = "vscreen" }
                 LinhaDeMenu(stringResource(R.string.backup_e_licencas)) { secao = "backup" }
+                LinhaDeMenu(stringResource(R.string.wizard_repetir)) { vm.repetirWizard() }
             }
         }
         if (secao == "motor") StatusScreen(vm)

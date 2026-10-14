@@ -53,6 +53,11 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("allowedRoots", v).apply()
 
     /** "daemon" (root/Shizuku) ou "embedded" (motor dentro da app, sem root). */
+    /** Falso até o utilizador passar pelo assistente de configuração inicial. */
+    var wizardConcluido: Boolean
+        get() = sp.getBoolean("wizardConcluido", false)
+        set(v) = sp.edit().putBoolean("wizardConcluido", v).apply()
+
     var mode: String
         get() = sp.getString("mode", "daemon")!!
         set(v) = sp.edit().putString("mode", v).apply()

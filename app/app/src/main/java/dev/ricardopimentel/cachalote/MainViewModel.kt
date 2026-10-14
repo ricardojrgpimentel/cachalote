@@ -152,6 +152,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Consumo de contexto, como o motor o reporta (`usage_update`). */
     var uso by mutableStateOf<Uso?>(null)
 
+    /** O assistente de configuração inicial aparece enquanto isto for falso. */
+    var wizardConcluido by mutableStateOf(Prefs(getApplication()).wizardConcluido)
+
+    fun concluirWizard() {
+        Prefs(getApplication()).wizardConcluido = true
+        wizardConcluido = true
+        refreshStatus()
+    }
+
+    /** Repetir a configuração inicial (Ajustes → Motor, por exemplo). */
+    fun repetirWizard() {
+        Prefs(getApplication()).wizardConcluido = false
+        wizardConcluido = false
+    }
+
     private val vigia = VigiaAcessibilidade(CachaloteAccessibilityService.isEnabled())
     var a11yTicks by mutableStateOf(0)
 

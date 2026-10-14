@@ -1636,3 +1636,21 @@ todos invisíveis no dia-a-dia do modo root:
   telefone (ver item 128). A chave fica **só nas preferências da app** — não vai para o repositório e
   o `secret-scan` já a sabe reconhecer.
 - **Origem:** **[LOCAL]**.
+
+### 130. Assistente de configuração inicial
+- **Porque existe:** a primeira decisão de quem instala é **como o motor corre** (root, Shizuku ou
+  nada) — e essa decisão muda o que o agente consegue fazer e, sobretudo, **quanto o sistema
+  operativo o trava**. Sem guia, o utilizador adivinha; e uma app que não arranca por falta de uma
+  permissão (a de notificações mata o arranque, ver item 112) não explica nada.
+- **Seis passos:** boas-vindas (o que é, que trabalha por turnos, que nada corre sem autorização e o
+  que sai do telefone) · **escolha do modo** (os três, com o limite de cada um e detecção do que
+  existe no aparelho + recomendação) · ligar o motor (daemon, token, motor a responder) ·
+  acessibilidade · chave do provedor · capacidades · pronto.
+- **Decisão de desenho:** durante o assistente **não há barra de navegação** — há um caminho a
+  seguir, não abas. E pode ser repetido em *Ajustes → Repetir a configuração inicial*.
+- **Bug apanhado ao ver no telefone:** no cartão escolhido (fundo `primaryContainer`) o texto usava
+  as cores de superfície normais e ficava **ilegível** (escuro sobre teal). Passou a usar as cores
+  `onPrimaryContainer` desse fundo.
+- **Verificação:** no S10+, com a preferência nova a nascer a falso, o assistente apareceu; o passo
+  da escolha do modo detectou o root e recomendou-o.
+- **Origem:** **[LOCAL]**.
