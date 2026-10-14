@@ -59,7 +59,30 @@ Opções:
 app instalada usa. Mudar implica reinstalar (perde token/capacidades/auditoria). Nada a fazer por
 defeito.
 
-## 3. Checklist para tornar público
+## 3. O que já está preparado (2026-10-14)
+
+A publicação **já foi feita no repositório privado**, à espera de o tornar público:
+
+| Asset | Onde | Tamanho |
+|---|---|---|
+| `kernel.zip` | release [`kernel-77fa6785a4e4`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/kernel-77fa6785a4e4) | 211 MB |
+| `cachalote-0.3.0-f2.apk` | mesma release (assinada com `.work/cachalote-release.jks`) | 42 MB |
+
+O `app/app/src/main/assets/kernel.remote.json` (não versionado) já aponta para
+`https://github.com/ricardojrgpimentel/cachalote/releases/download/kernel-77fa6785a4e4/kernel.zip`
+com o `sha256` correspondente — a app descarrega-o e verifica-o.
+
+**Verificado:**
+
+- o asset existe e está completo — pelo API, com o token:
+  `HTTP 206` ao pedir 1 KB (a assinatura `PK` confirma o zip);
+- o URL de *browser* responde **404 sem autenticação hoje** (repo privado) — é exactamente o
+  esperado, e passa a 200 quando o repositório for público. ⚠️ Nota: em repos privados o URL de
+  *browser* **não** aceita token; só o endpoint do API (`/releases/assets/<id>` com
+  `Accept: application/octet-stream`) serve o ficheiro. Para a app isto é irrelevante: ela usa o
+  URL público quando o repo for público.
+
+## 3.1. Checklist para tornar público
 
 ```sh
 # 1. o repositório
