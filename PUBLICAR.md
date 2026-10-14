@@ -25,39 +25,43 @@ token). Antes disso, isto é o que foi verificado e o que ficou por decidir.
    scripts passam a funcionar em qualquer máquina.
 2. **Caminhos pessoais** em `STATUS.md` e `research/dsh-sdk-surface.md` → `<repo>`.
 
-## 2. Decisões que ficam para ti
+## 2. Identidade dos commits — ✅ **reescrito**
 
-### 2.1 Email nos commits
-
-O histórico tem dois autores:
+**Feito em 2026-10-14**, a pedido do autor: o histórico passou a ter **uma só identidade**:
 
 ```
-36  ricardo <ricardo@local>                 (commits que eu fiz)
-12  Ricardo Pimentel <eu@ricardopimen.tel>  (os teus)
+Ricardo Pimentel <12200109+ricardojrgpimentel@users.noreply.github.com>
 ```
 
-Um repositório público expõe esse email (é o caso de quase todos os projectos, mas é uma escolha).
-Opções:
+(os 75 commits, autor e committer; o email pessoal deixa de aparecer no repositório.)
 
-- **Manter** — zero trabalho; o email fica visível.
-- **Reescrever** para o email *noreply* do GitHub (ex.: `ricardojrgpimentel@users.noreply.github.com`):
+| | |
+|---|---|
+| Ferramenta | `git filter-repo --mailmap` (reescreve autor e committer, mantém datas) |
+| Conteúdo | **inalterado** — a árvore do novo `HEAD` é idêntica à antiga (`d8f874de76c2`) |
+| Antes | `main` = `b9dd9e8ef9f5e600b2e3536e91631816578a0621` · tag `kernel-77fa6785a4e4` = `ca28ace…` |
+| Depois | `main` = `8cc2005…` · tag `kernel-77fa6785a4e4` = `a61db73…` |
+| Cópia de segurança | `.work/backup-cachalote.git` (clone *mirror* completo do histórico antigo) |
+| Verificação | `gh api .../commits?per_page=100` → **75/75** com a identidade nova; release com `kernel.zip` (211 MB) e a APK (42 MB) intacta |
 
-  ```sh
-  # requer git-filter-repo (pip install git-filter-repo)
-  git filter-repo --email-callback \
-    'return b"ricardojrgpimentel@users.noreply.github.com" if email == b"eu@ricardopimen.tel" else email'
-  git push --force origin main
-  ```
+**Noutro computador (importante):** o histórico local fica divergente. Numa cópia de trabalho:
 
-  **Custo:** reescreve hashes; o clone do outro PC tem de fazer
-  `git fetch origin && git reset --hard origin/main` (senão divergem). Não fazer com trabalho por
-  comitar nesse PC.
+```sh
+git fetch origin
+git reset --hard origin/main      # e, se houver tags antigas: git fetch --tags --force
+```
 
-### 2.2 Identificador da app
+Não há ramos nem *pull requests* a preservar neste repositório.
 
-`dev.ricardopimentel.cachalote` (o teu nome) mantém-se — foi a decisão D9 do plano e é o que a
-app instalada usa. Mudar implica reinstalar (perde token/capacidades/auditoria). Nada a fazer por
-defeito.
+**Para commits futuros** basta o que já está configurado no repositório:
+
+```sh
+git config user.name  "Ricardo Pimentel"
+git config user.email "12200109+ricardojrgpimentel@users.noreply.github.com"
+```
+
+E no GitHub, **Settings → Emails → "Keep my email addresses private"** evita que novos *pushes*
+voltem a expor o email pessoal.
 
 ## 3. O que já está preparado (2026-10-14)
 
