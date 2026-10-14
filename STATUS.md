@@ -613,9 +613,13 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**Clique do ✕ na UI**~~ | ✅ **feito em §35** | bug do diálogo corrigido (leitura da sessão activa no topo) + botão **Fechar a sessão activa**; verificado pela UI |
 | ~~**Visão em vídeo**~~ | ✅ **feito em §36** | `android_see` com `frames`/`intervalMs`: anexa N fotogramas ao mesmo resultado; o agente comparou-os no tempo |
 | ~~**MCP servers configuráveis**~~ | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado **no motor e pela app** (`mcp__ping__ping` → pong) |
+| **Notificação no fim do turno** | por fazer | hoje um turno longo que acaba com a app em segundo plano não avisa ninguém; é uma linha no `CachaloteAgentService` |
+| **Testes de UI instrumentados** (`androidTest`) | por fazer | os três scripts de teste conduzem a app por `uiautomator` e são **flaky por natureza** (campos errados, teclado, `BACK`); umas quantas asserções Compose resolviam isso de vez |
+| **Inglês / i18n** | decisão | a app tem os textos **em português e dentro do Kotlin** (não há `strings.xml`); para um repo público vale decidir: manter PT, ou extrair + traduzir |
+| **vscreen: polimento** | por fazer | `tap`/`key`/`text` próprios no ecrã virtual (hoje o agente usa `bash input -d`), pré-visualização ao vivo (auto-refresh) e `vscreen_launch` dentro da ferramenta |
 | **Ecrã de licenças na app** | por fazer (pedido) | área na app com os **textos integrais** das licenças (Node, libc++, OpenSSL, ICU, SQLite, zlib, c-ares, AndroidX, Shizuku, DSH) — e publicar o mesmo no repo quando ficar público |
-| **Publicar o kernel (URL público) e uma APK de release** | ✅ preparado (§3 do PUBLICAR.md) | release com `kernel.zip` + APK assinada; falta só tornar o repo público | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
-| **vscreen** (ecrã virtual) | bloqueado | decisão LGPL tua; reimplementar do zero são dias de trabalho |
+| ~~**Publicar o kernel e a APK de release**~~ | ✅ **preparado** (§3 do `PUBLICAR.md`) | release `kernel-77fa6785a4e4` com `kernel.zip` (211 MB) + APK assinada (42 MB); falta **tornares o repo público** |
+| ~~**vscreen** (ecrã virtual)~~ | ✅ **feito em §37-39** | reimplementado do zero com APIs do AOSP (D8 = opção A, zero LGPL); sete passos verificados com prova visual |
 | ~~**SEA + snapshot V8**~~ | ✅ medido e rejeitado | § item 4: não ganha nada |
 | ~~**Kernel na APK**~~ | ✅ resolvido | §24: download com verificação (440 MB → 164 MB) |
 | ~~**CI**~~ | ✅ feito e reforçado | §25: três jobs, incluindo o build da APK num clone |
