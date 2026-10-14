@@ -111,7 +111,11 @@ function apply(ctx) {
     parameters: {},
     output: textOutput("Android capabilities"),
     async execute() {
-      return asText(await hostCall("status", {}));
+      const st = await hostCall("status", {});
+      // Estado do ecrã virtual: evita ter de o perguntar à parte.
+      const vs = await hostCall("vscreen_status", {}).catch(() => null);
+      if (vs) st.virtualScreen = { running: vs.running, displayId: vs.displayId, width: vs.width, height: vs.height };
+      return asText(st);
     },
   }));
 
@@ -317,6 +321,121 @@ function apply(ctx) {
       return value;
     },
   }));
+
+  /**
+   * Ecrã virtual: uma segunda tela onde o agente trabalha sem mexer no ecrã do dono.
+   * As acções de *ver* e *gerir* vão pelas capacidades da app; as de *pôr apps lá* e de *tocar*
+   * são comandos de root (`am start --display`, `input -d`) que o agente corre com o `bash`.
+   */
+  ctx.tools.register(defineTool({
+    name: "android_vscreen",
+    description:
+      "Virtual screen (a second, invisible display) where you can work WITHOUT taking over the " +
+      "phone the user is holding. Actions: " +
+      "'start' (params width/height/density) creates it and returns displayId; " +
+      "'frame' returns a PNG of it (attached to the conversation, like android_see) — use " +
+      "maxWidth for a smaller image; 'status' reports it; 'stop' releases it. " +
+      "To put an app on it, run with bash: `am start --display <displayId> -n <pkg>/<activity>`. " +
+      "To interact, run with bash: `input -d <displayId> tap X Y` (also swipe/text/keyevent). " +
+      "The virtual screen needs NO accessibility service: the pixels come from the display and " +
+      "the input from `input -d`. Its coordinates are its own (width×height), not the phone's.",
+    parameters: {
+      action: {
+        type: "string",
+        required: true,
+        enum: ["start", "status", "frame", "stop"],
+        description: "What to do with the virtual screen.",
+      },
+      width: { type: "integer", description: "start: width in pixels (default 720)." },
+      height: { type: "integer", description: "start: height in pixels (default 1280)." },
+      density: { type: "integer", description: "start: density in dpi (default 320)." },
+      maxWidth: { type: "integer", description: "frame: downscale the capture to this width (default 720)." },
+    },
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          action: { type: "string" },
+          running: { type: "boolean" },
+          displayId: { type: "integer" },
+          width: { type: "integer" },
+          height: { type: "integer" },
+          frames: { type: "integer" },
+          path: { type: "string" },
+          bytes: { type: "integer" },
+          mediaType: { type: "string" },
+          attached: { type: "boolean" },
+          attachmentRef: { type: "json" },
+          hint: { type: "string" },
+        },
+      },
+      render: (_args, value) => {
+        const parts = [{
+          type: "text",
+          text: value.action === "frame"
+            ? `ecrã virtual ${value.displayId} — fotograma ${value.width}×${value.height}` +
+              (value.attached ? " (imagem em anexo)" : "") + (value.hint ? ` — ${value.hint}` : "")
+            : `ecrã virtual ${value.displayId >= 0 ? value.displayId : "(nenhum)"} · ` +
+              `a correr: ${value.running === true} · ${value.width}×${value.height} @${value.density} dpi · ` +
+              `${value.frames ?? 0} fotogramas` + (value.hint ? ` — ${value.hint}` : ""),
+        }];
+        if (value.attachmentRef) parts.push({ type: "image", attachment: value.attachmentRef });
+        return parts;
+      },
+      presentationMeta: () => ({ title: "Ecrã virtual" }),
+    },
+    async execute(args) {
+      const acao = String(args.action || "").toLowerCase();
+      if (acao === "start") {
+        const r = await hostCall("vscreen_start", {
+          width: args.width ?? 720,
+          height: args.height ?? 1280,
+          density: args.density ?? 320,
+        });
+        return { action: acao, ...r, hint: "lança apps com: bash → am start --display <displayId> -n <pkg>/<activity>" };
+      }
+      if (acao === "stop") {
+        const r = await hostCall("vscreen_stop", {});
+        return { action: acao, running: false, displayId: -1, ...r };
+      }
+      if (acao === "status") {
+        return { action: acao, ...(await hostCall("vscreen_status", {})) };
+      }
+      if (acao === "frame") {
+        const raw = await hostCall("vscreen_frame", { maxWidth: args.maxWidth ?? 720 });
+        const value = {
+          action: acao,
+          displayId: raw.displayId,
+          width: raw.width,
+          height: raw.height,
+          bytes: raw.bytes,
+          mediaType: raw.mediaType || "image/png",
+          attached: false,
+          attachmentRef: null,
+        };
+        const attachments = ctx.get("attachments");
+        if (attachments === void 0) {
+          value.hint = "não há serviço de anexos nesta composição: a imagem não chega ao modelo";
+        } else if (typeof raw.data !== "string" || raw.data.length === 0) {
+          value.hint = "a app não devolveu os pixels";
+        } else {
+          try {
+            value.attachmentRef = await attachments.saveImage({
+              data: Buffer.from(raw.data, "base64"),
+              mediaType: value.mediaType,
+            });
+            value.attached = true;
+          } catch (error) {
+            value.hint = "falhou o anexo da imagem: " + (error?.message ?? String(error));
+          }
+        }
+        return value;
+      }
+      throw new Error(`acção desconhecida: ${acao} (usa start, status, frame ou stop)`);
+    },
+  }));
+
 }
 
 export { apply, inject, name };

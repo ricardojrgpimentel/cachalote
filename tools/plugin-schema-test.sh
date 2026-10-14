@@ -54,7 +54,7 @@ import { apply, name } from "./plugin/lib/index.js";
 
 const WANT = [
   "android_status", "android_notify", "android_screen", "android_tap",
-  "android_type", "android_key", "android_see",
+  "android_type", "android_key", "android_see", "android_vscreen",
 ];
 const reg = [];
 try {

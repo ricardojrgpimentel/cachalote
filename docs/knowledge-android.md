@@ -1243,3 +1243,19 @@ diferentes, e tratá-los como iguais era o erro:
   [`docs/screenshots/vscreen-toque-registado.png`](../docs/screenshots/vscreen-toque-registado.png)
   (mostra **5 127**) — o toque registou-se no ecrã virtual.
 - **Origem:** **[LOCAL]**.
+
+### 104. Ferramentas do agente para o ecrã virtual
+- **Desenho:** a ferramenta `android_vscreen` faz o que a app sabe fazer (`start`, `status`,
+  `frame`, `stop` — capacidades da app, sem shell). O que precisa de root (`am start --display`,
+  `input -d`) o agente corre com o `bash` que já tem — e a descrição da ferramenta diz-lhe isso
+  com os comandos exactos. Vantagem: nenhuma capacidade de shell nova, tudo o que é privilegiado
+  continua a passar pela guarda/auditoria do `bash`.
+- **O fotograma entra no contexto** como anexo (mesmo caminho do `android_see`), por isso o
+  agente vê o ecrã virtual sem nada de novo no lado das imagens.
+- **Verificação (agente, ponta a ponta):** pedido *"inicia um ecrã virtual, lança lá a calculadora
+  com bash, tira um fotograma e diz o número"* → `android_vscreen start` (display 3) →
+  `bash am start --display 3 …` → `android_vscreen frame` → **"O número no visor é 5127
+  (apresentado como `5 127`)"**.
+- **Cuidado:** um ecrã virtual a correr produz fotogramas continuamente; parar (`vscreen_stop`)
+  quando acaba, ou fica a consumir memória/bateria.
+- **Origem:** **[LOCAL]**.

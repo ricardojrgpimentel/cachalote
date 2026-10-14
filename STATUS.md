@@ -613,7 +613,8 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**Clique do ✕ na UI**~~ | ✅ **feito em §35** | bug do diálogo corrigido (leitura da sessão activa no topo) + botão **Fechar a sessão activa**; verificado pela UI |
 | ~~**Visão em vídeo**~~ | ✅ **feito em §36** | `android_see` com `frames`/`intervalMs`: anexa N fotogramas ao mesmo resultado; o agente comparou-os no tempo |
 | ~~**MCP servers configuráveis**~~ | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado **no motor e pela app** (`mcp__ping__ping` → pong) |
-| **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
+| **Ecrã de licenças na app** | por fazer (pedido) | área na app com os **textos integrais** das licenças (Node, libc++, OpenSSL, ICU, SQLite, zlib, c-ares, AndroidX, Shizuku, DSH) — e publicar o mesmo no repo quando ficar público |
+| **Publicar o kernel (URL público) e uma APK de release** | ✅ preparado (§3 do PUBLICAR.md) | release com `kernel.zip` + APK assinada; falta só tornar o repo público | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
 | **vscreen** (ecrã virtual) | bloqueado | decisão LGPL tua; reimplementar do zero são dias de trabalho |
 | ~~**SEA + snapshot V8**~~ | ✅ medido e rejeitado | § item 4: não ganha nada |
 | ~~**Kernel na APK**~~ | ✅ resolvido | §24: download com verificação (440 MB → 164 MB) |
@@ -1355,5 +1356,33 @@ Decisão do utilizador: **reimplementar do zero com APIs do AOSP**, sem uma linh
 acessibilidade** — a imagem vem do `ImageReader` e o toque do `input -d`. O agente pode portanto
 trabalhar numa segunda tela mesmo com a acessibilidade desligada, e o telefone fica livre.
 
-**Falta (próximas etapas):** ferramentas do agente para o ecrã virtual (S3) e a pré-visualização
-na app (S4).
+**Ferramentas do agente (§38):** `android_vscreen` (start/status/frame/stop, pela app) e o
+`bash` para o que precisa de root (`am start --display`, `input -d`).
+
+**Falta:** a pré-visualização na app (S4) e o ecrã de licenças na app (pedido do utilizador; com os
+textos integrais e a ligação à publicação do repositório).
+
+
+---
+
+## 38. vscreen: ferramentas do agente (S3)
+
+| Onde | O quê |
+|---|---|
+| `android_vscreen` (plugin) | `start` · `status` · `frame` (fotograma anexado ao contexto) · `stop` — tudo por capacidades da app, sem shell |
+| `bash` (agente) | `am start --display <id> -n <pkg>/<activity>` para pôr apps lá; `input -d <id> tap/swipe/text/keyevent` para interagir |
+| `android_status` | passou a reportar o estado do ecrã virtual |
+
+**Verificação pelo agente (ponta a ponta):** *"inicia um ecrã virtual 720x1280, lança lá a
+calculadora com bash, tira um fotograma e diz o número"* →
+
+```
+[thought] Display id is 3. Now run am start.
+[tool] bash [completed]
+[tool] android_vscreen [completed]
+[assistant] Ecrã virtual 3 (720×1280 @320 dpi) iniciado, calculadora lançada nele, fotograma
+            capturado. O número no visor é 5127 (apresentado como `5 127`).
+```
+
+Ou seja: o agente cria a segunda tela, põe lá a app, **vê-a** e lê o conteúdo — sem usar o ecrã
+do dono e **sem o serviço de acessibilidade**.
