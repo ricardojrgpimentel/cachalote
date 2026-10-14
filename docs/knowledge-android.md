@@ -1039,3 +1039,18 @@ diferentes, e tratá-los como iguais era o erro:
   nas linhas do diálogo (a sessão activa não estava entre as primeiras) e o clique em "Sessões"
   chegou com a app a reconectar. O que está provado é o protocolo e o estado por modo.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AA. Arranque do Shizuku
+
+### 94. O Shizuku no boot depende de como o servidor é iniciado
+- **Verificado no S10+:** a opção do Shizuku **"Iniciar na inicialização (root)"** já estava
+  ligada (Configurações → primeiro interruptor). Com root, o servidor volta sozinho depois de
+  reiniciar — logo o modo Shizuku do Cachalote fica utilizável sem abrir a app do Shizuku.
+- **Sem root não há como:** o servidor do Shizuku só sobe por ADB ou depuração sem fio (ou por
+  um app de terminal), e isso tem de ser feito depois de cada arranque. Não é limitação nossa.
+- **O que a app faz quando ele não está a correr:** diz exactamente isso no cartão do motor
+  (*"o Shizuku não está a correr (abre a app Shizuku e inicia-o)"*) e oferece o botão
+  **Autorizar no Shizuku**. Não falha em silêncio nem finge que ligou.
+- **Origem:** **[LOCAL]**.

@@ -606,7 +606,7 @@ repositório está em `main`, empurrado, sem alterações pendentes.
 | **Kernel na APK** | `--bundle` funciona, mas a APK fica com **440 MB** (§22.6): para distribuição tem de ser download na primeira execução, não asset |
 | **LMK sob pressão** | FGS + supervisão feitos, nunca testado com o telemóvel sem memória |
 | ~~**CI**~~ | ✅ **feito em §21**: `.github/workflows/ci.yml` (regressão do schema do plugin + sintaxe) |
-| **Arranque do Shizuku no boot** | o Shizuku tem a opção; o modo Shizuku precisa que ele esteja a correr |
+| ~~**Arranque do Shizuku no boot**~~ | ✅ **feito em §29**: a opção "Iniciar na inicialização (root)" já estava ligada no S10+; sem root o servidor tem de ser iniciado por ADB a cada arranque (limitação do Shizuku, não nossa) |
 | **Voz, visão em vídeo, `session/close` na UI** | por fazer |
 | **Ligação app↔daemon aos solavancos** | §21: a app reconecta em ciclo depois de o motor reiniciar (a chave grava → motor reinicia); um pedido nesse intervalo falha com "a ligação ao motor caiu". Vale a pena tornar a reconexão mais calma. |
 
@@ -1148,3 +1148,17 @@ sessão activa e `unknown session` para as do histórico (medido com um cliente 
 `app-ui-test` 9/9 e as 7 ferramentas do plugin registadas.
 
 **Não verificado:** o ✕ *pela UI* — a automação não acertou nas linhas do diálogo. Fica anotado.
+
+
+---
+
+## 29. Arranque do Shizuku: verificado
+
+A opção **"Iniciar na inicialização (root)"** do Shizuku estava **ligada** no telefone
+(Configurações → primeiro interruptor, `checked=true`) — com root o servidor volta sozinho
+depois de reiniciar, e o modo Shizuku fica utilizável sem tocar em nada. Num telefone **sem
+root** o servidor só sobe por ADB/depuração sem fio e isso repete-se a cada arranque: é uma
+limitação do Shizuku, não do Cachalote.
+
+Quando o Shizuku não está a correr, a app di-lo no cartão do motor e oferece **Autorizar no
+Shizuku** — não falha em silêncio.
