@@ -68,7 +68,10 @@ echo "node: $("$RUNTIME_SRC/bin/node" -v 2>/dev/null || echo '(binário Android;
 
 say "3/6 encenar em $STAGE"
 "${ADB[@]}" shell "rm -rf $STAGE && mkdir -p $STAGE"
-tar -cf "$WS/.work/kernel.tar" -C "$KERNEL" dsh
+# A marca de origem (escrita por tools/extract-kernel.cjs) vai junto: sem ela, o daemon instalado
+# não sabe — nem pode dizer — de onde veio a árvore.
+tar -cf "$WS/.work/kernel.tar" -C "$KERNEL" dsh .cachalote-origem 2>/dev/null \
+  || tar -cf "$WS/.work/kernel.tar" -C "$KERNEL" dsh
 "${ADB[@]}" push "$WS/.work/kernel.tar" "$STAGE/kernel.tar" >/dev/null
 "${ADB[@]}" shell "mkdir -p $STAGE/runtime/bin $STAGE/runtime/lib $STAGE/bin"
 "${ADB[@]}" push "$RUNTIME_SRC/bin/node" "$STAGE/runtime/bin/node" >/dev/null

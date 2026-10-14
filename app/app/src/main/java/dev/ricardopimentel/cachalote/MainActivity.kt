@@ -694,6 +694,14 @@ private fun StatusScreen(vm: MainViewModel) {
                     Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                 }
                 if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
+                    // Se o arranque falhou por falta de permissão, pedimo-la sem o utilizador ter
+                    // de descobrir o botão (o diálogo do Shizuku precisa de uma Activity).
+                    LaunchedEffect(vm.precisoPermissaoShizuku) {
+                        if (vm.precisoPermissaoShizuku) {
+                            vm.precisoPermissaoShizuku = false
+                            vm.requestShizukuPermission(ctx as android.app.Activity)
+                        }
+                    }
                     OutlinedButton(
                         onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
                         enabled = !vm.busy,

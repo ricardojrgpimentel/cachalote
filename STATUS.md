@@ -1635,3 +1635,22 @@ depois de cada substituição.
 
 `PUBLICAR.md` §4 passa a ter o `sha256` da chave, o alias, o certificado e o procedimento de cópia e
 restauro — e o aviso que a password por omissão é pública.
+
+
+---
+
+## 53. Shizuku re-verificado: cinco bugs corrigidos
+
+O flavor Shizuku não era exercitado desde uma sessão antiga. Re-corrido o caminho inteiro,
+apareceram cinco problemas (tabela completa em knowledge 122): **`doctor` com porto fixo** (dizia
+39731 num daemon no 39733), **marca de origem não copiada**, **token velho depois de reinstalar o
+daemon** (`token inválido` para sempre), **dois daemons no mesmo porto** ao reinstalar, e o **CLI
+instalado em `/data/local/tmp` a gerir o daemon root** (chegou a matar o daemon errado — o valor por
+omissão era `/data/adb/cachalote`).
+
+Todos corrigidos e verificados. No fim: daemon instalado **sem root**, a correr como **uid shell**,
+protegido do LMK, watchdog a vigiar, porto **39733**, motor como shell; e a app **pede** a permissão
+do Shizuku sozinha (o diálogo apareceu). O telemóvel ficou reposto no **modo root** e ligado.
+
+Por verificar: a ligação app↔daemon em modo Shizuku ponta a ponta (a autorização do Shizuku é por
+app e perde-se a cada reinstalação) e um turno a sério (exigiria pôr a chave nessa base).

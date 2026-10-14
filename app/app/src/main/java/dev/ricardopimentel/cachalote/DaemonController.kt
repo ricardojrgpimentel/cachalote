@@ -69,11 +69,13 @@ class DaemonController(private val context: Context) {
 
     // ---------------------------------------------------------------- ligação
 
-    suspend fun ensureToken(rotate: Boolean = false): String {
+    suspend fun ensureToken(rotate: Boolean = false, ignorarCache: Boolean = false): String {
         // O token é POR MODO: o daemon root e o daemon Shizuku são processos distintos (e
         // portos distintos), logo um token em cache do outro dá "token inválido".
         val cached = if (mode == Mode.SHIZUKU) prefs.tokenShizuku else prefs.token
-        if (!rotate && !cached.isNullOrBlank() && cached.length >= 32) return cached
+        // `ignorarCache` existe por causa de um caso real: depois de o daemon ser reinstalado, o
+        // token dele muda e o que a app tinha guardado passa a dar "token inválido" para sempre.
+        if (!rotate && !ignorarCache && !cached.isNullOrBlank() && cached.length >= 32) return cached
         val token = when (mode) {
             Mode.SHIZUKU -> ShizukuBridge.token(rotate)
             Mode.EMBEDDED -> error("o modo embutido não usa token")
@@ -126,7 +128,20 @@ class DaemonController(private val context: Context) {
 
     suspend fun connect(): JSONObject {
         acpReady = false
-        return when (mode) {
+        return try {
+            ligar()
+        } catch (t: Throwable) {
+            // "token inválido" acontece depois de o daemon ser reinstalado (o token dele muda, o
+            // que a app guardou fica velho). Relê o token do ficheiro e tenta uma vez mais, em vez
+            // de deixar o utilizador preso num erro que ele não sabe resolver.
+            val msg = t.message.orEmpty()
+            if (!msg.contains("token inválido", ignoreCase = true) && !msg.contains("autenticação", ignoreCase = true)) throw t
+            if (mode == Mode.SHIZUKU) prefs.tokenShizuku = null else prefs.token = null
+            ligar()
+        }
+    }
+
+    private suspend fun ligar(): JSONObject = when (mode) {
             Mode.DAEMON -> client.connectTcp(prefs.port, ensureToken())
             Mode.SHIZUKU -> client.connectTcp(effectivePort(), ensureToken())
             Mode.EMBEDDED -> {
@@ -137,7 +152,6 @@ class DaemonController(private val context: Context) {
                 }
                 client.connect(streams)
             }
-        }
     }
 
     suspend fun ensureConnected(): Boolean {

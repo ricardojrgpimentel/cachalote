@@ -80,6 +80,24 @@ function loadToken() {
   return t;
 }
 let TOKEN = loadToken();
+// O token é lido do ficheiro, mas pode mudar em execução (a app pede um novo depois de o daemon
+// ser reinstalado). Guarda-se o mtime e relê-se quando muda — antes, o daemon ficava com o token
+// antigo em memória e a app levava "token inválido" para sempre.
+let TOKEN_MTIME = 0;
+function tokenAtual() {
+  try {
+    const st = fs.statSync(TOKEN_FILE);
+    if (st.mtimeMs !== TOKEN_MTIME) {
+      const novo = fs.readFileSync(TOKEN_FILE, "utf8").trim();
+      if (novo && novo !== TOKEN) {
+        TOKEN = novo;
+        log("token do canal relido do ficheiro");
+      }
+      TOKEN_MTIME = st.mtimeMs;
+    }
+  } catch {}
+  return TOKEN;
+}
 
 /* ---------------- credenciais ---------------- */
 function readEnv() {
@@ -388,8 +406,9 @@ function attach(socket, { requireAuth }) {
 
       // autenticação (só TCP)
       if (msg.method === "cachalote.auth") {
-        const okToken = typeof msg.params?.token === "string" && msg.params.token.length === TOKEN.length &&
-          crypto.timingSafeEqual(Buffer.from(msg.params.token), Buffer.from(TOKEN));
+        const esperado = tokenAtual();
+        const okToken = typeof msg.params?.token === "string" && msg.params.token.length === esperado.length &&
+          crypto.timingSafeEqual(Buffer.from(msg.params.token), Buffer.from(esperado));
         if (okToken) {
           authed = true;
           const role = msg.params?.client === "tool" ? "tool" : "app";

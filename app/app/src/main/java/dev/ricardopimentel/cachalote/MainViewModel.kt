@@ -385,6 +385,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Pede a permissão do Shizuku (abre o diálogo do sistema). */
+    /**
+     * Fica a verdadeiro quando falta a permissão do Shizuku: a UI vê isto e pede-a (o pedido tem
+     * de vir de uma Activity, por isso não se faz aqui). Sem isto, quem carregasse em "Ligar
+     * daemon" só via um erro e não sabia que havia um botão para autorizar.
+     */
+    var precisoPermissaoShizuku by mutableStateOf(false)
+
     fun requestShizukuPermission(activity: android.app.Activity) {
         if (!controller.shizukuAvailable()) {
             shizukuState = "o Shizuku não está a correr"
@@ -931,6 +938,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 block()
             } catch (t: Throwable) {
                 error = "$label: ${t.message ?: t::class.java.simpleName}"
+                // Falta a permissão do Shizuku? A UI pede-a sozinha (ver `precisoPermissaoShizuku`).
+                if (error.contains("permissão do Shizuku")) precisoPermissaoShizuku = true
             } finally {
                 busy = false
             }

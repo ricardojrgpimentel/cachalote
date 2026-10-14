@@ -1485,3 +1485,25 @@ diferentes, e tratá-los como iguais era o erro:
   (é pública). Serve para desenvolvimento; quem tiver o `.jks` assina como "Cachalote" com ela. A
   secção 4 do `PUBLICAR.md` explica o que fazer (e o `sha256` para conferir a cópia).
 - **Origem:** **[LOCAL]**.
+
+### 122. Re-verificar o Shizuku valeu a pena: cinco bugs reais
+O flavor Shizuku tinha sido verificado numa sessão antiga e o código mudou muito desde então
+(i18n, capacidades, vscreen). Ao voltar a correr o caminho inteiro apareceram **cinco** problemas,
+todos invisíveis no dia-a-dia do modo root:
+
+| Bug | Sintoma | Correcção |
+|---|---|---|
+| **`doctor` com porto fixo** | dizia `TCP 39731 à escuta` num daemon que ouve no **39733** — mentia sobre o canal | o porto vem de `$BASE/home/port` (com o valor antigo como recurso) |
+| **Marca de origem não copiada** | toda a instalação nova avisava "kernel sem marca de origem" | o `tar` da árvore encenada passa a incluir `.cachalote-origem` |
+| **Token velho depois de reinstalar o daemon** | `shizuku: token inválido` para sempre (a app guardava o token antigo e nunca relia) | a ponte relê o ficheiro quando o `mtime` muda **e** a app, ao ver "token inválido", relê o token e tenta outra vez |
+| **Dois daemons no mesmo porto** | reinstalar não parava o anterior: dois bridges ao mesmo tempo | `start` procura os nossos processos pelo caminho do bridge e pára-os (e **diz** quando não consegue, em vez de fingir) |
+| **CLI com a base errada** | correr `/data/local/tmp/cachalote/bin/cachalote` gerava o daemon **root** (o valor por omissão era `/data/adb/cachalote`) — chegou a matar o daemon errado | a base por omissão passa a ser **onde o script vive** (`…/bin/cachalote` → a pasta de cima) |
+
+- **Verificado no fim:** o daemon instala-se **sem root**, corre como **uid shell**, protege-se do
+  LMK, tem watchdog, ouve no 39733, o motor corre como shell, o `doctor` funciona contra essa base e
+  o **diálogo de permissão do Shizuku aparece sozinho** (a app passou a pedi-lo quando o arranque
+  falha por falta dele).
+- **Por verificar:** a ligação app↔daemon em modo Shizuku de ponta a ponta e um turno a sério — a
+  autorização do Shizuku é **por app** e perde-se a cada reinstalação (e um turno exigiria pôr a
+  chave nessa base, que é uma decisão do dono).
+- **Origem:** **[LOCAL]**.

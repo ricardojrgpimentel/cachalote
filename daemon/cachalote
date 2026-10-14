@@ -15,7 +15,15 @@
 #   BASE/logs/{daemon,engine,web}.log
 set -u
 
-BASE="${CACHALOTE_BASE:-/data/adb/cachalote}"
+# A base por omissão é **onde este script vive** (…/bin/cachalote → a base é a pasta de cima):
+# um CLI instalado em /data/local/tmp/cachalote tem de gerir ESSE daemon, não o root. Sem isto,
+# correr o CLI do Shizuku sem variável de ambiente matava/geria o daemon errado (aconteceu).
+if [ -n "${CACHALOTE_BASE:-}" ]; then
+  BASE="$CACHALOTE_BASE"
+else
+  _AQUI="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+  if [ -n "$_AQUI" ] && [ -f "$_AQUI/bridge.cjs" ]; then BASE="$_AQUI"; else BASE="/data/adb/cachalote"; fi
+fi
 SOCK="$BASE/run/cachalote.sock"
 PIDFILE="$BASE/run/daemon.pid"
 WEBPID="$BASE/run/web.pid"
@@ -35,6 +43,21 @@ case "${1:-}" in
 # ---------------------------------------------------------------- motor ACP
 start)
   if alive; then echo "já está a correr (pid $(pid_of))"; exit 0; fi
+  # Um daemon antigo sem pidfile válido (reinstalação, pid reaproveitado) ficava a ocupar o porto
+  # e o novo não subia — chegou a haver **dois** bridges ao mesmo tempo. Antes de arrancar,
+  # procura os nossos processos pelo caminho do bridge e mata-os (é o mesmo uid, logo é permitido).
+  for p in $(ls /proc 2>/dev/null | grep -E '^[0-9]+$'); do
+    if [ -r "/proc/$p/cmdline" ] && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q "$BASE/bridge.cjs"; then
+      [ "$p" = "$$" ] && continue
+      echo "a tentar parar um daemon antigo sem pidfile (pid $p)"
+      kill "$p" 2>/dev/null || true
+      sleep 1
+      if [ -d "/proc/$p" ]; then
+        # Dono diferente (ex.: CLI do Shizuku a olhar para o daemon root): não é nosso para matar.
+        echo "  (não consegui parar o pid $p — dono diferente; a seguir)"
+      fi
+    fi
+  done
   [ -x "$NODE" ] || { echo "ERRO: falta $NODE (corre daemon/install.sh)"; exit 1; }
   mkdir -p "$BASE/run" "$BASE/logs" "$BASE/tmp"
   export CACHALOTE_BASE="$BASE"
@@ -158,7 +181,11 @@ doctor)
   if pgrep -f "cachalote watchdog" >/dev/null 2>&1; then ok "watchdog a vigiar"; else warn "watchdog não está a correr (service.d liga-o no arranque)"; fi
   echo
   echo "-- canal e motor"
-  if port_open "${CACHALOTE_PORT:-39731}"; then ok "TCP ${CACHALOTE_PORT:-39731} à escuta"; else bad "porto ${CACHALOTE_PORT:-39731} sem resposta"; fi
+  # O porto vem do ficheiro da base: no modo Shizuku é 39733, não 39731. Com o valor fixo, o
+  # doctor mentia sobre o canal (apanhado ao re-verificar o Shizuku).
+  PORTO="$(cat "$BASE/home/port" 2>/dev/null | tr -d '[:space:]')"
+  PORTO="${PORTO:-${CACHALOTE_PORT:-39731}}"
+  if port_open "$PORTO"; then ok "TCP $PORTO à escuta"; else bad "porto $PORTO sem resposta"; fi
   [ -S "$SOCK" ] && ok "socket unix" || warn "socket unix ausente (normal em /data/local/tmp — o SELinux recusa)"
   ST=""
   [ -S "$SOCK" ] && ST="$("$0" ctl cachalote.status 2>/dev/null | tr -d '\n ' )"
