@@ -73,16 +73,18 @@ versão monocromática (ícones temáticos) e o XML da cor de fundo — e o mani
 
 | Ecrã | Estado |
 |---|---|
-| Logo e ícone | ✅ feitos e **no telefone** (`app/icone-no-lancador.png`) |
-| Conversa (principal) | ✅ desenhado — `ecras/conversa.png` · **tema já aplicado** (`app/tema-aplicado-conversa.png`) |
-| Aprovação (diálogo) | ✅ desenhado — `ecras/aprovacao.png` |
-| Estado | por desenhar |
-| Chave | por desenhar |
-| Poderes | por desenhar |
-| Sessões | por desenhar |
-| Ecrã virtual | por desenhar |
-| Implementação em Compose | por fazer |
+| Logo, ícone e folha de marca | ✅ feitos · **no telefone** (`app/icone-no-lancador.png`, `app/marca-no-cabecalho.png`) |
+| Conversa (principal) | ✅ desenhado · **tema aplicado** |
+| Ajustes (menu de secções + secção aberta) | ✅ desenhado — `ecras/ajustes.png` (já com a barra de **dois** itens) |
+| Aprovação (diálogo) | ✅ desenhado |
+| Estado do sistema | ✅ desenhado |
+| Chave de API | ✅ desenhado |
+| Ecrã virtual | ✅ desenhado |
+| Sessões (diálogo) | ✅ desenhado |
+| Primeiras passos (onboarding) | ✅ desenhado |
+| ~~Poderes~~ | substituído por *Ajustes* (a IA mudou: a conversa é a primeira aba e os ajustes são um menu) |
+| Implementação das disposições em Compose | por fazer (a seguir, ecrã a ecrã) |
 
-**Nota de qualidade do primeiro ecrã:** o botão *Enviar* fica cortado na margem direita (a linha do
-campo transborda). Fica registado para corrigir no desenho seguinte — e é o tipo de coisa que a
-implementação em Compose resolve com um `Row` com `weight`.
+⚠️ **Nota:** os ecrãs desenhados antes da reorganização mostram a barra antiga de quatro itens
+(Estado · Chave · Conversa · Poderes). O conteúdo continua a servir de referência; a **navegação** é
+a que está no código (Conversa + Ajustes) e o ecrã *Ajustes* já foi redesenhado com ela.

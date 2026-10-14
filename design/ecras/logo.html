@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cachalote · Brand Identity Sheet</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #0c141d;
+      color: #dbe3f0;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Squircle with precise 22.5% curvature */
+    .squircle-card {
+      border-radius: 22.5%;
+    }
+    .grid-bg-pattern {
+      background-image: radial-gradient(rgba(56, 239, 194, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-8 md:p-12 lg:p-16 antialiased selection:bg-[#38efc2]/20 selection:text-[#38efc2]">
+
+  <div class="max-w-6xl mx-auto space-y-10">
+
+    <!-- Header & Metadata Bar -->
+    <header class="border-b border-[#223142] pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div class="space-y-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono-tech tracking-wider uppercase bg-[#142332] text-[#38efc2] border border-[#38efc2]/25 font-medium">
+            BRAND SPECIFICATION // v1.0
+          </span>
+          <span class="text-xs font-mono-tech text-[#6c829d]">ON-DEVICE RUNTIME // ANDROID</span>
+        </div>
+        <div class="flex items-baseline gap-4">
+          <h1 class="text-4xl md:text-5xl font-semibold tracking-[-0.04em] text-[#dbe3f0]">Cachalote</h1>
+          <span class="text-xs font-mono-tech px-2.5 py-1 bg-[#15212e] text-[#8ea3bf] border border-[#26374a] rounded">
+            pkg: cachalote.local.runtime
+          </span>
+        </div>
+        <p class="text-sm md:text-base text-[#8ea3bf] max-w-2xl leading-relaxed">
+          Identidade visual do agente autónomo local on-device. Inspirada na cachalote (<em class="text-[#dbe3f0] not-italic font-mono-tech text-xs">Physeter macrocephalus</em>): um animal que mergulha em profundidade extrema por iniciativa própria, trabalha em isolamento e regressa com o que encontrou.
+        </p>
+      </div>
+
+      <!-- Quick Tokens / Palette Spec -->
+      <div class="p-4 bg-[#080e15] border border-[#1b2735] rounded-xl font-mono-tech text-xs space-y-1.5 shrink-0 min-w-[240px]">
+        <div class="text-[10px] text-[#556980] uppercase tracking-wider font-semibold mb-1">Tokens Principais</div>
+        <div class="flex items-center justify-between">
+          <span class="text-[#6c829d]">BASE</span>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#0c141d] border border-[#2b3a4c]"></span>
+            <span class="text-[#dbe3f0]">#0C141D</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[#6c829d]">ACCENT_TEAL</span>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#38efc2]"></span>
+            <span class="text-[#38efc2] font-semibold">#38EFC2</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[#6c829d]">TYPE_HEAD</span>
+          <span class="text-[#dbe3f0]">Space Grotesk</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[#6c829d]">TYPE_LABEL</span>
+          <span class="text-[#dbe3f0]">JetBrains Mono</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+      <!-- SECTION 1: MASTER APP ICON (7 cols) -->
+      <section class="lg:col-span-7 bg-[#070e16] border border-[#192737] rounded-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-2">
+            <span class="font-mono-tech text-xs text-[#38efc2] font-medium">01 //</span>
+            <span class="font-mono-tech text-xs text-[#dbe3f0] uppercase tracking-wide">APP ICON MASTER</span>
+          </div>
+          <span class="font-mono-tech text-[11px] text-[#5c738f] bg-[#0c1622] px-2 py-0.5 rounded border border-[#1b2b3d]">
+            SQUIRCLE 22.5% · 1024×1024 SVG
+          </span>
+        </div>
+
+        <!-- Master Icon Showcase -->
+        <div class="flex flex-col items-center justify-center py-10 px-4 grid-bg-pattern rounded-xl border border-[#13202e] relative">
+          <!-- The Icon Canvas -->
+          <div class="w-64 h-64 md:w-72 md:h-72 bg-[#0c141d] squircle-card border border-[#25364a] p-10 flex items-center justify-center shadow-none transition-transform hover:scale-[1.01]">
+            <svg viewBox="0 0 400 400" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Water surface reference bar -->
+              <rect x="70" y="86" width="260" height="16" rx="8" fill="#38efc2" />
+              <!-- Abstract sperm whale: blunt head down-left, hydrodynamic dorsal arch, tapered fluke top-right -->
+              <path d="M 180 170
+                       C 230 170 280 194 308 214
+                       C 328 186 346 170 366 166
+                       C 358 200 350 226 368 252
+                       C 342 246 318 238 296 224
+                       C 256 258 208 272 164 272
+                       C 96 272 72 234 72 208
+                       C 72 184 104 170 180 170 Z" 
+                    fill="#38efc2" />
+            </svg>
+          </div>
+          <div class="mt-6 flex items-center gap-4 text-center font-mono-tech text-[11px] text-[#6c829d]">
+            <span>Fundo: <strong class="text-[#dbe3f0]">#0C141D</strong></span>
+            <span>·</span>
+            <span>Símbolo: <strong class="text-[#38efc2]">#38EFC2</strong></span>
+            <span>·</span>
+            <span>Zero gradientes / Zero sombras</span>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-[#142232] flex items-center justify-between text-xs font-mono-tech text-[#5c738f]">
+          <span>GEOFÍSICA: MERGULHO 3000M</span>
+          <span class="text-[#38efc2]">ALTO CONTRASTE (14.8:1 AAA)</span>
+        </div>
+      </section>
+
+      <!-- SECTION 2: SCALE & LEGIBILITY TESTS (5 cols) -->
+      <section class="lg:col-span-5 bg-[#070e16] border border-[#192737] rounded-2xl p-6 md:p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="font-mono-tech text-xs text-[#38efc2] font-medium">02 //</span>
+              <span class="font-mono-tech text-xs text-[#dbe3f0] uppercase tracking-wide">TESTE DE ESCALA ÓTICA</span>
+            </div>
+            <span class="font-mono-tech text-[11px] text-[#5c738f] bg-[#0c1622] px-2 py-0.5 rounded border border-[#1b2b3d]">
+              192px · 96px · 48px
+            </span>
+          </div>
+          <p class="text-xs text-[#8ea3bf] leading-relaxed mb-6 font-mono-tech">
+            Comprovação de legibilidade ótica sem perda de silhueta ou colapso das linhas em densidades nominais de ecrã Android (xxxhdpi, xhdpi, mdpi).
+          </p>
+
+          <!-- Scaled Row -->
+          <div class="p-6 bg-[#0c141d] rounded-xl border border-[#192635] flex items-end justify-around gap-4 py-8">
+            <!-- 192px simulation -->
+            <div class="flex flex-col items-center gap-2.5">
+              <div class="w-[110px] h-[110px] bg-[#0c141d] squircle-card border border-[#2b3d52] p-4 flex items-center justify-center">
+                <svg viewBox="0 0 400 400" class="w-full h-full" fill="none">
+                  <rect x="70" y="86" width="260" height="16" rx="8" fill="#38efc2" />
+                  <path d="M 180 170 C 230 170 280 194 308 214 C 328 186 346 170 366 166 C 358 200 350 226 368 252 C 342 246 318 238 296 224 C 256 258 208 272 164 272 C 96 272 72 234 72 208 C 72 184 104 170 180 170 Z" fill="#38efc2" />
+                </svg>
+              </div>
+              <span class="font-mono-tech text-[10px] text-[#6c829d]">192×192</span>
+            </div>
+
+            <!-- 96px simulation -->
+            <div class="flex flex-col items-center gap-2.5">
+              <div class="w-[64px] h-[64px] bg-[#0c141d] squircle-card border border-[#2b3d52] p-2.5 flex items-center justify-center">
+                <svg viewBox="0 0 400 400" class="w-full h-full" fill="none">
+                  <rect x="70" y="86" width="260" height="16" rx="8" fill="#38efc2" />
+                  <path d="M 180 170 C 230 170 280 194 308 214 C 328 186 346 170 366 166 C 358 200 350 226 368 252 C 342 246 318 238 296 224 C 256 258 208 272 164 272 C 96 272 72 234 72 208 C 72 184 104 170 180 170 Z" fill="#38efc2" />
+                </svg>
+              </div>
+              <span class="font-mono-tech text-[10px] text-[#6c829d]">96×96</span>
+            </div>
+
+            <!-- 48px simulation -->
+            <div class="flex flex-col items-center gap-2.5">
+              <div class="w-[36px] h-[36px] bg-[#0c141d] squircle-card border border-[#2b3d52] p-1 flex items-center justify-center">
+                <svg viewBox="0 0 400 400" class="w-full h-full" fill="none">
+                  <rect x="70" y="86" width="260" height="16" rx="8" fill="#38efc2" />
+                  <path d="M 180 170 C 230 170 280 194 308 214 C 328 186 346 170 366 166 C 358 200 350 226 368 252 C 342 246 318 238 296 224 C 256 258 208 272 164 272 C 96 272 72 234 72 208 C 72 184 104 170 180 170 Z" fill="#38efc2" />
+                </svg>
+              </div>
+              <span class="font-mono-tech text-[10px] text-[#38efc2] font-semibold">48×48 (Alvo)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-[#142232] font-mono-tech text-[11px] flex justify-between text-[#5c738f]">
+          <span>STATUS: TESTADO EM MATRIX</span>
+          <span class="text-[#38efc2]">NENHUM TRAÇO COLAPSA</span>
+        </div>
+      </section>
+
+      <!-- SECTION 3: MONOCHROME APPLICATIONS (Full 12 cols, split in 2) -->
+      <section class="lg:col-span-12 bg-[#070e16] border border-[#192737] rounded-2xl p-6 md:p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-2">
+            <span class="font-mono-tech text-xs text-[#38efc2] font-medium">03 //</span>
+            <span class="font-mono-tech text-xs text-[#dbe3f0] uppercase tracking-wide">VERSÕES MONOCROMÁTICAS</span>
+          </div>
+          <span class="font-mono-tech text-[11px] text-[#5c738f]">IMPRESSÃO / NOTIFICAÇÃO DO SISTEMA ANDROID</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Monocromático sobre Escuro -->
+          <div class="bg-[#0c141d] border border-[#1d2d3e] rounded-xl p-8 flex flex-col items-center justify-center text-center">
+            <span class="font-mono-tech text-[10px] text-[#6c829d] tracking-widest uppercase mb-6">SOBRE FUNDO ESCURO (#0C141D)</span>
+            <div class="w-24 h-24 flex items-center justify-center">
+              <svg viewBox="0 0 400 400" class="w-full h-full" fill="none">
+                <rect x="70" y="86" width="260" height="16" rx="8" fill="#dbe3f0" />
+                <path d="M 180 170 C 230 170 280 194 308 214 C 328 186 346 170 366 166 C 358 200 350 226 368 252 C 342 246 318 238 296 224 C 256 258 208 272 164 272 C 96 272 72 234 72 208 C 72 184 104 170 180 170 Z" fill="#dbe3f0" />
+              </svg>
+            </div>
+            <div class="mt-6 font-mono-tech text-xs text-[#8ea3bf]">
+              Cor do símbolo: <code class="text-[#dbe3f0] font-semibold">#dbe3f0</code> (Monocromo Negativo)
+            </div>
+          </div>
+
+          <!-- Monocromático sobre Claro -->
+          <div class="bg-[#f0f4f8] border border-[#d2dce6] rounded-xl p-8 flex flex-col items-center justify-center text-center">
+            <span class="font-mono-tech text-[10px] text-[#526478] tracking-widest uppercase mb-6">SOBRE FUNDO CLARO (#F0F4F8)</span>
+            <div class="w-24 h-24 flex items-center justify-center">
+              <svg viewBox="0 0 400 400" class="w-full h-full" fill="none">
+                <rect x="70" y="86" width="260" height="16" rx="8" fill="#0c141d" />
+                <path d="M 180 170 C 230 170 280 194 308 214 C 328 186 346 170 366 166 C 358 200 350 226 368 252 C 342 246 318 238 296 224 C 256 258 208 272 164 272 C 96 272 72 234 72 208 C 72 184 104 170 180 170 Z" fill="#0c141d" />
+              </svg>
+            </div>
+            <div class="mt-6 font-mono-tech text-xs text-[#2b3b4f]">
+              Cor do símbolo: <code class="text-[#0c141d] font-semibold">#0c141d</code> (Monocromo Positivo)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: WORDMARK (5 cols) -->
+      <section class="lg:col-span-5 bg-[#070e16] border border-[#192737] rounded-2xl p-6 md:p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="font-mono-tech text-xs text-[#38efc2] font-medium">04 //</span>
+              <span class="font-mono-tech text-xs text-[#dbe3f0] uppercase tracking-wide">WORDMARK</span>
+            </div>
+            <span class="font-mono-tech text-[11px] text-[#5c738f] bg-[#0c1622] px-2 py-0.5 rounded border border-[#1b2b3d]">
+              SPACE GROTESK SEMIBOLD
+            </span>
+          </div>
+
+          <div class="bg-[#0c141d] border border-[#1b2a3c] rounded-xl p-8 flex flex-col items-center justify-center my-4">
+            <span class="text-4xl md:text-5xl font-semibold tracking-[-0.04em] text-[#dbe3f0]">
+              Cachalote
+            </span>
+          </div>
+
+          <div class="space-y-2 mt-4 font-mono-tech text-xs text-[#8ea3bf]">
+            <div class="flex justify-between border-b border-[#142332] pb-1.5">
+              <span class="text-[#5c738f]">FAMÍLIA:</span>
+              <span class="text-[#dbe3f0]">Space Grotesk</span>
+            </div>
+            <div class="flex justify-between border-b border-[#142332] pb-1.5">
+              <span class="text-[#5c738f]">PESO:</span>
+              <span class="text-[#dbe3f0]">600 (SemiBold)</span>
+            </div>
+            <div class="flex justify-between border-b border-[#142332] pb-1.5">
+              <span class="text-[#5c738f]">TRACKING:</span>
+              <span class="text-[#dbe3f0]">-0.04em (Tight)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-[#5c738f]">COR:</span>
+              <span class="text-[#dbe3f0]">#dbe3f0 (High-contrast On-Surface)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 5: HORIZONTAL LOCKUP WITH CLEAR SPACE (7 cols) -->
+      <section class="lg:col-span-7 bg-[#070e16] border border-[#192737] rounded-2xl p-6 md:p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="font-mono-tech text-xs text-[#38efc2] font-medium">05 //</span>
+              <span class="font-mono-tech text-xs text-[#dbe3f0] uppercase tracking-wide">HORIZONTAL LOCKUP & CLEAR SPACE</span>
+            </div>
+            <span class="font-mono-tech text-[11px] text-[#5c738f] bg-[#0c1622] px-2 py-0.5 rounded border border-[#1b2b3d]">
+              ZONA DE PROTEÇÃO: 1X MARK
+            </span>
+          </div>
+
+          <!-- Lockup container with clear space dashed boundary -->
+          <div class="bg-[#0c141d] border border-[#1b2a3c] rounded-xl p-8 relative flex items-center justify-center my-4 overflow-hidden">
+            <!-- Clear Space Dashed Guide Box -->
+            <div class="border border-dashed border-[#38efc2]/35 rounded-lg p-6 flex items-center gap-5 relative bg-[#38efc2]/[0.02]">
+              <!-- Coordinate marker tags -->
+              <span class="absolute -top-2.5 left-3 font-mono-tech text-[9px] text-[#38efc2] bg-[#0c141d] px-1 border border-[#38efc2]/30 rounded">
+                padding: X (32px)
+              </span>
+
+              <!-- Vector Mark alone (48x48) -->
+              <div class="w-12 h-12 shrink-0">
+                <svg viewBox="0 0 400 400" class="w-full h-full" fill="none">
+                  <rect x="70" y="86" width="260" height="16" rx="8" fill="#38efc2" />
+                  <path d="M 180 170 C 230 170 280 194 308 214 C 328 186 346 170 366 166 C 358 200 350 226 368 252 C 342 246 318 238 296 224 C 256 258 208 272 164 272 C 96 272 72 234 72 208 C 72 184 104 170 180 170 Z" fill="#38efc2" />
+                </svg>
+              </div>
+
+              <!-- Wordmark in lockup -->
+              <span class="text-3xl font-semibold tracking-[-0.04em] text-[#dbe3f0]">
+                Cachalote
+              </span>
+            </div>
+          </div>
+
+          <p class="font-mono-tech text-xs text-[#8ea3bf] leading-relaxed mt-4">
+            A zona de exclusão (área tracejada) delimita a margem mínima sem intrusão de texto ou outros elementos gráficos de interface. A proporção garante leitura ótica equilibrada em cabeçalhos de sistema.
+          </p>
+        </div>
+      </section>
+
+      <!-- SECTION 6: CONCEPT NOTE / MANIFESTO (Full 12 cols) -->
+      <section class="lg:col-span-12 bg-[#070e16] border border-[#192737] rounded-2xl p-6 md:p-8 relative">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="font-mono-tech text-xs text-[#38efc2] font-medium">06 //</span>
+            <span class="font-mono-tech text-xs text-[#dbe3f0] uppercase tracking-wide">CONCEITO & METÁFORA</span>
+          </div>
+          <span class="font-mono-tech text-[11px] text-[#38efc2]">ON-DEVICE PRIVACY</span>
+        </div>
+
+        <div class="border-l-2 border-[#38efc2] pl-6 py-2 my-2">
+          <blockquote class="text-xl md:text-2xl italic font-normal text-[#dbe3f0] leading-snug">
+            “baleia que mergulha fundo e volta com o que encontrou”
+          </blockquote>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 pt-6 border-t border-[#142332] font-mono-tech text-xs text-[#8ea3bf]">
+          <div class="space-y-1">
+            <span class="text-[#38efc2] font-semibold">TÉCNICO & LOCAL</span>
+            <p class="text-[11px] text-[#6c829d]">Sem dependência de servidores centralizados para execução de tarefas do dispositivo.</p>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[#38efc2] font-semibold">CALMO & ISOLADO</span>
+            <p class="text-[11px] text-[#6c829d]">Sem intrusão visual nem ruído desnecessário. Opera no fundo, silencioso e preciso.</p>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[#38efc2] font-semibold">RETORNO COM VALOR</span>
+            <p class="text-[11px] text-[#6c829d]">Não apenas processa: conclui ações complexas e entrega resultados estruturados.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="pt-8 border-t border-[#1a293a] flex flex-col sm:flex-row items-center justify-between gap-4 font-mono-tech text-xs text-[#52667d]">
+      <div>Cachalote Runtime Brand Specification · Android On-Device</div>
+      <div>Base: #0C141D · Accent: #38EFC2 · Text: #DBE3F0</div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

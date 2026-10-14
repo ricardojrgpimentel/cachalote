@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cachalote · Ajustes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: '#0c141d',
+            'surface-container-lowest': '#070f17',
+            'surface-container-low': '#141c25',
+            'surface-container': '#1a232e',
+            'surface-container-high': '#222b37',
+            'surface-container-highest': '#2b3542',
+            'on-surface': '#dbe3f0',
+            'on-surface-variant': '#8895a7',
+            primary: '#38efc2',
+            'primary-container': '#0d4a3c',
+            'on-primary': '#00382b',
+            'outline-subtle': '#223040',
+            'outline-variant': '#2a3b4e',
+            error: '#ff6b6b'
+          },
+          fontFamily: {
+            sans: ['"Space Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #0c141d;
+      color: #dbe3f0;
+      font-family: 'Space Grotesk', sans-serif;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0c141d;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #223040;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen w-full max-w-md mx-auto overflow-x-hidden selection:bg-primary/20">
+
+  <!-- Top App Bar & Status Header -->
+  <header class="sticky top-0 z-40 bg-surface-container-low/95 backdrop-blur-md border-b border-outline-subtle px-4 pt-3 pb-2.5">
+    <!-- Brand / Title row -->
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2.5">
+        <!-- Cachalote SVG Icon Mark -->
+        <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center border border-outline-subtle shadow-inner">
+          <svg viewBox="0 0 1024 1024" class="w-5 h-5 text-primary" fill="currentColor">
+            <rect x="174" y="240" width="420" height="40" rx="20" />
+            <path d="M 330 368 C 395 368 468 398 506 422 C 532 392 560 372 594 366 C 584 410 576 442 598 474 C 564 468 530 458 498 440 C 440 484 372 500 308 500 C 200 500 162 452 162 418 C 162 386 210 368 330 368 Z" />
+          </svg>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <h1 class="font-bold text-lg tracking-tight text-on-surface">Cachalote</h1>
+          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">ON-DEVICE</span>
+        </div>
+      </div>
+
+      <!-- Quick daemon icon indicator -->
+      <div class="flex items-center gap-2">
+        <button class="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high active:scale-95 transition">
+          <span class="material-symbols-outlined text-[20px]">history</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Readout Line -->
+    <div class="flex items-center justify-between text-xs py-0.5 font-mono">
+      <div class="flex items-center gap-1.5 text-on-surface-variant">
+        <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+        <span class="text-on-surface">motor DSH no telefone</span>
+        <span class="text-on-surface-variant">·</span>
+        <span class="text-primary font-medium">ligado</span>
+      </div>
+      <div class="text-[10px] text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded font-mono">
+        POSIX: OK
+      </div>
+    </div>
+
+    <!-- Monospace Context Progress Line -->
+    <div class="mt-1.5 flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+      <div class="flex items-center gap-1">
+        <span class="material-symbols-outlined text-[13px] text-primary">data_usage</span>
+        <span>contexto: <span class="text-on-surface font-semibold">6 290</span> / 1 000 000</span>
+      </div>
+      <span class="text-primary font-semibold">1%</span>
+    </div>
+    <!-- Context bar track -->
+    <div class="w-full bg-surface-container h-1 rounded-full overflow-hidden mt-1">
+      <div class="bg-primary h-full w-[1%]" style="width: 1%;"></div>
+    </div>
+  </header>
+
+  <!-- Scrollable Content -->
+  <main class="flex-1 px-4 py-4 pb-24 space-y-5 overflow-y-auto custom-scrollbar">
+
+    <!-- Screen Title & Tag -->
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="flex items-center gap-1 text-[11px] font-mono text-primary uppercase tracking-wider mb-0.5">
+          <span class="material-symbols-outlined text-[13px]">tune</span>
+          <span>Configuração do Sistema</span>
+        </div>
+        <h2 class="text-2xl font-bold tracking-tight text-on-surface">Ajustes</h2>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] font-mono text-on-surface-variant bg-surface-container px-2 py-1 rounded border border-outline-subtle">v0.9.4-local</span>
+      </div>
+    </div>
+
+    <!-- MAIN SETTINGS MENU CARD -->
+    <section class="bg-surface-container-low rounded-2xl border border-outline-subtle overflow-hidden shadow-sm">
+      <div class="px-4 py-2.5 bg-surface-container-low border-b border-outline-subtle flex items-center justify-between">
+        <span class="text-xs font-mono uppercase tracking-wider text-on-surface-variant">Secções de Controlo</span>
+        <span class="text-[11px] font-mono text-primary/80">8 módulos</span>
+      </div>
+
+      <div class="divide-y divide-outline-subtle/50 text-sm">
+        <!-- Row 1: Motor -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">memory</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Motor</div>
+              <p class="text-xs text-on-surface-variant truncate">estado, modos (root, Shizuku, embutido) e diagnóstico</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 2: Chave do provedor -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">vpn_key</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Chave do provedor</div>
+              <p class="text-xs text-on-surface-variant truncate">a chave do provedor, guardada no daemon</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 3: Capacidades autorizadas (Highlighted / Active Section) -->
+        <button class="w-full px-4 py-3 flex items-center justify-between bg-surface-container/60 hover:bg-surface-container transition-colors text-left group border-l-2 border-primary">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/30 shrink-0">
+              <span class="material-symbols-outlined text-[18px]">security</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-primary flex items-center gap-1.5">
+                <span>Capacidades autorizadas</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              </div>
+              <p class="text-xs text-on-surface-variant truncate">permissões operacionais de ferramentas e automação</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-primary text-[18px] shrink-0 rotate-90 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 4: Acessibilidade -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">accessibility_new</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Acessibilidade</div>
+              <p class="text-xs text-on-surface-variant truncate">serviço de leitura de nós e hierarchy dump</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 5: Áreas permitidas do bash -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">terminal</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Áreas permitidas do bash</div>
+              <p class="text-xs text-on-surface-variant truncate">pastas de trabalho isoladas e caminhos POSIX permitidos</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 6: Servidores MCP -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">hub</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Servidores MCP</div>
+              <p class="text-xs text-on-surface-variant truncate">Model Context Protocol, endpoints locais e sockets</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 7: Ecrã virtual -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">screenshot_monitor</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Ecrã virtual</div>
+              <p class="text-xs text-on-surface-variant truncate">resolução, driver de display 2 e taxa de fotogramas</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+
+        <!-- Row 8: Backup e licenças -->
+        <button class="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-container transition-colors text-left group">
+          <div class="flex items-center gap-3 pr-2 min-w-0">
+            <span class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant border border-outline-subtle shrink-0">
+              <span class="material-symbols-outlined text-[18px]">verified_user</span>
+            </span>
+            <div class="min-w-0">
+              <div class="font-medium text-on-surface group-hover:text-primary transition-colors">Backup e licenças</div>
+              <p class="text-xs text-on-surface-variant truncate">exportação da sandbox, chaves e termos open-source</p>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-[18px] shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- SECTION DETAIL EXAMPLE: "Capacidades autorizadas" -->
+    <section class="bg-surface-container-low rounded-2xl border border-primary/40 overflow-hidden shadow-lg shadow-primary/5">
+      <!-- Back row / Breadcrumb -->
+      <div class="px-4 py-3 bg-surface-container flex items-center justify-between border-b border-outline-subtle">
+        <button class="flex items-center gap-1.5 text-xs font-mono text-primary hover:text-primary/80 transition-colors py-0.5 -ml-1">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span>Ajustes</span>
+        </button>
+        <div class="flex items-center gap-1 text-[11px] font-mono text-on-surface-variant">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+          <span>secção ativa</span>
+        </div>
+      </div>
+
+      <!-- Section Header & Explanation -->
+      <div class="p-4 border-b border-outline-subtle bg-surface-container-low">
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="material-symbols-outlined text-primary text-[20px]">verified_user</span>
+          <h3 class="font-bold text-base text-on-surface">Capacidades autorizadas</h3>
+        </div>
+        <p class="text-xs text-on-surface-variant leading-relaxed">
+          O agente pede; tu decides. Cada pedido fica registado em baixo.
+        </p>
+
+        <!-- Bulk Action Buttons -->
+        <div class="flex items-center gap-2 mt-3 pt-2 border-t border-outline-subtle/50">
+          <button class="flex-1 py-1.5 px-3 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 text-xs font-mono font-medium transition active:scale-95 text-center flex items-center justify-center gap-1.5">
+            <span class="material-symbols-outlined text-[15px]">done_all</span>
+            <span>Autorizar todas</span>
+          </button>
+          <button class="flex-1 py-1.5 px-3 rounded-lg bg-surface-container border border-outline-subtle text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high text-xs font-mono font-medium transition active:scale-95 text-center flex items-center justify-center gap-1.5">
+            <span class="material-symbols-outlined text-[15px]">block</span>
+            <span>Negar todas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Switches List (10 tools/capabilities with monospace names) -->
+      <div class="divide-y divide-outline-subtle/40 bg-surface-container-lowest/50 text-xs">
+        
+        <!-- 1. notify -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">notify</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">sistema</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Emite notificações na barra de estado do Android</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 2. screen -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">screen</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">visão</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Leitura em tempo real do estado da janela atual</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 3. tap -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">tap</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">toque</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Injeção de toques com coordenadas (x, y)</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 4. type -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">type</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">escrita</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Envio de sequências de texto para campos focados</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 5. key -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">key</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">teclas</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Envio de keycodes Android (BACK, HOME, ENTER)</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 6. screenshot -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">screenshot</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">captura</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Captura do buffer gráfico para análise visual</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 7. vscreen_start -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">vscreen_start</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">display 2</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Criação do display virtual isolado 540x960</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 8. vscreen_status -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">vscreen_status</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">estado</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Consulta de métricas, buffer ativo e DPI virtual</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 9. vscreen_frame -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">vscreen_frame</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">fotograma</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Recuperação de fotograma do ecrã virtual secundário</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+        <!-- 10. vscreen_stop -->
+        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-surface-container/30 transition-colors">
+          <div class="pr-3 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-primary font-medium text-[13px]">vscreen_stop</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-mono">encerramento</span>
+            </div>
+            <p class="text-[11px] text-on-surface-variant mt-0.5 truncate">Destruição do buffer virtual e limpeza de memória</p>
+          </div>
+          <!-- Switch ON -->
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-on-primary peer-checked:after:border-on-primary"></div>
+          </label>
+        </div>
+
+      </div>
+
+      <!-- Security footer note -->
+      <div class="px-4 py-2.5 bg-surface-container-low text-[11px] font-mono text-on-surface-variant border-t border-outline-subtle flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-primary text-[14px]">lock</span>
+          Políticas gravadas em sandbox POSIX
+        </span>
+        <span class="text-primary">10/10 ativas</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- STRICT TWO-ITEM BOTTOM NAVIGATION BAR (Conversa & Ajustes) -->
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 bg-surface-container-low/95 backdrop-blur-md border-t border-outline-subtle px-6 py-2 flex items-center justify-around h-16">
+    <!-- Item 1: Conversa (Inactive) -->
+    <a href="#" class="flex flex-col items-center justify-center gap-1 text-on-surface-variant hover:text-on-surface transition-all py-1 px-8 rounded-xl active:scale-95 group">
+      <span class="material-symbols-outlined text-[22px] group-hover:text-primary transition-colors">chat</span>
+      <span class="text-xs font-medium tracking-tight">Conversa</span>
+    </a>
+
+    <!-- Item 2: Ajustes (Active) -->
+    <a href="#" class="flex flex-col items-center justify-center gap-1 text-primary transition-all py-1 px-8 rounded-xl bg-surface-container-high/80 border border-primary/20 shadow-sm active:scale-95">
+      <div class="relative flex items-center justify-center">
+        <span class="material-symbols-outlined text-[22px]" style="font-variation-settings: 'FILL' 1;">settings</span>
+        <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary rounded-full"></span>
+      </div>
+      <span class="text-xs font-semibold tracking-tight text-primary">Ajustes</span>
+    </a>
+  </nav>
+
+</body>
+</html>

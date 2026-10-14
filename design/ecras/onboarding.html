@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote — Primeira Execução</title>
+<!-- Typography: Space Grotesk & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-on-surface": "#29313b",
+            "surface-dim": "#0c141d",
+            "on-error": "#690005",
+            "inverse-surface": "#dbe3f0",
+            "surface-container-highest": "#2d353f",
+            "primary-fixed": "#4dfdcf",
+            "on-tertiary-fixed": "#002113",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-secondary-container": "#003640",
+            "on-secondary": "#00363f",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-container": "#182029",
+            "tertiary-container": "#5fedb0",
+            "primary-container": "#38efc2",
+            "on-error-container": "#ffdad6",
+            "on-tertiary-fixed-variant": "#005236",
+            "background": "#0c141d",
+            "surface-bright": "#323a44",
+            "surface-variant": "#2d353f",
+            "secondary-fixed-dim": "#58d6f1",
+            "on-tertiary-container": "#006947",
+            "on-surface-variant": "#bacac2",
+            "on-secondary-fixed-variant": "#004e5b",
+            "error": "#ffb4ab",
+            "secondary": "#58d6f1",
+            "primary": "#beffe7",
+            "on-primary-fixed-variant": "#00513f",
+            "secondary-fixed": "#a7edff",
+            "on-primary": "#00382b",
+            "surface-container-high": "#232b34",
+            "surface-container-lowest": "#070f17",
+            "on-secondary-fixed": "#001f25",
+            "on-background": "#dbe3f0",
+            "outline-variant": "#3b4a44",
+            "on-primary-fixed": "#002118",
+            "tertiary": "#c0ffdc",
+            "inverse-primary": "#006b55",
+            "outline": "#84948d",
+            "on-primary-container": "#006952",
+            "error-container": "#93000a",
+            "surface-container-low": "#141c25",
+            "primary-fixed-dim": "#15e0b4",
+            "on-tertiary": "#003824",
+            "surface-tint": "#15e0b4",
+            "surface": "#0c141d",
+            "on-surface": "#dbe3f0",
+            "secondary-container": "#00a7c0"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "gutter": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem",
+            "space-lg": "1.5rem"
+          },
+          "fontFamily": {
+            "label-lg": ["JetBrains Mono", "monospace"],
+            "body-md": ["Geist", "sans-serif"],
+            "headline-sm": ["Space Grotesk", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "body-sm": ["Geist", "sans-serif"],
+            "body-lg": ["Geist", "sans-serif"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "label-sm": ["JetBrains Mono", "monospace"],
+            "label-md": ["JetBrains Mono", "monospace"]
+          },
+          "fontSize": {
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-outlined[data-weight="fill"] {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Native smooth scrolling and hidden tap highlights */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #0c141d;
+      color: #dbe3f0;
+      font-family: 'Geist', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container flex justify-center min-h-screen">
+<!-- Mobile Shell Viewport Container (~390-412px target) -->
+<div class="w-full max-w-md min-h-screen flex flex-col relative bg-surface-dim pb-32">
+<!-- Top Status Header (Contextual Onboarding Header) -->
+<header class="sticky top-0 z-40 w-full px-margin h-14 bg-surface-container-low/95 backdrop-blur-md flex items-center justify-between border-b border-outline-variant/30">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center bg-surface-container-high border border-outline-variant/40">
+<img alt="Cachalote Icon" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1W69xBP12xxRWsujNGNHsj8RFnfCGyg7EeHI22Lg8xuuVCBzOl0SuaWTrJE6H50aj0zjtDoocFR5YfA_z8QtBawM7u2epxFt5sAR6RD3zksQiQchH-_QHUbv4pUT4BMYDIoaSvmu8lo42ZvpbhlB4au8wssbbCBOPq-ps3pd7a4e85PdgMupokOIXnWgbWkyyoGPeMrbSXijCYdZulLkMLgbQYySNf40Jicxa3sFnTwIuE1FrKs3ocUY7I"/>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface">Cachalote</span>
+<span class="font-label-sm text-label-sm px-1.5 py-0.5 rounded bg-primary-container/15 text-primary-container font-semibold tracking-wide">PRIMEIRA EXECUÇÃO</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container border border-outline-variant/40">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">v0.9.4-local</span>
+</div>
+</header>
+<!-- Sub-Status Bar: Realtime Daemon Heartbeat -->
+<section class="px-margin py-2 bg-surface-container-lowest/80 border-b border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px] text-primary-container" data-icon="terminal">terminal</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">daemon ativo · <span class="text-primary font-medium">2/5 passos prontos</span></span>
+</div>
+<div class="flex items-center gap-1 text-primary-container font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[13px]" data-icon="memory">memory</span>
+<span>POSIX ok</span>
+</div>
+</section>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-margin pt-6 flex flex-col gap-6">
+<!-- Hero Welcome Area -->
+<section class="flex flex-col items-start gap-4">
+<!-- Hero App Glyph Card with Glow -->
+<div class="relative w-16 h-16 rounded-2xl p-1 bg-surface-container-high border border-primary-container/40 flex items-center justify-center shadow-[0px_8px_24px_rgba(38,208,206,0.18)]">
+<img alt="Cachalote Glyph" class="w-full h-full rounded-xl object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1W69xBP12xxRWsujNGNHsj8RFnfCGyg7EeHI22Lg8xuuVCBzOl0SuaWTrJE6H50aj0zjtDoocFR5YfA_z8QtBawM7u2epxFt5sAR6RD3zksQiQchH-_QHUbv4pUT4BMYDIoaSvmu8lo42ZvpbhlB4au8wssbbCBOPq-ps3pd7a4e85PdgMupokOIXnWgbWkyyoGPeMrbSXijCYdZulLkMLgbQYySNf40Jicxa3sFnTwIuE1FrKs3ocUY7I"/>
+<div class="absolute -bottom-1 -right-1 bg-primary-container text-on-primary-container rounded-full w-5 h-5 flex items-center justify-center border-2 border-surface-dim shadow-sm">
+<span class="material-symbols-outlined text-[12px] font-bold" data-icon="bolt">bolt</span>
+</div>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">Cachalote</h1>
+<p class="font-headline-sm text-headline-sm text-primary-container font-medium mt-0.5 tracking-tight">
+            O DeepSeek Harness a correr dentro do telemóvel
+          </p>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          O agente vive no telemóvel: vê o ecrã, toca, escreve e corre comandos — sempre com a tua autorização.
+        </p>
+<!-- Compact Metadata Chip Bar -->
+<div class="w-full flex flex-wrap items-center gap-2 pt-1">
+<div class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-surface-container border border-outline-variant/40">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">100% on-device</span>
+</div>
+<div class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-surface-container border border-outline-variant/40">
+<span class="material-symbols-outlined text-[13px] text-on-surface-variant" data-icon="shield">shield</span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Sandbox POSIX</span>
+</div>
+<div class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-surface-container border border-outline-variant/40">
+<span class="material-symbols-outlined text-[13px] text-on-surface-variant" data-icon="cloud_off">cloud_off</span>
+<span class="font-label-sm text-label-sm text-on-surface font-medium">Sem telemetria externa</span>
+</div>
+</div>
+</section>
+<!-- Numbered Setup Checklist (Guia de Configuração Inicial) -->
+<section class="flex flex-col gap-3">
+<!-- Header & Progress Indicator -->
+<div class="flex flex-col gap-2 pb-1">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm font-semibold text-on-surface">Passos de configuração</h2>
+<span class="font-label-md text-label-md text-primary-container font-medium bg-primary-container/10 px-2 py-0.5 rounded-md border border-primary-container/20">
+              2 de 5 concluídos
+            </span>
+</div>
+<!-- Gauge Progress Bar: 40% Completed -->
+<div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden border border-outline-variant/20">
+<div class="h-full bg-primary-container transition-all duration-500 rounded-full w-[40%] shadow-[0px_0px_8px_rgba(56,239,194,0.6)]"></div>
+</div>
+</div>
+<!-- Step List (Distinct Modular Cards) -->
+<div class="flex flex-col gap-2.5">
+<!-- Passo 01: Done -->
+<article class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-start justify-between gap-3 transition-colors">
+<div class="flex items-start gap-3">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-container/15 text-primary-container flex items-center justify-center border border-primary-container/30">
+<span class="font-label-md text-label-md font-semibold">01</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<h3 class="font-label-lg text-label-lg font-semibold text-on-surface">Ligar o daemon</h3>
+<span class="material-symbols-outlined text-[16px] text-primary-container" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">arranca no boot, protegido do low-memory killer</p>
+</div>
+</div>
+<div class="flex-shrink-0 pt-0.5">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary-container/10 text-primary-container border border-primary-container/30 font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[12px]" data-icon="done">done</span>
+                Concluído
+              </span>
+</div>
+</article>
+<!-- Passo 02: Done -->
+<article class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-start justify-between gap-3 transition-colors">
+<div class="flex items-start gap-3">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-container/15 text-primary-container flex items-center justify-center border border-primary-container/30">
+<span class="font-label-md text-label-md font-semibold">02</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<h3 class="font-label-lg text-label-lg font-semibold text-on-surface">Obter o token do canal</h3>
+<span class="material-symbols-outlined text-[16px] text-primary-container" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">segredo entre a app e o daemon</p>
+</div>
+</div>
+<div class="flex-shrink-0 pt-0.5">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary-container/10 text-primary-container border border-primary-container/30 font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[12px]" data-icon="done">done</span>
+                Concluído
+              </span>
+</div>
+</article>
+<!-- Passo 03: Active / Pending (Amber/Accent Highlight) -->
+<article class="p-3.5 rounded-xl bg-surface-container border border-primary-container/40 flex flex-col gap-3 shadow-[0px_4px_16px_rgba(56,239,194,0.06)] relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-container"></div>
+<div class="flex items-start justify-between gap-3 pl-1">
+<div class="flex items-start gap-3">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-label-md text-label-md font-bold shadow-sm">
+                  03
+                </div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<h3 class="font-label-lg text-label-lg font-bold text-on-surface">Autorizar a acessibilidade</h3>
+<span class="font-label-sm text-label-sm text-secondary-fixed-dim px-1.5 py-0.2 rounded bg-secondary-container/20 font-medium">Requerido</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">sem isto o agente não vê nem toca no ecrã</p>
+</div>
+</div>
+</div>
+<!-- Action Button for Step 3 -->
+<div class="pl-1 pt-1">
+<button class="w-full h-11 px-3.5 rounded-lg bg-surface-container-high hover:bg-surface-bright active:scale-[0.98] transition-all border border-primary-container/50 text-primary-container font-label-md text-label-md flex items-center justify-center gap-2 group" type="button">
+<span class="material-symbols-outlined text-[17px] group-hover:rotate-12 transition-transform" data-icon="settings_accessibility">settings_accessibility</span>
+<span class="font-semibold tracking-tight">Abrir Definições ↗</span>
+</button>
+</div>
+</article>
+<!-- Passo 04: Pending -->
+<article class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-surface-container-high text-on-surface-variant flex items-center justify-center border border-outline-variant/30">
+<span class="font-label-md text-label-md font-medium">04</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-label-lg text-label-lg font-semibold text-on-surface">Introduzir a chave do provedor</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5 font-mono text-[11px] text-outline">fica em home/.env, modo 600; a app não a guarda</p>
+</div>
+</div>
+</div>
+<div class="pl-11">
+<button class="h-9 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface hover:text-primary-container font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]" data-icon="vpn_key">vpn_key</span>
+<span>Ir para a Chave →</span>
+</button>
+</div>
+</article>
+<!-- Passo 05: Pending -->
+<article class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col gap-2.5">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-start gap-3">
+<div class="flex-shrink-0 w-8 h-8 rounded-lg bg-surface-container-high text-on-surface-variant flex items-center justify-center border border-outline-variant/30">
+<span class="font-label-md text-label-md font-medium">05</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-label-lg text-label-lg font-semibold text-on-surface">Escolher as capacidades</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">por omissão só as notificações</p>
+</div>
+</div>
+</div>
+<div class="pl-11">
+<button class="h-9 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface hover:text-primary-container font-label-sm text-label-sm flex items-center gap-1.5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[14px]" data-icon="tune">tune</span>
+<span>Ir para Poderes →</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- Trust & Security Micro-banner -->
+<section class="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/40 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-container text-[20px] flex-shrink-0 mt-0.5" data-icon="lock">lock</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-primary font-semibold tracking-tight">Privacidade estrita</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-snug mt-0.5">
+            Os comandos nunca saem do telemóvel sem o teu consentimento explícito prévio.
+          </p>
+</div>
+</section>
+<!-- Terminal Status Log Readout Snippet (Micro Telemetry) -->
+<div class="px-3.5 py-2.5 rounded-lg bg-[#070f17] border border-outline-variant/20 flex flex-col gap-1 font-mono text-[11px] text-outline">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="text-primary-container flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+            cachaloted.sock
+          </span>
+<span>127.0.0.1:4096</span>
+</div>
+<p class="truncate text-on-surface-variant/80">$ harness init --sandbox --isolated-fs=home</p>
+</div>
+</main>
+<!-- Bottom Action Dock (Sticky Bottom Navigation Shell for Wizard) -->
+<div class="fixed bottom-0 left-0 right-0 z-50 flex justify-center bg-surface-container-low/95 backdrop-blur-md px-margin py-3 border-t border-outline-variant/30 shadow-[0px_-4px_20px_rgba(0,0,0,0.4)]">
+<div class="w-full max-w-md flex flex-col gap-2">
+<!-- Filled Primary Button: Continuar -->
+<button class="w-full h-12 rounded-xl bg-primary-container hover:bg-primary-fixed-dim active:scale-[0.98] transition-transform text-[#0d131a] font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-[0px_8px_20px_rgba(56,239,194,0.2)]" type="button">
+<span>Continuar</span>
+<span class="material-symbols-outlined text-[18px] font-bold" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Secondary Text Action Button: Já sei o que faço -->
+<button class="w-full h-9 rounded-lg text-on-surface-variant hover:text-on-surface active:scale-[0.99] transition-colors font-label-md text-label-md flex items-center justify-center" type="button">
+<span>Já sei o que faço</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

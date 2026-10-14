@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Cachalote - Sessões</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "error": "#ffb4ab",
+            "secondary": "#58d6f1",
+            "surface-container-highest": "#2d353f",
+            "outline-variant": "#3b4a44",
+            "on-background": "#dbe3f0",
+            "tertiary": "#c0ffdc",
+            "surface": "#0c141d",
+            "surface-tint": "#15e0b4",
+            "surface-container": "#182029",
+            "surface-container-lowest": "#070f17",
+            "on-secondary-fixed-variant": "#004e5b",
+            "primary": "#beffe7",
+            "tertiary-fixed": "#6ffbbe",
+            "secondary-container": "#00a7c0",
+            "on-error": "#690005",
+            "surface-variant": "#2d353f",
+            "surface-bright": "#323a44",
+            "primary-fixed": "#4dfdcf",
+            "primary-container": "#38efc2",
+            "outline": "#84948d",
+            "inverse-surface": "#dbe3f0",
+            "on-tertiary": "#003824",
+            "surface-container-low": "#141c25",
+            "surface-container-high": "#232b34",
+            "error-container": "#93000a",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-surface": "#dbe3f0",
+            "inverse-primary": "#006b55",
+            "on-secondary": "#00363f",
+            "surface-dim": "#0c141d",
+            "on-primary": "#00382b",
+            "on-error-container": "#ffdad6",
+            "tertiary-container": "#5fedb0",
+            "background": "#0c141d",
+            "secondary-fixed": "#a7edff",
+            "on-tertiary-fixed-variant": "#005236",
+            "on-primary-fixed": "#002118",
+            "on-secondary-container": "#003640",
+            "on-surface-variant": "#bacac2",
+            "on-secondary-fixed": "#001f25",
+            "on-primary-container": "#006952",
+            "primary-fixed-dim": "#15e0b4",
+            "inverse-on-surface": "#29313b",
+            "on-primary-fixed-variant": "#00513f",
+            "secondary-fixed-dim": "#58d6f1",
+            "on-tertiary-container": "#006947",
+            "on-tertiary-fixed": "#002113"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem",
+            "margin": "1rem",
+            "space-lg": "1.5rem",
+            "space-xl": "2rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Space Grotesk"],
+            "body-md": ["Geist"],
+            "label-md": ["JetBrains Mono"],
+            "label-lg": ["JetBrains Mono"],
+            "body-lg": ["Geist"],
+            "body-sm": ["Geist"],
+            "headline-md": ["Space Grotesk"],
+            "label-sm": ["JetBrains Mono"],
+            "headline-sm": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    /* Hide scrollbars for clean terminal look */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Mobile Screen Container (390px simulated native Android frame) -->
+<main class="relative w-full max-w-[412px] h-[884px] mx-auto overflow-hidden bg-surface flex flex-col justify-end shadow-2xl">
+<!-- ============================================== -->
+<!-- UNDERLYING CHAT SCREEN (DIMMED & BLURRED SCENE) -->
+<!-- ============================================== -->
+<div aria-hidden="true" class="absolute inset-0 flex flex-col justify-between pointer-events-none select-none opacity-40 filter blur-[2px]">
+<!-- Top App Bar (Mocked Underlay) -->
+<header class="w-full h-14 bg-surface-container-low px-4 flex items-center justify-between border-b border-outline-variant/30">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">terminal</span>
+<span class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface">Cachalote</span>
+<span class="font-label-sm text-[9px] bg-surface-container-high px-1.5 py-0.5 rounded text-primary tracking-wider">LOCAL</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">memory</span>
+<span class="material-symbols-outlined text-[20px]">history</span>
+</div>
+</header>
+<!-- Chat Canvas Context Underneath -->
+<div class="flex-1 px-4 py-6 space-y-4 font-body-md overflow-hidden">
+<!-- System Badge -->
+<div class="flex justify-center">
+<span class="font-label-sm text-label-sm text-outline bg-surface-container-low px-2.5 py-1 rounded-full border border-outline-variant/30">
+            motor: llama-3.2-3b-instruct · NPU activa
+          </span>
+</div>
+<!-- User Bubble -->
+<div class="flex justify-end">
+<div class="bg-surface-container-high text-on-surface max-w-[85%] rounded-2xl rounded-tr-sm p-3 border border-outline-variant/20">
+<p class="text-body-sm font-body-sm">escreve um teste para o LifecycleService com coroutines</p>
+</div>
+</div>
+<!-- Agent Output Box -->
+<div class="flex justify-start">
+<div class="bg-surface-container-low text-on-surface-variant max-w-[90%] rounded-2xl rounded-tl-sm p-3.5 border border-outline-variant/30 space-y-2">
+<div class="flex items-center gap-2 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>A gerar suite JUnit5 no Android sandbox...</span>
+</div>
+<pre class="font-label-sm text-[11px] bg-surface p-2 rounded text-outline-variant overflow-x-hidden leading-tight font-label-md">@Test
+fun testServiceTransitions() = runTest {
+  val service = LifecycleService()
+  service.bind()
+  assert(service.isActive)
+}</pre>
+</div>
+</div>
+</div>
+<!-- Mocked Input Dock -->
+<div class="p-3 bg-surface-container-low/80 border-t border-outline-variant/20 flex items-center gap-2">
+<div class="h-10 flex-1 bg-surface-container rounded-xl px-3 flex items-center text-outline text-body-sm">
+<span>Instrua o modelo local...</span>
+</div>
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">arrow_upward</span>
+</div>
+</div>
+</div>
+<!-- Scrim Backdrop Layer with high-fidelity blur -->
+<div aria-label="Cortina de contexto" class="absolute inset-0 bg-[#0c141d]/75 backdrop-blur-[3px] transition-opacity z-10"></div>
+<!-- ============================================== -->
+<!-- MODAL BOTTOM SHEET: SESSÕES                     -->
+<!-- ============================================== -->
+<section aria-labelledby="sessions-modal-title" aria-modal="true" class="relative z-20 w-full bg-surface-container-low border-t border-x border-outline-variant/40 rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.65)] flex flex-col max-h-[777px] animate-in fade-in slide-in-from-bottom-8 duration-200" role="dialog">
+<!-- Top Drag Handle Pill -->
+<div class="w-full pt-3 pb-1.5 flex justify-center items-center cursor-grab active:cursor-grabbing">
+<div class="w-10 h-1.25 bg-outline-variant/70 rounded-full" style="height: 5px;"></div>
+</div>
+<!-- Sheet Header Row -->
+<div class="px-5 pt-2 pb-3.5 flex items-center justify-between border-b border-outline-variant/20">
+<div class="flex items-center gap-2.5">
+<h2 class="font-headline-sm text-headline-sm font-semibold tracking-tight text-on-surface" id="sessions-modal-title">
+            Sessões
+          </h2>
+<!-- Monospace Active Session Badge -->
+<div class="flex items-center gap-1 font-label-sm text-[11px] text-primary bg-surface-container-high/90 px-2 py-0.5 rounded border border-primary/25 shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+<span>activa: <span class="font-semibold">269676d6</span></span>
+</div>
+</div>
+<!-- Close Dialog Action (✕) -->
+<button aria-label="Fechar painel de sessões" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high active:scale-95 transition-all duration-150" type="button">
+<span class="material-symbols-outlined text-[19px]">close</span>
+</button>
+</div>
+<!-- Scrollable List of 6 Session Rows -->
+<div class="px-4 py-3 space-y-2 overflow-y-auto no-scrollbar max-h-[442px]" tabindex="0">
+<!-- SESSÃO 1 (ACTIVA - HIGHLIGHTED) -->
+<article class="group relative flex items-center justify-between gap-2.5 bg-primary/10 border border-primary/45 rounded-xl px-3.5 py-3 shadow-[0_2px_12px_rgba(56,239,194,0.08)] transition-all">
+<div class="flex items-start gap-2.5 min-w-0 flex-1">
+<div class="pt-0.5 text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[18px] font-bold" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="min-w-0 flex-1">
+<p class="font-body-md text-[13px] font-semibold text-on-surface truncate leading-snug">
+                escreve um teste para o LifecycleService
+              </p>
+<p class="font-label-sm text-[11px] text-primary/80 font-normal tracking-wide mt-0.5">
+                269676d6 <span class="text-outline/50">·</span> 2026-10-14 14:02
+              </p>
+</div>
+</div>
+<!-- Trailing action EXCLUSIVELY on active session: Fechar ✕ -->
+<button class="flex-shrink-0 h-7 px-2.5 rounded-lg bg-surface-container-high border border-outline-variant/40 hover:border-error/50 hover:bg-error-container/20 hover:text-error text-on-surface-variant flex items-center gap-1 active:scale-95 transition-all text-label-sm font-label-sm" title="Fechar sessão activa" type="button">
+<span class="material-symbols-outlined text-[13px]">close</span>
+<span class="text-[10px] font-medium">Fechar</span>
+</button>
+</article>
+<!-- SESSÃO 2 -->
+<article class="flex items-center justify-between gap-3 bg-surface-container/50 hover:bg-surface-container-high/70 border border-outline-variant/30 rounded-xl px-3.5 py-2.5 cursor-pointer active:scale-[0.99] transition-all">
+<div class="flex items-start gap-2.5 min-w-0 flex-1">
+<div class="pt-1 text-outline flex-shrink-0">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant block"></span>
+</div>
+<div class="min-w-0 flex-1">
+<p class="font-body-md text-[13px] font-medium text-on-surface truncate leading-snug">
+                Analisa crash no LifecycleService e logcat
+              </p>
+<p class="font-label-sm text-[10.5px] text-outline font-normal mt-0.5">
+                8f14b2a0 <span class="text-outline/40">·</span> 2026-10-14 13:45
+              </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline/40">chevron_right</span>
+</article>
+<!-- SESSÃO 3 -->
+<article class="flex items-center justify-between gap-3 bg-surface-container/50 hover:bg-surface-container-high/70 border border-outline-variant/30 rounded-xl px-3.5 py-2.5 cursor-pointer active:scale-[0.99] transition-all">
+<div class="flex items-start gap-2.5 min-w-0 flex-1">
+<div class="pt-1 text-outline flex-shrink-0">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant block"></span>
+</div>
+<div class="min-w-0 flex-1">
+<p class="font-body-md text-[13px] font-medium text-on-surface truncate leading-snug">
+                Refactor do driver virtual display 540x960
+              </p>
+<p class="font-label-sm text-[10.5px] text-outline font-normal mt-0.5">
+                3c71a99e <span class="text-outline/40">·</span> 2026-10-13 18:20
+              </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline/40">chevron_right</span>
+</article>
+<!-- SESSÃO 4 -->
+<article class="flex items-center justify-between gap-3 bg-surface-container/50 hover:bg-surface-container-high/70 border border-outline-variant/30 rounded-xl px-3.5 py-2.5 cursor-pointer active:scale-[0.99] transition-all">
+<div class="flex items-start gap-2.5 min-w-0 flex-1">
+<div class="pt-1 text-outline flex-shrink-0">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant block"></span>
+</div>
+<div class="min-w-0 flex-1">
+<p class="font-body-md text-[13px] font-medium text-on-surface truncate leading-snug">
+                Configurar sandbox POSIX e permissões no Android
+              </p>
+<p class="font-label-sm text-[10.5px] text-outline font-normal mt-0.5">
+                1e5504d2 <span class="text-outline/40">·</span> 2026-10-12 11:15
+              </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline/40">chevron_right</span>
+</article>
+<!-- SESSÃO 5 -->
+<article class="flex items-center justify-between gap-3 bg-surface-container/50 hover:bg-surface-container-high/70 border border-outline-variant/30 rounded-xl px-3.5 py-2.5 cursor-pointer active:scale-[0.99] transition-all">
+<div class="flex items-start gap-2.5 min-w-0 flex-1">
+<div class="pt-1 text-outline flex-shrink-0">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant block"></span>
+</div>
+<div class="min-w-0 flex-1">
+<p class="font-body-md text-[13px] font-medium text-on-surface truncate leading-snug">
+                Injeção de eventos com input tap e keyevent
+              </p>
+<p class="font-label-sm text-[10.5px] text-outline font-normal mt-0.5">
+                09ba31c8 <span class="text-outline/40">·</span> 2026-10-11 20:30
+              </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline/40">chevron_right</span>
+</article>
+<!-- SESSÃO 6 -->
+<article class="flex items-center justify-between gap-3 bg-surface-container/50 hover:bg-surface-container-high/70 border border-outline-variant/30 rounded-xl px-3.5 py-2.5 cursor-pointer active:scale-[0.99] transition-all">
+<div class="flex items-start gap-2.5 min-w-0 flex-1">
+<div class="pt-1 text-outline flex-shrink-0">
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant block"></span>
+</div>
+<div class="min-w-0 flex-1">
+<p class="font-body-md text-[13px] font-medium text-on-surface truncate leading-snug">
+                Verificação de conectividade daemon socket unix
+              </p>
+<p class="font-label-sm text-[10.5px] text-outline font-normal mt-0.5">
+                77d29ef1 <span class="text-outline/40">·</span> 2026-10-10 09:12
+              </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline/40">chevron_right</span>
+</article>
+</div>
+<!-- Footer Inside Sheet -->
+<footer class="px-5 pt-3 pb-6 border-t border-outline-variant/25 bg-surface-container-low/95 flex flex-col items-center gap-2.5">
+<!-- Text action: Fechar a sessão activa -->
+<button class="inline-flex items-center gap-1.5 text-error hover:text-on-error-container font-label-md text-label-md py-1 px-3 rounded hover:bg-error-container/20 transition-colors duration-150 active:scale-95" type="button">
+<span class="material-symbols-outlined text-[15px]">power_settings_new</span>
+<span>Fechar a sessão activa</span>
+</button>
+<!-- Small Helper Instruction (Monospace) -->
+<p class="font-label-sm text-[10.5px] text-outline/80 text-center tracking-tight select-none">
+          ✕ fecha a sessão activa · toca numa linha para retomar
+        </p>
+<!-- Dismiss Primary Button -->
+<button class="w-full h-12 mt-1 rounded-xl bg-surface-container-high hover:bg-surface-container-highest active:scale-[0.98] transition-all text-on-surface font-label-md text-label-lg font-medium flex items-center justify-center border border-outline-variant/40 shadow-sm" type="button">
+          Fechar
+        </button>
+</footer>
+</section>
+</main>
+</body></html>
