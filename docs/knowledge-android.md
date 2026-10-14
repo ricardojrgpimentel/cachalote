@@ -1534,3 +1534,25 @@ todos invisíveis no dia-a-dia do modo root:
   (0 displays). Documentado na app — *"vive dentro desta app: se ela for fechada, o ecrã virtual
   desaparece"*.
 - **Origem:** **[LOCAL]**.
+
+### 125. Fila de tarefas: "faz isto e avisa-me"
+- **O que é:** o dono junta tarefas (texto) e a app corre-as **uma a seguir à outra**, esperando
+  pelo fim de cada turno. Cada turno gera a sua notificação (é o `enviarPrompt` que a manda) e um
+  pedido de autorização **pára-a naturalmente** — o turno não acaba até o dono responder, e a
+  notificação de autorização (§116) já avisa.
+- **Desenho:** a lógica vive em `Fila.kt` (ordem, estados, persistência em `files/fila.json`),
+  separada do ViewModel e da UI para se poder testar sem aparelho. O cartão é um composable de
+  dados+lambdas (`FilaCard`).
+- **Decisão:** uma tarefa que estava a correr quando a app morreu volta a **pendente** — não se sabe
+  se acabou, e repetir é melhor do que perder o trabalho. Uma tarefa **falhada** não se repete
+  sozinha (senão a fila entrava em ciclo).
+- **Bug apanhado só na verificação no aparelho:** a fila era lida do ficheiro, mas o estado da UI
+  (`tarefas`) **não era inicializado** — a fila parecia perdida depois de fechar a app, que é
+  exactamente o que ela existe para evitar. Os testes unitários passavam (testavam `Fila`, não o
+  arranque do ViewModel). Corrigido no `init` e verificado no telefone: `2 na fila` com as duas
+  pendentes, a concluída fora.
+- **Verificação:** `FilaTest` (7) + `FilaCardTest` (5) na JVM; no aparelho, o cartão aparece e a
+  fila sobrevive ao arranque.
+- **Limite honesto:** a fila corre enquanto a app estiver viva (o serviço em primeiro plano ajuda);
+  se o processo morrer, o turno em curso perde-se e a tarefa volta a pendente.
+- **Origem:** **[LOCAL]**.

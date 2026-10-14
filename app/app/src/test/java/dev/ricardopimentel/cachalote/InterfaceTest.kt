@@ -281,3 +281,71 @@ class ConsumoTest {
         compose.onAllNodesWithText("contexto", substring = true).assertCountEquals(0)
     }
 }
+
+/** O cartão da fila de tarefas. */
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [34], qualifiers = "pt-rPT")
+class FilaCardTest {
+
+    @get:Rule
+    val compose = createComposeRule()
+
+    private fun card(
+        tarefas: List<Tarefa>,
+        aCorrer: Boolean = false,
+        onJuntar: () -> Unit = {},
+        onCorrer: () -> Unit = {},
+        onParar: () -> Unit = {},
+        onRemover: (String) -> Unit = {},
+        onLimpar: () -> Unit = {},
+    ) {
+        compose.setContent {
+            FilaCard(tarefas, aCorrer, enabled = true, onJuntar, onCorrer, onParar, onRemover, onLimpar)
+        }
+    }
+
+    private val pendente = Tarefa("t1", "escrever o relatório")
+
+    @Test
+    fun com_a_fila_vazia_nao_se_pode_correr() {
+        card(emptyList())
+        compose.onNodeWithText("fila vazia").assertIsDisplayed()
+        compose.onNodeWithText("Correr a fila").assertIsNotEnabled()
+    }
+
+    @Test
+    fun mostra_as_pendentes_numeradas_e_conta_as_que_faltam() {
+        card(listOf(pendente, Tarefa("t2", "rever o código")))
+        compose.onNodeWithText("2 na fila").assertIsDisplayed()
+        compose.onNodeWithText("1. escrever o relatório").assertIsDisplayed()
+        compose.onNodeWithText("2. rever o código").assertIsDisplayed()
+    }
+
+    @Test
+    fun juntar_e_correr_chamam_o_que_devem() {
+        var juntou = 0
+        var correu = 0
+        card(listOf(pendente), onJuntar = { juntou++ }, onCorrer = { correu++ })
+        compose.onNodeWithText("Juntar à fila").performClick()
+        compose.onNodeWithText("Correr a fila").performClick()
+        assertEquals(1, juntou)
+        assertEquals(1, correu)
+    }
+
+    @Test
+    fun a_correr_mostra_parar_em_vez_de_correr() {
+        var parou = 0
+        card(listOf(pendente), aCorrer = true, onParar = { parou++ })
+        compose.onNodeWithText("Parar a fila").performClick()
+        compose.onAllNodesWithText("Correr a fila").assertCountEquals(0)
+        assertEquals(1, parou)
+    }
+
+    @Test
+    fun o_x_remove_a_tarefa_certa() {
+        var removida: String? = null
+        card(listOf(pendente, Tarefa("t2", "outra")), onRemover = { removida = it })
+        compose.onAllNodesWithText("✕")[0].performClick()
+        assertEquals("t1", removida)
+    }
+}

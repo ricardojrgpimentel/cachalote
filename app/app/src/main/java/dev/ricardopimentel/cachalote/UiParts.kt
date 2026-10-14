@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -44,6 +47,65 @@ fun ConsumoDeContexto(uso: Uso?) {
         fontFamily = FontFamily.Monospace,
         color = MaterialTheme.colorScheme.secondary,
     )
+}
+
+/**
+ * Fila de tarefas: o que está à espera, o que corre agora, e os botões para a gerir.
+ *
+ * Tudo por dados + lambdas (nada de ViewModel) para se poder testar sem aparelho.
+ */
+@Composable
+fun FilaCard(
+    tarefas: List<Tarefa>,
+    aCorrer: Boolean,
+    enabled: Boolean,
+    onJuntar: () -> Unit,
+    onCorrer: () -> Unit,
+    onParar: () -> Unit,
+    onRemover: (String) -> Unit,
+    onLimpar: () -> Unit,
+) {
+    val pendentes = tarefas.count { it.estado == Tarefa.PENDENTE }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.fila_titulo), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(
+                    if (pendentes == 0) stringResource(R.string.fila_vazia) else stringResource(R.string.fila_quantas, pendentes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                if (aCorrer) CircularProgressIndicator(modifier = Modifier.padding(start = 8.dp).size(16.dp), strokeWidth = 2.dp)
+            }
+            Text(
+                stringResource(R.string.fila_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onJuntar, enabled = enabled) { Text(stringResource(R.string.fila_juntar)) }
+                if (aCorrer) {
+                    OutlinedButton(onClick = onParar) { Text(stringResource(R.string.fila_parar)) }
+                } else {
+                    OutlinedButton(onClick = onCorrer, enabled = enabled && pendentes > 0) { Text(stringResource(R.string.fila_correr)) }
+                }
+                OutlinedButton(onClick = onLimpar, enabled = enabled && tarefas.any { it.estado != Tarefa.PENDENTE }) {
+                    Text(stringResource(R.string.fila_limpar))
+                }
+            }
+            // Só as que ainda não correram (as concluídas desaparecem com "Limpar concluídas").
+            tarefas.filter { it.estado == Tarefa.PENDENTE }.forEachIndexed { i, t ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${i + 1}. ${t.texto}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { onRemover(t.id) }, enabled = enabled) { Text("✕") }
+                }
+            }
+        }
+    }
 }
 
 /** Lista de sessões: ✓ na activa, ✕ só nela (o motor só fecha a sessão activa), retomar ao tocar. */

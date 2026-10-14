@@ -45,6 +45,15 @@
     <string name="fechar">Close</string>
     <string name="fechar_sessao_activa">Close the active session</string>
     <string name="fechar_texto">Close</string>
+    <string name="fila_correr">Run the queue</string>
+    <string name="fila_corrida">running the queue…</string>
+    <string name="fila_juntar">Add to queue</string>
+    <string name="fila_limpar">Clear finished</string>
+    <string name="fila_parar">Stop the queue</string>
+    <string name="fila_quantas">%1$d in the queue</string>
+    <string name="fila_texto">Write a task and tap «Add to queue»: the agent runs them one after another and notifies you at the end of each. If it needs approval it waits — and tells you.</string>
+    <string name="fila_titulo">Task queue</string>
+    <string name="fila_vazia">queue empty</string>
     <string name="fotograma_desc">virtual screen frame</string>
     <string name="gravar_mcp">Save MCP</string>
     <string name="gravar_reiniciar">Save and restart</string>

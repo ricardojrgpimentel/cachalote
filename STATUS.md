@@ -1671,3 +1671,29 @@ primeiro prompt (a preferir o do motor, se um dia vier) e a nota para pedir isso
 serviço em primeiro plano. Matar o processo (`am force-stop`) leva-o com ele, e **não pode ser de
 outra maneira**: um *virtual display* pertence a um processo Android, e o daemon é um processo
 **Node**. Está documentado no cartão da app.
+
+
+---
+
+## 55. Fila de tarefas: "faz isto e avisa-me"
+
+Cartão na conversa: escreve-se a tarefa, toca-se em **Juntar à fila**, e o agente corre-as **uma a
+seguir à outra**, esperando pelo fim de cada turno. Cada turno gera a sua notificação; um pedido de
+autorização pára a fila naturalmente (o turno não acaba até o dono responder) e a notificação de
+autorização avisa.
+
+| Peça | Onde |
+|---|---|
+| Lógica (ordem, estados, persistência) | `Fila.kt` — testável sem aparelho |
+| Cartão | `FilaCard` em `UiParts.kt` (dados + lambdas) |
+| Ligação | `MainViewModel`: `juntarATexto`, `correrFila`, `pararFila`, `removerDaFila`, `limparConcluidas` |
+
+**Decisões:** uma tarefa **interrompida** volta a pendente (repetir é melhor do que perder); uma
+tarefa **falhada** não se repete sozinha (senão entrava em ciclo).
+
+**Bug apanhado só no aparelho:** a fila era lida do ficheiro mas o estado da UI não era
+inicializado — parecia perdida ao fechar a app. Os testes unitários passavam (testavam `Fila`, não o
+arranque do ViewModel). Corrigido e verificado: depois de reiniciar, `2 na fila` com as duas
+pendentes.
+
+**Testes:** `FilaTest` (7) + `FilaCardTest` (5) → **42 testes na JVM**, todos a passar.

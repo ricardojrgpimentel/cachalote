@@ -93,6 +93,62 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     var accessibilityOn by mutableStateOf(CachaloteAccessibilityService.isEnabled())
 
+    // ---------------------------------------------------------------- fila de tarefas
+
+    // `getApplication()` e não `LocalContext`: isto é um ViewModel, não um composable.
+    private var fila = Fila.em(getApplication())
+
+    var tarefas by mutableStateOf<List<Tarefa>>(emptyList())
+    var filaACorrer by mutableStateOf(false)
+
+    /** Junta o que está escrito no campo à fila (sem enviar). */
+    fun juntarATexto(texto: String) {
+        fila.adicionar(texto) ?: return
+        tarefas = fila.todas
+    }
+
+    fun removerDaFila(id: String) {
+        fila.remover(id)
+        tarefas = fila.todas
+    }
+
+    fun limparConcluidas() {
+        fila.limparConcluidas()
+        tarefas = fila.todas
+    }
+
+    fun pararFila() {
+        filaACorrer = false
+        transcript.add(ChatLine("system", "fila parada (a tarefa em curso continua)"))
+    }
+
+    /**
+     * Corre a fila: uma tarefa de cada vez, esperando pelo fim de cada turno. Cada turno gera a
+     * sua notificação (é o `enviarPrompt` que a manda), e um pedido de autorização pára-a
+     * naturalmente — o turno não acaba até o dono responder.
+     */
+    fun correrFila() {
+        if (filaACorrer) return
+        filaACorrer = true
+        viewModelScope.launch {
+            transcript.add(ChatLine("system", "a correr a fila…"))
+            while (filaACorrer) {
+                val tarefa = fila.proxima() ?: break
+                try {
+                    enviarPrompt(tarefa.texto)
+                    fila.concluir(tarefa.id)
+                } catch (t: Throwable) {
+                    fila.concluir(tarefa.id, falhou = true)
+                    transcript.add(ChatLine("error", "tarefa da fila falhou: ${t.message ?: "?"}"))
+                }
+                tarefas = fila.todas
+            }
+            filaACorrer = false
+            tarefas = fila.todas
+            if (fila.vazia) transcript.add(ChatLine("system", "fila concluída"))
+        }
+    }
+
     /** Consumo de contexto, como o motor o reporta (`usage_update`). */
     var uso by mutableStateOf<Uso?>(null)
 
@@ -494,9 +550,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         saveState()
     }
 
-    fun send(text: String) = run("prompt") {
+    fun send(text: String) = run("prompt") { enviarPrompt(text) }
+
+    /**
+     * O corpo de um turno. Separado do `send` porque a **fila** tem de o esperar para só mandar a
+     * tarefa seguinte quando a anterior acabar (o `run` não dá para esperar).
+     */
+    private suspend fun enviarPrompt(text: String) {
         val img = pendingImage
-        if (text.isBlank() && img == null) return@run
+        if (text.isBlank() && img == null) return
         var sid = sessionId
         if (sid.isNullOrBlank()) {
             val res = controller.newSession()
@@ -901,6 +963,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ---------------------------------------------------------------- utilitário
 
     init {
+        // A fila é lida do ficheiro ao arrancar: sem isto, `tarefas` ficava vazio e a fila parecia
+        // perdida depois de fechar a app — que é exactamente o que ela existe para evitar.
+        tarefas = fila.todas
         // Vigia a acessibilidade a cada 5 s: se cair a meio da sessão, avisa na conversa (e por
         // notificação, se a app não estiver à frente). Sem isto o agente só o descobre ao falhar.
         viewModelScope.launch {

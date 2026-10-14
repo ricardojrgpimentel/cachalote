@@ -922,6 +922,20 @@ private fun ChatScreen(vm: MainViewModel) {
                 TextButton(onClick = { vm.clearImage() }) { Text(stringResource(R.string.remover)) }
             }
         }
+        // Fila de tarefas: junta ao lado do campo, para se poder lançar trabalho e sair.
+        FilaCard(
+            tarefas = vm.tarefas,
+            aCorrer = vm.filaACorrer,
+            enabled = !vm.busy,
+            onJuntar = {
+                vm.juntarATexto(input)
+                input = ""
+            },
+            onCorrer = { vm.correrFila() },
+            onParar = { vm.pararFila() },
+            onRemover = { vm.removerDaFila(it) },
+            onLimpar = { vm.limparConcluidas() },
+        )
         Row(
             modifier = Modifier.fillMaxWidth().padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,

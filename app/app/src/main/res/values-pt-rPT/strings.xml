@@ -45,6 +45,15 @@
     <string name="fechar">Fechar</string>
     <string name="fechar_sessao_activa">Fechar a sessão activa</string>
     <string name="fechar_texto">Fechar</string>
+    <string name="fila_correr">Correr a fila</string>
+    <string name="fila_corrida">a correr a fila…</string>
+    <string name="fila_juntar">Juntar à fila</string>
+    <string name="fila_limpar">Limpar concluídas</string>
+    <string name="fila_parar">Parar a fila</string>
+    <string name="fila_quantas">%1$d na fila</string>
+    <string name="fila_texto">Escreve uma tarefa e toca em «Juntar à fila»: o agente corre-as uma a seguir à outra e avisa-te no fim de cada uma. Se precisar de autorização, fica à espera — e avisa-te.</string>
+    <string name="fila_titulo">Fila de tarefas</string>
+    <string name="fila_vazia">fila vazia</string>
     <string name="fotograma_desc">fotograma do ecrã virtual</string>
     <string name="gravar_mcp">Gravar MCP</string>
     <string name="gravar_reiniciar">Gravar e reiniciar</string>
