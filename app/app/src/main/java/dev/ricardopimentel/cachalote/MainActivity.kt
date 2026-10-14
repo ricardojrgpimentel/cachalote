@@ -517,10 +517,26 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(onClick = { vm.vscreenStart() }, enabled = !vm.busy) { Text(stringResource(R.string.iniciar)) }
                     OutlinedButton(onClick = { vm.vscreenRefresh() }, enabled = !vm.busy) { Text(stringResource(R.string.ver_fotograma)) }
                     OutlinedButton(onClick = { vm.vscreenStop() }, enabled = !vm.busy) { Text(stringResource(R.string.parar)) }
+                    Text(stringResource(R.string.ao_vivo), style = MaterialTheme.typography.bodySmall)
+                    Switch(
+                        checked = vm.vscreenAoVivo,
+                        onCheckedChange = { vm.vscreenAoVivo = it },
+                        enabled = vm.vscreenRunning,
+                    )
+                }
+                // Ao vivo: um fotograma a cada 1,5 s enquanto o interruptor estiver ligado e o
+                // ecrã virtual existir. É o que deixa o dono *ver* o agente a trabalhar.
+                if (vm.vscreenAoVivo && vm.vscreenRunning) {
+                    LaunchedEffect(vm.vscreenRunning, vm.vscreenAoVivo) {
+                        while (true) {
+                            vm.vscreenRefresh(silencioso = true)
+                            kotlinx.coroutines.delay(1500)
+                        }
+                    }
                 }
                 if (vm.vscreenInfo.isNotBlank()) {
                     Text(vm.vscreenInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)

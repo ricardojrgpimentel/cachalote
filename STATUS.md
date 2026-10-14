@@ -616,7 +616,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**Notificação no fim do turno**~~ | ✅ **feito em §41** | avisa com a app em segundo plano (e só aí); canal próprio para poder silenciar |
 | ~~**Testes instrumentados**~~ | ✅ **feito em §42** | 9 testes no aparelho (i18n, licenças, notificação), sem um único toque; + `tools/i18n-check.sh` na CI |
 | ~~**Inglês / i18n**~~ | ✅ **feito em §43** | 106 textos em `values/` (inglês, omissão) e `values-pt-rPT/` (pt-PT); pt-BR cai no pt-PT e nunca apanha formas brasileiras |
-| ~~**vscreen: polimento**~~ | ✅ **feito em §44** | `launch`/`tap`/`swipe`/`key`/`text` na ferramenta, por dois métodos **estreitos** do daemon (só no ecrã que a app confirma); teste `tools/vscreen-tool-test.sh` 6/6 |
+| ~~**vscreen: polimento**~~ | ✅ **feito em §44/45** | acções `launch`/`tap`/`swipe`/`key`/`text` por métodos estreitos do daemon (+ teste 6/6) e pré-visualização **ao vivo** |
 | ~~**Ecrã de licenças na app**~~ | ✅ **feito em §40** | 13 entradas com os **textos integrais** em `assets/licenses.json` + diálogo em Poderes |
 | ~~**Publicar o kernel e a APK de release**~~ | ✅ **preparado** (§3 do `PUBLICAR.md`) | release `kernel-77fa6785a4e4` com `kernel.zip` (211 MB) + APK assinada (42 MB); falta **tornares o repo público** |
 | ~~**vscreen** (ecrã virtual)~~ | ✅ **feito em §37-39** | reimplementado do zero com APIs do AOSP (D8 = opção A, zero LGPL); sete passos verificados com prova visual |
@@ -1485,3 +1485,11 @@ aceitava números.
 **Duas armadilhas operacionais** (documentadas em knowledge 112, custaram uma hora): correr
 `connectedDebugAndroidTest` **desinstala a app** e apaga as preferências; e numa instalação nova a
 app **morre no arranque** sem `POST_NOTIFICATIONS` concedida — sem crash nenhum no `logcat`.
+
+
+### 45. Pré-visualização ao vivo
+
+Interruptor **Ao vivo** no cartão do ecrã virtual: um fotograma a cada 1,5 s, por um caminho
+silencioso (sem mexer no estado dos botões). **Prova de que é vivo:** dois fotogramas com o
+conteúdo parado dão o mesmo `md5` (correcto); depois de um toque injectado dão `md5` diferente
+(`06f87e8d2864` → `481004c6ca30`) — ou seja, a imagem acompanha o que o agente faz.

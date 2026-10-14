@@ -283,6 +283,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var vscreenRunning by mutableStateOf(false)
     var vscreenBitmap by mutableStateOf<android.graphics.Bitmap?>(null)
 
+    /** Pré-visualização ao vivo: pede fotogramas seguidos enquanto o interruptor estiver ligado. */
+    var vscreenAoVivo by mutableStateOf(false)
+
     /** Ecrã virtual: iniciar, parar, estado e ver o fotograma actual. */
     fun vscreenStart() = run("ecrã virtual") {
         val r = capsExecute("vscreen_start", org.json.JSONObject().put("width", 720).put("height", 1280).put("density", 320))
@@ -298,8 +301,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         vscreenInfo = "parado"
     }
 
-    /** Pede um fotograma e guarda-o para o mostrar no ecrã (não vai para o contexto do modelo). */
-    fun vscreenRefresh() = run("ecrã virtual") {
+    /**
+     * Pede um fotograma e guarda-o para o mostrar no ecrã (não vai para o contexto do modelo).
+     * `silencioso` é o modo da pré-visualização ao vivo: não mexe em `busy` (senão os botões
+     * piscavam a cada 1,5 s) nem na faixa de erro.
+     */
+    fun vscreenRefresh(silencioso: Boolean = false) {
+        if (!silencioso) return run("ecrã virtual") { vscreenFrame() }
+        viewModelScope.launch { runCatching { vscreenFrame() } }
+    }
+
+    private suspend fun vscreenFrame() {
         val r = capsExecute("vscreen_frame", org.json.JSONObject().put("maxWidth", 540))
         val bytes = android.util.Base64.decode(r.optString("data"), android.util.Base64.NO_WRAP)
         vscreenBitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)

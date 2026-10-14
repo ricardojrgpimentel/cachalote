@@ -1372,3 +1372,13 @@ diferentes, e tratá-los como iguais era o erro:
 - **Como distinguir:** se *outras* apps arrancam e a nossa não, e não há excepção em lado nenhum,
   procurar permissões por conceder antes de suspeitar do código.
 - **Origem:** **[LOCAL]** (custou uma hora; o registo acima vale por ela).
+
+### 113. Pré-visualização ao vivo (e como se prova que é vivo)
+- **O que se fez:** interruptor **Ao vivo** no cartão do ecrã virtual: enquanto está ligado, a app
+  pede um fotograma a cada 1,5 s e desenha-o. O pedido vai por um caminho "silencioso" (não mexe
+  no estado `busy`, senão os botões piscavam a cada pedido, nem na faixa de erro).
+- **Como se prova que é mesmo vivo:** não basta que a imagem apareça — um fotograma estático
+  também aparece. O teste é comparar **dois fotogramas separados por uma acção**: com o conteúdo
+  parado dão o mesmo `md5` (correcto), e **depois de um toque injectado** dão `md5` diferente
+  (`06f87e8d2864` → `481004c6ca30`, 59 179 → 59 562 bytes). É isso que a pré-visualização mostra.
+- **Origem:** **[LOCAL]**.
