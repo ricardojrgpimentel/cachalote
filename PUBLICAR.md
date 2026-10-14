@@ -182,6 +182,23 @@ Alias: cachalote · válido até 2054
 Certificado SHA-256: 881b04b0c38746eda8c61da319b99f65bb39364c01884862857a1f29895931a9
 ```
 
+
+### Sem anexos no gestor de palavras-passe (ex.: Bitwarden grátis)
+
+A keystore é binária (2,6 KB), mas dá para a guardar como **texto** numa nota segura — em base64
+são ~4,2 KB, folgado:
+
+```sh
+./tools/backup-signing-key.sh --para-texto        # → .work/cachalote-chave.txt
+#   abre o ficheiro, copia TUDO e cola numa nota segura; depois apaga o ficheiro
+./tools/backup-signing-key.sh --de-texto ~/cachalote-chave.txt   # repõe a keystore no sítio
+```
+
+O ficheiro de texto nasce dentro de `.work/`, que o git ignora (e não deve ser colado em conversas
+que passem pela API de um modelo, claro). O `--de-texto` repõe a `.jks` e volta a mostrar o SHA-256
+do certificado, para confirmares que é a mesma identidade. **Ciclo testado:** a chave reposta a
+partir do texto tem o mesmo `sha256` (`d31252d7…`).
+
 Opcional: mudar a password por omissão (que está escrita no `build-release.sh`, logo é pública):
 
 ```sh

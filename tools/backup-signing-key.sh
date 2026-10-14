@@ -78,9 +78,62 @@ e compara com o que guardaste.
 FIM
 }
 
+
+# ---------------------------------------------------------------- em texto (para gestores sem anexos)
+# Bitwarden (plano gratuito) não tem anexos: cabe tudo numa **nota segura**. A keystore é binária
+# (2,6 KB), portanto vai em base64 — ~3,5 KB de texto, folgado para uma nota.
+para_texto() {
+  [ -f "$KS" ] || { echo "erro: não encontrei $KS"; return 1; }
+  local saida="${1:-$WS/.work/cachalote-chave.txt}"
+  local cert
+  cert="$("$KT" -list -v -keystore "$KS" -storepass "$STORE_PASS" -alias "$ALIAS" 2>/dev/null | grep -i "SHA256:" | awk '{print $2}')"
+  {
+    echo "# Cachalote — chave de assinatura da release (não apagar)"
+    echo "#"
+    echo "# Esta nota contém a keystore em base64. Com ela e a password, consegues voltar a"
+    echo "# assinar actualizações da app num computador novo:"
+    echo "#"
+    echo "#   git clone https://github.com/ricardojrgpimentel/cachalote.git && cd cachalote"
+    echo "#   ./tools/backup-signing-key.sh --de-texto ~/cachalote-chave.txt"
+    echo "#   ./tools/build-release.sh     # confirma o SHA-256 do certificado em baixo"
+    echo "#"
+    echo "# Alias            : $ALIAS"
+    echo "# Password keystore: ${CACHALOTE_STORE_PASS:-cachalote}   (ou o que tiveres definido)"
+    echo "# Certificado      : $cert"
+    echo "#"
+    echo "-----BEGIN CACHALOTE KEYSTORE (base64)-----"
+    base64 < "$KS"
+    echo "-----END CACHALOTE KEYSTORE (base64)-----"
+  } > "$saida"
+  echo "escrito: $saida ($(wc -c < "$saida" | tr -d ' ') bytes de texto)"
+  echo "sha256 da keystore: $(shasum -a 256 "$KS" | awk '{print $1}')"
+  echo "certificado       : $cert"
+  cat <<'FIM'
+
+A seguir:
+  1. abre o ficheiro, copia TUDO e cola numa **nota segura** do Bitwarden;
+  2. apaga o ficheiro do projecto (fica em .work/, que já é ignorado pelo git);
+  3. não coles isto em chats nem em sítios que passem pela API de um modelo.
+FIM
+}
+
+de_texto() {
+  local origem="${1:?uso: --de-texto <ficheiro.txt>}"
+  [ -f "$origem" ] || { echo "erro: não encontrei $origem"; return 1; }
+  mkdir -p "$WS/.work"
+  local tmp="$WS/.work/.chave.tmp"
+  sed -n '/BEGIN CACHALOTE KEYSTORE/,/END CACHALOTE KEYSTORE/p' "$origem"     | grep -v -- '-----' | base64 -d > "$tmp" || { echo "erro: o base64 não descodificou"; rm -f "$tmp"; return 1; }
+  mv "$tmp" "$KS"
+  chmod 600 "$KS"
+  echo "keystore reposta em $KS"
+  verificar
+}
+
 case "${1:-}" in
   --verificar) verificar ;;
   --criar) shift; criar "${1:-}" ;;
   --restaurar) shift; restaurar "${1:-}" ;;
-  *) echo "uso: $0 --verificar | --criar [saida.enc] | --restaurar <ficheiro.enc>"; exit 2 ;;
+  --para-texto) shift; para_texto "${1:-}" ;;
+  --de-texto) shift; de_texto "${1:-}" ;;
+  *) echo "uso: $0 --verificar | --criar [saida.enc] | --restaurar <ficheiro.enc>"; echo "     $0 --para-texto [saida.txt] | --de-texto <ficheiro.txt>"; exit 2 ;;
 esac
