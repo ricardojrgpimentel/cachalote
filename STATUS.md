@@ -1536,8 +1536,15 @@ sessões, modo desconhecido é ignorado. `BackupTest`: 4 testes.
 apagava a outra — há teste); e o aviso da acessibilidade **não era persistido**, o que só se
 descobriu ao ir lê-lo no instantâneo (corrigido).
 
-**Verificação no aparelho:** desligar a acessibilidade com a app a correr produziu
-*"a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade
-→ Cachalote)"* no transcript. A captura do cabeçalho com o consumo **não** foi possível: a
-automação de UI voltou a falhar no campo de escrita (é o problema crónico que os testes na JVM
-vieram resolver) — o indicador está coberto pelo `ConsumoTest`.
+**Verificação no aparelho:**
+- **Acessibilidade:** desligar o serviço com a app a correr produziu *"a acessibilidade desligou-se:
+  o agente perdeu olhos e dedos no ecrã"* no transcript (gravado, sobrevive a fechar a app) ✅
+- **Fim de turno (caminho de erro):** um turno que falhou por transporte da API gerou a notificação
+  *"O agente acabou o turno — o turno falhou: …"* e a linha de erro no transcript ✅
+- **Aviso de autorização:** **não** foi possível provocá-lo no aparelho — a API da DeepSeek estava a
+  falhar por transporte (*"DeepSeek Messages transport failed"*) e o agente nunca chegou ao ponto de
+  pedir autorização. A lógica está coberta por 8 testes na JVM. Fica por verificar ponta a ponta
+  quando a API estiver sã.
+- **Consumo no cabeçalho:** a captura não foi possível (a automação de UI voltou a falhar no campo
+  de escrita — o problema crónico que os testes na JVM vieram resolver); está coberto pelo
+  `ConsumoTest` (2 testes Compose).
