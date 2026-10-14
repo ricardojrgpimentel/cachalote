@@ -597,18 +597,28 @@ repositório está em `main`, empurrado, sem alterações pendentes.
    verificar com nova tentativa). O passo 7 ("remover chave") também era intermitente — e a
    causa era outra, mais interessante: um `BACK` a mais fechava a app. Ver §21.
 
-### O que continua no roadmap (sem pressa)
+### O que continua no roadmap
 
-| Item | Nota |
-|---|---|
-| **vscreen** (ecrã virtual) | decisão LGPL em aberto; não incluí nada do Operit |
-| **SEA + snapshot V8** (D6b) | ganho de arranque; risco de partir o porto |
-| **Kernel na APK** | `--bundle` funciona, mas a APK fica com **440 MB** (§22.6): para distribuição tem de ser download na primeira execução, não asset |
-| **LMK sob pressão** | FGS + supervisão feitos, nunca testado com o telemóvel sem memória |
-| ~~**CI**~~ | ✅ **feito em §21**: `.github/workflows/ci.yml` (regressão do schema do plugin + sintaxe) |
-| ~~**Arranque do Shizuku no boot**~~ | ✅ **feito em §29**: a opção "Iniciar na inicialização (root)" já estava ligada no S10+; sem root o servidor tem de ser iniciado por ADB a cada arranque (limitação do Shizuku, não nossa) |
-| **Voz, visão em vídeo, `session/close` na UI** | por fazer |
-| **Ligação app↔daemon aos solavancos** | §21: a app reconecta em ciclo depois de o motor reiniciar (a chave grava → motor reinicia); um pedido nesse intervalo falha com "a ligação ao motor caiu". Vale a pena tornar a reconexão mais calma. |
+**Fechado nesta ronda** (com a secção onde está a prova): kernel por download (§24), CI com
+build de um clone (§25), low-memory killer com watchdog (§26), reconexão calma (§27), sessões por
+modo e fecho da sessão activa (§28), arranque do Shizuku no boot (§29). O **SEA + snapshot V8**
+(D6b) ficou **medido e rejeitado** (§ item 4): constrói, restaura, responde — e não ganha nada.
+A **voz** e o **anexar imagem ao prompt** entraram em §23.
+
+| Item | Estado | Nota |
+|---|---|---|
+| **`cachalote doctor`** | por fazer | um comando que verifica a cadeia toda (daemon, motor, chave, acessibilidade, kernel, disco, portos, oom, watchdog) e diz o que está mal. Barato e útil a sério |
+| **Títulos de sessão** | por fazer | o perfil desliga `session-title-llm`; ligá-lo dá nomes às sessões em vez de `0d876415` |
+| **LMK sob pressão real** | meio | `oom_score_adj` e watchdog feitos (§26); falta encher a RAM e ver o comportamento |
+| **Clique do ✕ na UI** | meio | o fecho funciona (ACPP medido); o teste de UI não acerta nas linhas do diálogo |
+| **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
+| **MCP servers configuráveis** | por fazer | o `session/new` vai com `mcpServers: []`; dava para ligar ferramentas externas |
+| **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
+| **vscreen** (ecrã virtual) | bloqueado | decisão LGPL tua; reimplementar do zero são dias de trabalho |
+| ~~**SEA + snapshot V8**~~ | ✅ medido e rejeitado | § item 4: não ganha nada |
+| ~~**Kernel na APK**~~ | ✅ resolvido | §24: download com verificação (440 MB → 164 MB) |
+| ~~**CI**~~ | ✅ feito e reforçado | §25: três jobs, incluindo o build da APK num clone |
+| ~~**Arranque do Shizuku no boot**~~ | ✅ verificado | §29: opção já ligada (root) |
 
 ---
 
