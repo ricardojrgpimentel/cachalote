@@ -968,3 +968,25 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   relatório do `patch-android.cjs`, e exige a linha da guarda de caminhos como prova positiva.
 - **Resultado:** num clone limpo, em `ubuntu-latest`, os três jobs passam — incluindo a APK.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## X. Sobreviver ao low-memory killer
+
+### 91. `oom_score_adj`, watchdog do daemon — o que faltava no risco do LMK
+- **O que existia:** o daemon supervisorava o **motor** (reinício com backoff), mas ninguém
+  supervisorava o **daemon**. Se o LMK (ou um crash, ou o kernel) o matasse, ficava morto: a app
+  mostrava "desligado" até alguém reparar. E nenhum dos dois processos estava protegido.
+- **Solução:**
+  1. `oom_score_adj` do daemon em **-800** e do motor em **-500** (o mínimo é -1000; o próprio
+     sistema usa estes valores para processos quase-críticos). O daemon define-o no `start`, a
+     ponte define-o para o motor assim que o arranca.
+  2. `cachalote watchdog [segundos]` — laço que arranca o daemon se estiver parado e volta a
+     arrancá-lo se morrer. O `service.d` do Magisk corre-o **em segundo plano** no arranque
+     (um `start` único, como estava, não chega).
+- **Verificação (S10+):** `kill -9` no daemon (pid 13979) → o watchdog detectou em ~20 s, subiu
+  um daemon novo (pid 15018, também com `-800`), a ponte respawnou o motor, o `handshake` voltou
+  a `OK` e a app **reconectou sozinha** ("motor DSH no telefone · ligado") sem se mexer nela.
+- **Custo honesto:** há uma janela de até `intervalo` segundos (20–30 s) sem daemon. Para turnos
+  longos, o motor já não é morto pelo LMK por causa do `-500`.
+- **Origem:** **[LOCAL]**.

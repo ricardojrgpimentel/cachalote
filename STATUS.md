@@ -1086,3 +1086,22 @@ Pelo caminho: o `android-actions/setup-android@v3` falha porque pede o pacote le
 passou a instalar-se só o necessário pelo `sdkmanager` (`platforms;android-35`,
 `build-tools;35.0.0`). E o `bootstrap.sh` ganhou `--no-device` (kernel + runtime sem telemóvel),
 que é o que a CI usa.
+
+
+---
+
+## 26. Low-memory killer: protecção e watchdog
+
+O risco do plano ("Node morto por LMK em repouso") tinha mitigação escrita e nenhuma implementada.
+
+| Medida | Valor / comportamento |
+|---|---|
+| `oom_score_adj` do daemon | **-800** (definido no `cachalote start`) |
+| `oom_score_adj` do motor | **-500** (definido pela ponte ao arrancá-lo) |
+| Supervisor do daemon | `cachalote watchdog [seg]` — laço que o arranca se estiver em baixo |
+| Arranque | `service.d/cachalote.sh` corre o watchdog **em segundo plano** (antes era um `start` único) |
+
+**Verificação no S10+:** matei o daemon com `kill -9` (pid 13979). Em ~20 s o watchdog subiu um
+daemon novo (pid 15018, também `-800`), a ponte respawnou o motor, o `handshake` voltou a `OK` e
+a app **reconectou sozinha** — sem tocar no telemóvel. A janela de indisponibilidade é o
+intervalo do watchdog (20–30 s), e está documentada.

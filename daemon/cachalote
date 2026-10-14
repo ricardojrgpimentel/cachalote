@@ -40,8 +40,28 @@ start)
   export CACHALOTE_BASE="$BASE"
   nohup "$NODE" "$BASE/bridge.cjs" >>"$BASE/logs/daemon-console.log" 2>&1 &
   echo $! > "$PIDFILE"
+  # Proteger do low-memory killer: o daemon não é uma app em primeiro plano e, sem isto, o
+  # Android mata-o em pressão de memória. -800 é o valor que o próprio sistema usa para
+  # processos quase-críticos (o mínimo é -1000).
+  echo -800 > "/proc/$!/oom_score_adj" 2>/dev/null || true
   sleep 2
   if alive; then echo "arrancado (pid $(pid_of))"; else echo "FALHOU — ver $BASE/logs/daemon.log"; tail -n 20 "$BASE/logs/daemon.log" "$BASE/logs/daemon-console.log"; exit 1; fi
+  ;;
+watchdog)
+  # Mantém o daemon vivo: arranca-o se estiver parado e volta a arrancar se morrer. É o que o
+  # service.d do Magisk corre no arranque (ver daemon/cachalote.service.sh). Sem isto, um daemon
+  # morto (LMK, kernel, crash) ficava morto até alguém reparar.
+  INTERVAL="${2:-30}"
+  LOG="$BASE/logs/watchdog.log"
+  mkdir -p "$BASE/logs"
+  echo "$(date -Iseconds 2>/dev/null || date) watchdog: a vigiar (intervalo ${INTERVAL}s)" >> "$LOG"
+  while true; do
+    if ! alive; then
+      echo "$(date -Iseconds 2>/dev/null || date) watchdog: daemon em baixo, a arrancar" >> "$LOG"
+      "$0" start >> "$LOG" 2>&1
+    fi
+    sleep "$INTERVAL"
+  done
   ;;
 stop)
   if ! alive; then echo "não está a correr"; rm -f "$PIDFILE"; exit 0; fi
@@ -122,7 +142,23 @@ web-url)
   if [ -s "$BASE/home/web.url" ]; then cat "$BASE/home/web.url";
   else grep -aoE "http://127\.0\.0\.1:[0-9]+/\?token=[A-Za-z0-9_-]+" "$BASE/logs/web.log" 2>/dev/null | tail -1; fi
   ;;
-web-stop)
+web-watchdog)
+  # Mantém o daemon vivo: arranca-o se estiver parado e volta a arrancar se morrer. É o que o
+  # service.d do Magisk corre no arranque (ver daemon/cachalote.service.sh). Sem isto, um daemon
+  # morto (LMK, kernel, crash) ficava morto até alguém reparar.
+  INTERVAL="${2:-30}"
+  LOG="$BASE/logs/watchdog.log"
+  mkdir -p "$BASE/logs"
+  echo "$(date -Iseconds 2>/dev/null || date) watchdog: a vigiar (intervalo ${INTERVAL}s)" >> "$LOG"
+  while true; do
+    if ! alive; then
+      echo "$(date -Iseconds 2>/dev/null || date) watchdog: daemon em baixo, a arrancar" >> "$LOG"
+      "$0" start >> "$LOG" 2>&1
+    fi
+    sleep "$INTERVAL"
+  done
+  ;;
+stop)
   if [ -f "$WEBPID" ]; then kill "$(cat "$WEBPID")" 2>/dev/null; rm -f "$WEBPID"; echo "interface web parada"; else echo "não estava a correr"; fi
   ;;
 web-status)
@@ -162,5 +198,5 @@ key-status)
   NAME="${2:-DEEPSEEK_API_KEY}"
   if grep -q "^$NAME=" "$BASE/home/.env" 2>/dev/null; then echo "presente"; else echo "ausente"; fi
   ;;
-*) echo "uso: cachalote start|stop|restart|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|key-set|key-remove|key-status"; exit 2 ;;
+*) echo "uso: cachalote start|stop|restart|watchdog [seg]|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|key-set|key-remove|key-status"; exit 2 ;;
 esac

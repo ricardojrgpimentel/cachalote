@@ -144,6 +144,10 @@ function startEngine() {
   engine = spawn(NODE, ["--expose-internals", BINJS, "--profile", PROFILE], {
     env, cwd: path.join(BASE, "home"), stdio: ["pipe", "pipe", "pipe"],
   });
+  // O motor também não deve ser a primeira vítima do LMK: é caro de reconstruir (10 k+ ficheiros).
+  try {
+    fs.writeFileSync(`/proc/${engine.pid}/oom_score_adj`, "-500");
+  } catch {}
   const engineOut = fs.createWriteStream(ENGINE_LOG, { flags: "a" });
   engine.stdout.on("data", (b) => {
     engineOut.write(b);
