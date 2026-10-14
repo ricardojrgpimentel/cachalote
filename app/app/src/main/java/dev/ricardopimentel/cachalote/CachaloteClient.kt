@@ -49,6 +49,13 @@ class CachaloteClient {
         val close: () -> Unit = {},
     )
 
+    /**
+     * Como reconectar (o controlador sabe se é daemon, Shizuku ou embutido). O cliente chama
+     * isto quando um pedido chega sem ligação — é o que evita o "a ligação ao motor caiu"
+     * quando o motor está a reiniciar (gravar a chave, por exemplo).
+     */
+    var reconnector: (suspend () -> Unit)? = null
+
     private var streams: Streams? = null
     private var readerJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -104,6 +111,12 @@ class CachaloteClient {
             .put("method", method)
             .put("params", params)
         try {
+            // A ligação (ou o motor) pode estar a reiniciar: dar-lhe uma hipótese antes de
+            // desistir. Só aqui, ANTES de enviar — um pedido já enviado nunca é repetido (isso
+            // duplicaria turnos).
+            if (streams == null) {
+                runCatching { reconnector?.invoke() }
+            }
             writeLock.withLock {
                 val out = streams?.output ?: error("sem ligação ao motor")
                 val w = BufferedWriter(OutputStreamWriter(out, Charsets.UTF_8))

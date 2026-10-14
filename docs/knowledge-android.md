@@ -990,3 +990,28 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
 - **Custo honesto:** há uma janela de até `intervalo` segundos (20–30 s) sem daemon. Para turnos
   longos, o motor já não é morto pelo LMK por causa do `-500`.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## Y. Reconexão calma
+
+### 92. Três janelas diferentes quando o motor reinicia — e só duas se podem repetir
+Gravar a chave reinicia o motor. Um pedido feito nesse intervalo pode cair em três sítios
+diferentes, e tratá-los como iguais era o erro:
+1. **Sem ligação nenhuma** (modo embutido: o stdio morreu com o processo). Nada foi enviado ⇒
+   **seguro repetir**. O cliente chama o `reconnector` (o controlador reconecta/arranca) antes de
+   desistir.
+2. **A ponte recusa** (modo daemon: `cachalote: o motor não está a correr`). A ponte responde
+   *em vez de* encaminhar ⇒ nada foi executado ⇒ **seguro repetir**. `comMotorPronto()` repete
+   até 6× com 1,5 s quando a mensagem é exactamente essa.
+3. **Entregue e depois cai** (o frame foi escrito e o motor morreu a meio). **Nunca repetir**: um
+   turno repetido executa as ferramentas duas vezes. Aqui a resposta certa é a mensagem clara
+   (`a ligação ao motor caiu`) e o utilizador repete se quiser.
+- **Verificado:** `tools/app-reconnect-test.sh` mata o motor e envia logo o prompt — o pedido é
+  aceite e o motor volta (pid novo) com o daemon a responder `OK`. No modo embutido o mesmo
+  cenário recupera em ~5 s (o motor volta e a app fica "ligada").
+- **Limite honesto do teste:** a janela (2) não se apanha de forma fiável por automação — o
+  `pkill` via `su` leva 1–2 s e o motor já voltou quando o toque chega, por isso o teste diz
+  quando *não* a apanhou (não conta como sucesso do retry). Para (1) e (3) o comportamento é
+  determinístico e está acima.
+- **Origem:** **[LOCAL]**.

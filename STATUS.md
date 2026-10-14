@@ -1105,3 +1105,23 @@ O risco do plano ("Node morto por LMK em repouso") tinha mitigação escrita e n
 daemon novo (pid 15018, também `-800`), a ponte respawnou o motor, o `handshake` voltou a `OK` e
 a app **reconectou sozinha** — sem tocar no telemóvel. A janela de indisponibilidade é o
 intervalo do watchdog (20–30 s), e está documentada.
+
+
+---
+
+## 27. Reconexão: distinguir as três janelas
+
+O §21 deixou anotado que "um pedido no intervalo falha com *a ligação ao motor caiu*". O
+trabalho mostrou que são **três situações** e que tratá-las igual era o problema:
+
+| Janela | O que aconteceu | Repetir? | O que fazemos |
+|---|---|---|---|
+| Sem ligação | nada foi enviado | **sim** | o cliente chama o `reconnector` (reconecta/arranca) antes de desistir |
+| A ponte recusa (`o motor não está a correr`) | a ponte respondeu em vez de encaminhar | **sim** | `comMotorPronto()` repete até 6× com 1,5 s |
+| Entregue e o motor morreu | o turno chegou a começar | **não** | mensagem clara; repetir duplicaria ferramentas |
+
+**Teste novo:** `tools/app-reconnect-test.sh` — escreve um prompt, mata o motor, toca em
+**Enviar** com as coordenadas já calculadas (para não perder a janela num `dump`) e verifica que
+o pedido é aceite e que o motor volta com o daemon saudável. Na prática ele apanha a janela (3)
+de forma determinística, e diz explicitamente quando **não** apanhou a (2) — para não vender
+como verificado o que não foi.

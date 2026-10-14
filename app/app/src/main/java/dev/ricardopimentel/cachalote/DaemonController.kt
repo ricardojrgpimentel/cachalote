@@ -88,6 +88,42 @@ class DaemonController(private val context: Context) {
         return token
     }
 
+    init {
+        // Sem isto, um pedido feito durante o reinício do motor (gravar a chave, watchdog a
+        // levantar o daemon) falhava logo com "a ligação ao motor caiu" (ver STATUS §21).
+        client.reconnector = {
+            if (!client.connected.value) {
+                runCatching { connect() }
+            }
+        }
+    }
+
+    /**
+     * Repete um pedido quando o falhanço é **transitório e não entregue**: a ponte responde
+     * "o motor não está a correr" enquanto o reinicia, e a ligação pode cair no modo embutido.
+     * Nesses casos NADA foi executado, logo repetir é seguro — ao contrário de um turno já
+     * entregue (esse nunca é repetido). Ver STATUS §21 ("ligação aos solavancos").
+     */
+    private suspend fun <T> comMotorPronto(tentativas: Int = 6, bloco: suspend () -> T): T {
+        var ultimo: Throwable? = null
+        for (t in 1..tentativas) {
+            try {
+                return bloco()
+            } catch (e: Throwable) {
+                ultimo = e
+                val m = e.message ?: ""
+                val transitorio = m.contains("motor não está a correr") ||
+                    m.contains("sem ligação ao motor") ||
+                    m.contains("a ligação ao motor caiu")
+                if (!transitorio || t == tentativas) throw e
+                android.util.Log.i("cachalote-reconexao", "transitório ($m) — tentativa $t")
+                kotlinx.coroutines.delay(1_500)
+                runCatching { if (!client.connected.value) connect() }
+            }
+        }
+        throw (ultimo ?: IllegalStateException("o motor não respondeu"))
+    }
+
     suspend fun connect(): JSONObject {
         acpReady = false
         return when (mode) {
@@ -144,7 +180,7 @@ class DaemonController(private val context: Context) {
         throw (last ?: IllegalStateException("o motor não respondeu"))
     }
 
-    suspend fun newSession(): JSONObject {
+    suspend fun newSession(): JSONObject = comMotorPronto {
         ensureAcp()
         val res = client.callForResult(
             "session/new",
@@ -153,7 +189,7 @@ class DaemonController(private val context: Context) {
             JSONObject().put("cwd", workspace).put("mcpServers", org.json.JSONArray()),
         )
         res.optString("sessionId").takeIf { it.isNotBlank() }?.let { prefs.lastSessionId = it }
-        return res
+        res
     }
 
     suspend fun listSessions(cwd: String): JSONObject {
