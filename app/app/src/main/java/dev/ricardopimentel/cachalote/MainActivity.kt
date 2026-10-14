@@ -34,6 +34,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
@@ -196,7 +198,16 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // A marca do design (baleia a mergulhar): o mesmo vector de design/logo/marca.svg.
+                Icon(
+                    painter = painterResource(R.drawable.ic_marca),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(26.dp),
+                )
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
             Text(
                 if (vm.connected) stringResource(R.string.cabecalho_motor_ligado) else stringResource(R.string.cabecalho_motor_desligado),
                 style = MaterialTheme.typography.bodySmall,

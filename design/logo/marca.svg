@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Marca do Cachalote: a baleia a mergulhar sob a linha de superfície.
+     Vector (extraído do SVG que o Google Stitch devolveu na folha de marca).
+     `currentColor` permite usar a marca em qualquer cor; o teal do sistema é #38efc2. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" role="img" aria-label="Cachalote">
+  <title>Cachalote</title>
+  <line x1="14" y1="24" x2="86" y2="24" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M 28 69 C 23 64, 21 52, 28 42 C 32 37, 43 36, 54 44 L 66 53 L 76 43 C 78 41, 81 42, 80 46 L 77 56 L 82 62 C 84 64, 82 67, 78 66 L 67 63 L 53 59 C 42 56, 36 60, 33 66 Z" fill="currentColor"/>
+</svg>

@@ -14,7 +14,8 @@ design que os mantém coerentes. A implementação é em Compose; aqui fica a re
 | `app/<nome>.png` | como a app está de facto (para comparar com o desenho) |
 | `logo/folha-de-marca.{png,html}` | a folha de marca: ícone, teste de legibilidade, monocromático, wordmark e lockup |
 | `logo/icone-fonte.png` | o ícone isolado, 1024×1024 (a fonte de todos os tamanhos) |
-| `logo/marca.png` | a marca recortada, com transparência (para o ícone e para dentro da app) |
+| `logo/marca.png` | a marca recortada, com transparência (para o ícone) |
+| `logo/marca.svg` | a marca **em vector** — extraída dos `<svg>` que o Stitch devolveu no HTML da folha de marca (`currentColor`, escala sem perda) |
 | `ecras/<nome>.html` | o HTML do ecrã (referência de medidas e cores exactas para a implementação) |
 
 ## Como se reproduz (Google Stitch, MCP)
@@ -51,6 +52,11 @@ sistema — empacotar as fontes é um passo à parte (são OFL, dá para as traz
 
 A marca é uma **baleia (cachalote) a mergulhar sob a linha de superfície** — o mergulho autónomo em
 profundidade técnica e o regresso com o que encontrou. Sem gradientes, geométrica, legível a 48 px.
+
+A marca existe em dois formatos: **raster** (`marca.png`, para o ícone, onde o Android quer PNG) e
+**vector** (`marca.svg`, para tudo o resto). O vector saiu do próprio HTML da folha de marca — o
+Stitch desenha em SVG, e isso está à vista em `folha-de-marca.html`. O mesmo path está em
+`app/app/src/main/res/drawable/ic_marca.xml` (o cabeçalho da app usa-o).
 
 O ícone da app é gerado dela:
 

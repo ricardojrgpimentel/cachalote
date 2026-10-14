@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Marca do Cachalote em vector: a baleia a mergulhar sob a linha de superfície.
+     Mesma geometria do design/logo/marca.svg (viewBox 100x100). A cor é o acento do sistema. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:pathData="M14,24 L86,24"
+        android:strokeColor="#38EFC2"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#38EFC2"
+        android:pathData="M28,69 C23,64 21,52 28,42 C32,37 43,36 54,44 L66,53 L76,43 C78,41 81,42 80,46 L77,56 L82,62 C84,64 82,67 78,66 L67,63 L53,59 C42,56 36,60 33,66 Z" />
+</vector>
