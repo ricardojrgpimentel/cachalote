@@ -6,7 +6,12 @@ name: CI
 # que nenhum teste de UI se queixasse).
 
 on:
+  # Só ramos: uma tag de release (ex.: `kernel-…`) aponta para o commit que empacotou o kernel e
+  # não deve disparar a CI — chegou a correr sobre um commit anterior a uma correcção e deu um
+  # vermelho que não dizia nada sobre o estado actual do código (ver STATUS §49).
   push:
+    branches: ["**"]
+    tags-ignore: ["**"]
   pull_request:
 
 jobs:
