@@ -319,6 +319,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         vscreenInfo = "display ${r.optInt("displayId")} · ${r.optInt("width")}×${r.optInt("height")} · ${r.optInt("bytes") / 1024} KB"
     }
 
+    var backupAviso by mutableStateOf("")
+
+    /** Exporta as definições (modo, capacidades, áreas do bash, URL do kernel, MCP) para um URI. */
+    fun exportarDefinicoes(uri: android.net.Uri) = run("exportar definições") {
+        val texto = Backup.exportar(getApplication(), Prefs(getApplication())).toString(2)
+        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { saida ->
+            saida.write(texto.toByteArray())
+        } ?: error("não consegui abrir o destino")
+        backupAviso = "definições exportadas"
+        transcript.add(ChatLine("system", "definições exportadas (sem a chave nem o token — de propósito)"))
+    }
+
+    /** Restaura um backup. A chave e o token **não** vêm no ficheiro, por decisão do projecto. */
+    fun importarDefinicoes(uri: android.net.Uri) = run("importar definições") {
+        val texto = getApplication<Application>().contentResolver.openInputStream(uri)
+            ?.bufferedReader()?.use { it.readText() } ?: error("não consegui ler o ficheiro")
+        val n = Backup.importar(getApplication(), Prefs(getApplication()), texto)
+        refreshCapabilities()
+        mcpJsonText = controller.mcpServersJson
+        kernelUrlText = controller.kernelUrl
+        backupAviso = "$n definições restauradas"
+        transcript.add(ChatLine("system", "backup restaurado ($n definições); a chave tem de ser reposta à mão, se for preciso"))
+    }
+
     /** Lê as licenças de terceiros (textos integrais) do asset. */
     fun carregarLicencas() {
         if (licencas.isEmpty()) licencas = Licencas.carregar(getApplication())

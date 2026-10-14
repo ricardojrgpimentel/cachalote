@@ -33,6 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
@@ -460,6 +461,36 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     maxLines = 2,
                 )
                 OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_url)) }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.backup_titulo), fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.backup_texto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                val exportar = rememberLauncherForActivityResult(
+                    androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+                ) { uri -> if (uri != null) vm.exportarDefinicoes(uri) }
+                val importar = rememberLauncherForActivityResult(
+                    androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+                ) { uri -> if (uri != null) vm.importarDefinicoes(uri) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { exportar.launch(Backup.nomeFicheiro()) },
+                        enabled = !vm.busy,
+                    ) { Text(stringResource(R.string.backup_exportar)) }
+                    OutlinedButton(
+                        onClick = { importar.launch(arrayOf("application/json", "*/*")) },
+                        enabled = !vm.busy,
+                    ) { Text(stringResource(R.string.backup_importar)) }
+                }
+                if (vm.backupAviso.isNotBlank()) {
+                    Text(vm.backupAviso, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
 

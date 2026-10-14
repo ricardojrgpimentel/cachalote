@@ -20,6 +20,10 @@
     <string name="autorizar_no_shizuku">Authorise in Shizuku</string>
     <string name="autorizar_todas">Allow all</string>
     <string name="aviso_root">Warning: the engine runs as root and Android does not enforce the DSH sandbox. What stops a command outside the workspace is the authorisation you approve here — and everything is logged.</string>
+    <string name="backup_exportar">Export settings</string>
+    <string name="backup_importar">Import settings</string>
+    <string name="backup_texto">Exports the mode, allowed capabilities, bash areas, kernel URL and MCP servers. The provider key and the channel token are **not** included.</string>
+    <string name="backup_titulo">Settings backup</string>
     <string name="cabecalho_a_reconectar">reconnecting…</string>
     <string name="cabecalho_motor_desligado">DSH engine on the phone · disconnected</string>
     <string name="cabecalho_motor_ligado">DSH engine on the phone · connected</string>

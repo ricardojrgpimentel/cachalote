@@ -20,6 +20,10 @@
     <string name="autorizar_no_shizuku">Autorizar no Shizuku</string>
     <string name="autorizar_todas">Autorizar todas</string>
     <string name="aviso_root">Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.</string>
+    <string name="backup_exportar">Exportar definições</string>
+    <string name="backup_importar">Importar definições</string>
+    <string name="backup_texto">Exporta o modo, as capacidades autorizadas, as áreas do bash, o URL do kernel e os servidores MCP. A chave do provedor e o token do canal **não** entram no ficheiro.</string>
+    <string name="backup_titulo">Backup das definições</string>
     <string name="cabecalho_a_reconectar">a reconectar…</string>
     <string name="cabecalho_motor_desligado">motor DSH no telefone · desligado</string>
     <string name="cabecalho_motor_ligado">motor DSH no telefone · ligado</string>

@@ -1493,3 +1493,30 @@ Interruptor **Ao vivo** no cartão do ecrã virtual: um fotograma a cada 1,5 s, 
 silencioso (sem mexer no estado dos botões). **Prova de que é vivo:** dois fotogramas com o
 conteúdo parado dão o mesmo `md5` (correcto); depois de um toque injectado dão `md5` diferente
 (`06f87e8d2864` → `481004c6ca30`) — ou seja, a imagem acompanha o que o agente faz.
+
+
+---
+
+## 46. Testes de interface na JVM + backup das definições + guias
+
+**Testes de interface (substituem os toques cegos, e correm na CI).** O Espresso não consegue
+correr nesta ROM (`InputManager.getInstance()` é API oculta): os 8 testes instrumentados falhavam
+todos, sem culpa do teste. Passaram a correr na **JVM com Robolectric** — **11 testes** em `test/`:
+lista de sessões (✓ na activa, ✕ só nela, retomar, desactivado enquanto o agente trabalha),
+interruptores das capacidades, controlos do ecrã virtual (incluindo o "ao vivo" só com o ecrã a
+correr) e licenças (lista + texto integral) — **em pt-PT e em inglês** (qualificadores de recursos).
+Ficam instrumentados os que precisam do telefone: notificação (2) e i18n de recursos (5).
+
+**Backup das definições.** Exporta/importa modo, capacidades, áreas do bash, URL do kernel e MCP.
+**Não** leva a chave nem o token — e há um teste que falha se algum deles aparecer no ficheiro.
+Importação defensiva: ficheiro de outra app é recusado, MCP inválido é recusado antes de estragar
+sessões, modo desconhecido é ignorado. `BackupTest`: 4 testes.
+
+**Guias de utilizador** para terceiros, em pt-PT e inglês:
+[`docs/COMO-USAR.md`](docs/COMO-USAR.md) · [`docs/HOW-TO-USE.md`](docs/HOW-TO-USE.md).
+
+| Suíte | Onde | Testes |
+|---|---|---|
+| Interface (Robolectric, JVM, CI) | `app/src/test` | 11 |
+| Backup (Robolectric, JVM, CI) | `app/src/test` | 4 |
+| Recursos e notificação (aparelho) | `app/src/androidTest` | 9 |

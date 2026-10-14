@@ -1382,3 +1382,33 @@ diferentes, e tratá-los como iguais era o erro:
   parado dão o mesmo `md5` (correcto), e **depois de um toque injectado** dão `md5` diferente
   (`06f87e8d2864` → `481004c6ca30`, 59 179 → 59 562 bytes). É isso que a pré-visualização mostra.
 - **Origem:** **[LOCAL]**.
+
+### 114. Testes de interface na JVM: o Espresso não corre nesta ROM
+- **O que se tentou:** testes de interface instrumentados com Compose (`createComposeRule`) no
+  aparelho. Todos os 8 falharam com
+  `NoSuchMethodException: android.hardware.input.InputManager.getInstance` dentro de `Espresso.onIdle`.
+  Não era o teste: o Espresso injecta eventos por uma API que as ROMs recentes escondem. Fixar
+  `espresso-core:3.6.1` e relaxar as três `hidden_api_policy` não resolveu.
+- **O que se fez:** os mesmos testes a correr na **JVM com Robolectric** (`test/`, não `androidTest/`).
+  `@Config(sdk = [34], qualifiers = "pt-rPT")` para os textos em português europeu e uma segunda
+  classe com `qualifiers = "en"` para o inglês. Correm **na CI**, sem aparelho — 11 testes.
+- **Duas armadilhas do Robolectric:** quer escrever no `$HOME` (recusado pelo sandbox) e, com
+  `robolectric.dependency.dir` definido, **deixa de descarregar** os jars e falha logo. Solução:
+  redireccionar só o `user.home` do processo de teste para dentro do `build/`.
+- **Ganho inesperado:** o Robolectric com `qualifiers` testa os **dois idiomas** de forma
+  determinística — o que o aparelho não deixou fazer (`cmd locale set-app-locales` não pega nesta
+  ROM).
+- **O que fica instrumentado:** o que precisa do telefone a sério (notificação, i18n de recursos).
+- **Origem:** **[LOCAL]**.
+
+### 115. Backup das definições — e o que ele não leva
+- **O que leva:** modo, capacidades autorizadas, áreas do bash, URL do kernel e servidores MCP.
+- **O que não leva, de propósito:** a **chave do provedor** (vive no daemon; a app nunca a guarda) e
+  o **token do canal** (segredo entre a app e o daemon). Um backup que anda por aí com segredos
+  dentro é uma fuga à espera de acontecer — e há um teste que falha se algum deles aparecer no
+  ficheiro.
+- **Importação defensiva:** um ficheiro que não seja do Cachalote é recusado; um MCP inválido é
+  recusado **antes** de estragar as sessões novas; um modo desconhecido é ignorado.
+- **Verificação:** `BackupTest` (4 testes, na JVM) — exporta/importa e confirma que os segredos não
+  saem.
+- **Origem:** **[LOCAL]**.
