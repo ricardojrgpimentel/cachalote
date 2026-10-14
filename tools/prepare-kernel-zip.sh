@@ -6,8 +6,11 @@
 #   ./tools/prepare-kernel-zip.sh --push     # + envia para o armazenamento privado da app
 #   ./tools/prepare-kernel-zip.sh --bundle   # + mete o zip na APK (assets/) com sha256
 #
-# O zip tem a raiz `dsh/` (como o tar do daemon). Sem compressão: o kernel já são ficheiros
-# JS pequenos e a extracção fica muito mais rápida (e o zip fica ~140 MB).
+# O zip tem a raiz `dsh/` (como o tar do daemon). Sem compressão: a extracção fica muito mais
+# rápida. ATENÇÃO ao tamanho: a árvore do `app.asar` do desktop dava ~110 MB, mas a que vem do
+# **npm** dá ~389 MB (com ela embutida a APK vai a ~440 MB). Para distribuir, o caminho é o
+# download do kernel na primeira execução (o `--push` serve para desenvolvimento), não o asset.
+# Ver STATUS §22.6.
 set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
 DEV="${CACHALOTE_DEV:-R58M55JNP6X}"
