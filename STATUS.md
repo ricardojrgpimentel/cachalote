@@ -1358,7 +1358,7 @@ Decisão do utilizador: **reimplementar do zero com APIs do AOSP**, sem uma linh
 
 **Vantagem arquitectural que apareceu:** no ecrã virtual **não é preciso o serviço de
 acessibilidade** — a imagem vem do `ImageReader` e o toque do `input -d`. O agente pode portanto
-trabalhar numa segunda tela mesmo com a acessibilidade desligada, e o telefone fica livre.
+trabalhar numa segundo ecrã mesmo com a acessibilidade desligada, e o telefone fica livre.
 
 **Ferramentas do agente (§38):** `android_vscreen` (start/status/frame/stop, pela app) e o
 `bash` para o que precisa de root (`am start --display`, `input -d`).
@@ -1389,7 +1389,7 @@ calculadora com bash, tira um fotograma e diz o número"* →
             capturado. O número no visor é 5127 (apresentado como `5 127`).
 ```
 
-Ou seja: o agente cria a segunda tela, põe lá a app, **vê-a** e lê o conteúdo — sem usar o ecrã
+Ou seja: o agente cria a segundo ecrã, põe lá a app, **vê-a** e lê o conteúdo — sem usar o ecrã
 do dono e **sem o serviço de acessibilidade**.
 
 

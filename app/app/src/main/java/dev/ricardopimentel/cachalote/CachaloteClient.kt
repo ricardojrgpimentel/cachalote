@@ -50,7 +50,7 @@ class CachaloteClient {
     )
 
     /**
-     * Como reconectar (o controlador sabe se é daemon, Shizuku ou embutido). O cliente chama
+     * Como voltar a ligar (o controlador sabe se é daemon, Shizuku ou embutido). O cliente chama
      * isto quando um pedido chega sem ligação — é o que evita o "a ligação ao motor caiu"
      * quando o motor está a reiniciar (gravar a chave, por exemplo).
      */

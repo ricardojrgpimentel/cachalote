@@ -15,7 +15,7 @@ import java.io.ByteArrayOutputStream
 /**
  * **Ecrã virtual** — reimplementado do zero com APIs do AOSP (decisão do utilizador: opção A,
  * zero LGPL). Nada aqui vem do Operit nem de terceiros: `DisplayManager.createVirtualDisplay` e
- * `ImageReader` são API pública do Android (Apache-2.0) e é o que basta para ter uma segunda tela
+ * `ImageReader` são API pública do Android (Apache-2.0) e é o que basta para ter uma segundo ecrã
  * onde o agente trabalha sem mexer no ecrã do utilizador.
  *
  * Como funciona:

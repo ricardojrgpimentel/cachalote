@@ -33,6 +33,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -133,25 +134,25 @@ fun CachaloteApp() {
                             selected = tab == 0,
                             onClick = { tab = 0 },
                             icon = { Icon(Icons.Filled.Memory, null) },
-                            label = { Text("Estado") },
+                            label = { Text(stringResource(R.string.aba_estado)) },
                         )
                         NavigationBarItem(
                             selected = tab == 1,
                             onClick = { tab = 1 },
                             icon = { Icon(Icons.Filled.Key, null) },
-                            label = { Text("Chave") },
+                            label = { Text(stringResource(R.string.aba_chave)) },
                         )
                         NavigationBarItem(
                             selected = tab == 2,
                             onClick = { tab = 2 },
                             icon = { Icon(Icons.Filled.Chat, null) },
-                            label = { Text("Conversa") },
+                            label = { Text(stringResource(R.string.aba_conversa)) },
                         )
                         NavigationBarItem(
                             selected = tab == 3,
                             onClick = { tab = 3 },
                             icon = { Icon(Icons.Filled.Build, null) },
-                            label = { Text("Poderes") },
+                            label = { Text(stringResource(R.string.aba_poderes)) },
                         )
                     }
                 },
@@ -189,9 +190,9 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Cachalote", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "motor DSH no telefone · " + (if (vm.connected) "ligado" else "desligado"),
+                if (vm.connected) stringResource(R.string.cabecalho_motor_ligado) else stringResource(R.string.cabecalho_motor_desligado),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
@@ -208,7 +209,7 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
 private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
     AlertDialog(
         onDismissRequest = { vm.answerApproval(null) },
-        title = { Text("Autorização") },
+        title = { Text(stringResource(R.string.dialogo_autorizacao)) },
         text = {
             Column {
                 Text(ap.title, fontWeight = FontWeight.SemiBold)
@@ -233,7 +234,7 @@ private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
             }
         },
         dismissButton = {
-            TextButton(onClick = { vm.answerApproval(null) }) { Text("Recusar o turno") }
+            TextButton(onClick = { vm.answerApproval(null) }) { Text(stringResource(R.string.recusar_turno)) }
         },
     )
 }
@@ -262,7 +263,7 @@ private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = { vm.configPicker = null }) { Text("Fechar") } },
+        dismissButton = { TextButton(onClick = { vm.configPicker = null }) { Text(stringResource(R.string.fechar)) } },
     )
 }
 
@@ -276,7 +277,7 @@ private fun SessionsDialog(vm: MainViewModel) {
         onDismissRequest = { vm.showSessions = false },
         title = {
             Column {
-                Text("Sessões")
+                Text(stringResource(R.string.seccoes))
                 Text(
                     if (atual.isNullOrBlank()) "nenhuma sessão activa" else "activa: " + atual.take(8),
                     style = MaterialTheme.typography.bodySmall,
@@ -286,7 +287,7 @@ private fun SessionsDialog(vm: MainViewModel) {
         },
         text = {
             if (vm.sessions.isEmpty()) {
-                Text("não há sessões guardadas no motor")
+                Text(stringResource(R.string.sem_sessoes))
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                     itemsIndexed(vm.sessions) { _, row ->
@@ -329,15 +330,15 @@ private fun SessionsDialog(vm: MainViewModel) {
                     // Caminho curto para o que interessa: fechar a sessão em uso, sem ter de a
                     // encontrar na lista (a lista tem dezenas de sessões antigas).
                     TextButton(onClick = { vm.closeSession(atual) }, enabled = !vm.busy) {
-                        Text("Fechar a sessão activa")
+                        Text(stringResource(R.string.fechar_sessao_activa))
                     }
                 }
                 Text(
-                    "✕ fecha a sessão activa · toca numa linha para retomar",
+                    stringResource(R.string.legenda_sessoes),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
-                TextButton(onClick = { vm.showSessions = false }) { Text("Fechar") }
+                TextButton(onClick = { vm.showSessions = false }) { Text(stringResource(R.string.fechar)) }
             }
         },
     )
@@ -358,7 +359,7 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Acessibilidade", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.acessibilidade), fontWeight = FontWeight.SemiBold)
                 Text(
                     if (accessibilityOn) "serviço ligado — o agente consegue ver e tocar no ecrã"
                     else "serviço desligado — sem ele o agente só envia notificações",
@@ -372,39 +373,38 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
-                }) { Text("Abrir Definições → Acessibilidade") }
+                }) { Text(stringResource(R.string.abrir_acessibilidade)) }
             }
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Motor embutido (sem root)", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Testa se o Node embutido na APK consegue executar-se a partir do " +
-                        "nativeLibraryDir — é o que permite correr o motor dentro da app.",
+                    stringResource(R.string.testar_execucao_texto),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 Text(vm.embedTest, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = { vm.testEmbeddedNode() }, enabled = !vm.busy) { Text("Testar execução") }
+                OutlinedButton(onClick = { vm.testEmbeddedNode() }, enabled = !vm.busy) { Text(stringResource(R.string.testar_execucao)) }
             }
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Capacidades autorizadas", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.capacidades_titulo), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "O agente pede; tu decides. Cada pedido fica registado em baixo.",
+                    stringResource(R.string.capacidades_explicacao),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, true) } }) {
-                        Text("Autorizar todas")
+                        Text(stringResource(R.string.autorizar_todas))
                     }
                     OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, false) } }) {
-                        Text("Negar todas")
+                        Text(stringResource(R.string.negar_todas))
                     }
                 }
                 Spacer(Modifier.height(4.dp))
@@ -423,11 +423,11 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Registo", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { vm.clearAudit() }) { Text("Limpar") }
+                    Text(stringResource(R.string.registo), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.clearAudit() }) { Text(stringResource(R.string.limpar)) }
                 }
                 if (vm.audit.isEmpty()) {
-                    Text("ainda não houve pedidos", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.sem_pedidos), style = MaterialTheme.typography.bodySmall)
                 } else {
                     vm.audit.take(25).forEach { line ->
                         Text(
@@ -443,22 +443,21 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Áreas permitidas do bash", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.areas_bash), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Fora destas pastas o agente tem de pedir autorização no telefone. " +
-                        "Uma por linha; o workspace da sessão é sempre permitido.",
+                    stringResource(R.string.areas_bash_texto),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 OutlinedTextField(
                     value = vm.allowedRootsText,
                     onValueChange = { vm.allowedRootsText = it },
-                    placeholder = { Text("/sdcard/Download") },
+                    placeholder = { Text(stringResource(R.string.placeholder_areas)) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 4,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { vm.saveAllowedRoots() }, enabled = !vm.busy) { Text("Gravar e reiniciar") }
+                    OutlinedButton(onClick = { vm.saveAllowedRoots() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_reiniciar)) }
                     if (vm.allowedRootsSaved.isNotBlank()) {
                         Text(vm.allowedRootsSaved, style = MaterialTheme.typography.bodySmall)
                     }
@@ -468,38 +467,35 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Kernel por download (modo embutido)", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.kernel_titulo), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Sem asset na APK, a app vai buscar o kernel a este URL e verifica o sha256. " +
-                        "Vazio = usa o URL gravado no build. Serve para hospedagem própria.",
+                    stringResource(R.string.kernel_texto),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 OutlinedTextField(
                     value = vm.kernelUrlText,
                     onValueChange = { vm.kernelUrlText = it },
-                    placeholder = { Text("https://…/kernel.zip") },
+                    placeholder = { Text(stringResource(R.string.placeholder_url)) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 2,
                 )
-                OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text("Gravar URL") }
+                OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_url)) }
             }
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Ecrã virtual", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Uma segunda tela onde o agente trabalha sem mexer no teu ecrã. Põe apps lá com " +
-                        "bash: am start --display <id> -n <pkg>/<activity>; toca com input -d <id>. " +
-                        "Vive dentro desta app: se ela for fechada, o ecrã virtual desaparece.",
+                    stringResource(R.string.vscreen_texto),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { vm.vscreenStart() }, enabled = !vm.busy) { Text("Iniciar") }
-                    OutlinedButton(onClick = { vm.vscreenRefresh() }, enabled = !vm.busy) { Text("Ver fotograma") }
-                    OutlinedButton(onClick = { vm.vscreenStop() }, enabled = !vm.busy) { Text("Parar") }
+                    OutlinedButton(onClick = { vm.vscreenStart() }, enabled = !vm.busy) { Text(stringResource(R.string.iniciar)) }
+                    OutlinedButton(onClick = { vm.vscreenRefresh() }, enabled = !vm.busy) { Text(stringResource(R.string.ver_fotograma)) }
+                    OutlinedButton(onClick = { vm.vscreenStop() }, enabled = !vm.busy) { Text(stringResource(R.string.parar)) }
                 }
                 if (vm.vscreenInfo.isNotBlank()) {
                     Text(vm.vscreenInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
@@ -507,7 +503,7 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                 vm.vscreenBitmap?.let { bmp ->
                     Image(
                         bitmap = bmp.asImageBitmap(),
-                        contentDescription = "fotograma do ecrã virtual",
+                        contentDescription = stringResource(R.string.fotograma_desc),
                         modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
                         contentScale = ContentScale.Fit,
                     )
@@ -517,14 +513,11 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Servidores MCP", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.mcp_titulo), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "JSON no formato do ACP, enviado em cada sessão nova. Exemplo stdio:\n" +
-                        "[{\"name\":\"ping\",\"command\":\"/data/adb/cachalote/runtime/bin/node\"," +
-                        "\"args\":[\"/data/local/tmp/mcp-ping-server.mjs\"]," +
-                        "\"env\":[{\"name\":\"LD_LIBRARY_PATH\",\"value\":\"/data/adb/cachalote/runtime/lib\"}]}]\n" +
-                        "⚠ O comando tem de ser um caminho ABSOLUTO e, se usar o Node do daemon, precisa " +
-                        "do LD_LIBRARY_PATH no env (senão morre no linker).",
+                    stringResource(R.string.mcp_texto) + "\n" +
+                        stringResource(R.string.mcp_exemplo) + "\n" +
+                        stringResource(R.string.mcp_aviso),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
@@ -536,7 +529,7 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     maxLines = 6,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = { vm.saveMcpServers() }, enabled = !vm.busy) { Text("Gravar MCP") }
+                    OutlinedButton(onClick = { vm.saveMcpServers() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_mcp)) }
                     if (vm.mcpSaved.isNotBlank()) {
                         Text(vm.mcpSaved, style = MaterialTheme.typography.bodySmall)
                     }
@@ -545,8 +538,7 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
         }
 
         Text(
-            "Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. " +
-                "Estes interruptores são a barreira real — desliga o que não precisares.",
+            stringResource(R.string.aviso_root),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -600,8 +592,8 @@ private fun OnboardingCard(vm: MainViewModel) {
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Primeiros passos — faltam $missing", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { vm.refreshStatus(); vm.refreshCapabilities() }, enabled = !vm.busy) { Text("Verificar") }
+                Text(stringResource(R.string.primeiros_passos, missing), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { vm.refreshStatus(); vm.refreshCapabilities() }, enabled = !vm.busy) { Text(stringResource(R.string.verificar)) }
             }
             checks.forEach { (label, done, action) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -633,12 +625,12 @@ private fun StatusScreen(vm: MainViewModel) {
         OnboardingCard(vm)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Motor", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.motor), fontWeight = FontWeight.SemiBold)
                 Text(
                     when (vm.modeKind) {
-                        DaemonController.Mode.DAEMON -> "daemon com root: arranca no boot, bash como root com guarda de caminhos"
-                        DaemonController.Mode.SHIZUKU -> "daemon via Shizuku: corre como shell (uid 2000), sem root"
-                        DaemonController.Mode.EMBEDDED -> "embutido: motor dentro da app, o sandbox do Android é o limite"
+                        DaemonController.Mode.DAEMON -> stringResource(R.string.modo_daemon_texto)
+                        DaemonController.Mode.SHIZUKU -> stringResource(R.string.modo_shizuku_texto)
+                        DaemonController.Mode.EMBEDDED -> stringResource(R.string.modo_embutido_texto)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
@@ -664,11 +656,11 @@ private fun StatusScreen(vm: MainViewModel) {
                     OutlinedButton(
                         onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
                         enabled = !vm.busy,
-                    ) { Text("Autorizar no Shizuku") }
+                    ) { Text(stringResource(R.string.autorizar_no_shizuku)) }
                 }
                 if (vm.modeKind == DaemonController.Mode.EMBEDDED) {
                     OutlinedButton(onClick = { vm.downloadKernel() }, enabled = !vm.busy) {
-                        Text("Descarregar kernel")
+                        Text(stringResource(R.string.descarregar_kernel))
                     }
                 }
                 if (vm.embeddedInfo.isNotBlank()) {
@@ -688,23 +680,23 @@ private fun StatusScreen(vm: MainViewModel) {
         }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Acesso", fontWeight = FontWeight.SemiBold)
-                Text("root: " + when (vm.rootOk) { true -> "concedido"; false -> "negado"; null -> "?" })
-                Text("token: ${vm.tokenState}")
+                Text(stringResource(R.string.acesso), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.root_rotulo, when (vm.rootOk) { true -> stringResource(R.string.root_concedido); false -> stringResource(R.string.root_negado); null -> stringResource(R.string.root_desconhecido) }))
+                Text(stringResource(R.string.token_rotulo, vm.tokenState))
                 Text(
-                    "diagnóstico: pid ${android.os.Process.myPid()} · a11y ${vm.accessibilityOn} · ticks ${vm.a11yTicks} · direto ${CachaloteAccessibilityService.isEnabled()}",
+                    stringResource(R.string.diagnostico, android.os.Process.myPid(), vm.accessibilityOn.toString(), vm.a11yTicks, CachaloteAccessibilityService.isEnabled().toString()),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Text("motor: ${vm.agentInfo.ifBlank { "(handshake ainda não feito)" }}")
+                Text(stringResource(R.string.motor_rotulo, vm.agentInfo.ifBlank { stringResource(R.string.handshake_pendente) }))
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.refreshStatus() }, enabled = !vm.busy) { Text("Atualizar") }
-            OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text("Ligar daemon") }
+            Button(onClick = { vm.refreshStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
+            OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text(stringResource(R.string.ligar_daemon)) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text("Obter token (root)") }
-            OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text("Reiniciar motor") }
+            OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text(stringResource(R.string.obter_token)) }
+            OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text(stringResource(R.string.reiniciar_motor)) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -723,10 +715,9 @@ private fun StatusScreen(vm: MainViewModel) {
             // Arranca o motor do perfil web (se preciso) e abre a interface completa.
             vm.busy = true
             ctx.startActivity(android.content.Intent(ctx, WebModeActivity::class.java))
-        }, enabled = !vm.busy) { Text("Modo completo (interface web do DSH)") }
+        }, enabled = !vm.busy) { Text(stringResource(R.string.modo_completo)) }
         Text(
-            "O daemon corre como root e o sandbox do Android não é imposto: quem trava comandos " +
-                "fora do workspace é a aprovação. Ver D10 no plano.",
+            stringResource(R.string.aviso_root),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
         )
@@ -744,14 +735,13 @@ private fun KeyScreen(vm: MainViewModel) {
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Chave do provedor", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.chave_provedor), fontWeight = FontWeight.SemiBold)
                 Text(
                     if (vm.keyPresent) "presente · ${vm.keyLength} caracteres · ${vm.keyUpdatedAt}"
                     else "ainda não há chave guardada",
                 )
                 Text(
-                    "A chave é enviada ao daemon, que a escreve em home/.env com modo 600. " +
-                        "A app não a guarda.",
+                    stringResource(R.string.chave_explicacao),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
@@ -773,12 +763,12 @@ private fun KeyScreen(vm: MainViewModel) {
             Button(
                 onClick = { vm.saveKey(value); value = "" },
                 enabled = !vm.busy && value.length >= 8,
-            ) { Text("Guardar no daemon") }
+            ) { Text(stringResource(R.string.guardar_no_daemon)) }
             OutlinedButton(onClick = { visible = !visible }) { Text(if (visible) "Esconder" else "Mostrar") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { vm.refreshKeyStatus() }, enabled = !vm.busy) { Text("Verificar estado") }
-            TextButton(onClick = { vm.removeKey() }, enabled = !vm.busy) { Text("Remover chave") }
+            TextButton(onClick = { vm.refreshKeyStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.verificar_estado)) }
+            TextButton(onClick = { vm.removeKey() }, enabled = !vm.busy) { Text(stringResource(R.string.remover_chave)) }
         }
     }
 }
@@ -799,13 +789,13 @@ private fun ChatScreen(vm: MainViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "sessão: " + (vm.sessionId?.take(8) ?: "nenhuma") +
+                stringResource(R.string.sessao_rotulo, vm.sessionId?.take(8) ?: stringResource(R.string.nenhuma)) +
                     (if (vm.reconnecting) "  · a reconectar…" else ""),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { vm.refreshSessions() }, enabled = !vm.busy) { Text("Sessões") }
-            TextButton(onClick = { vm.newSession() }, enabled = !vm.busy) { Text("Nova sessão") }
+            TextButton(onClick = { vm.refreshSessions() }, enabled = !vm.busy) { Text(stringResource(R.string.seccoes)) }
+            TextButton(onClick = { vm.newSession() }, enabled = !vm.busy) { Text(stringResource(R.string.nova_sessao)) }
         }
         if (vm.configOptions.isNotEmpty()) {
             Row(
@@ -880,7 +870,7 @@ private fun ChatScreen(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { vm.clearImage() }) { Text("Remover") }
+                TextButton(onClick = { vm.clearImage() }) { Text(stringResource(R.string.remover)) }
             }
         }
         Row(
@@ -904,7 +894,7 @@ private fun ChatScreen(vm: MainViewModel) {
                     // Cancelado pelo utilizador: não é erro.
                 }
             }
-            TextButton(onClick = { picker.launch("image/*") }, enabled = !vm.busy) { Text("Anexar") }
+            TextButton(onClick = { picker.launch("image/*") }, enabled = !vm.busy) { Text(stringResource(R.string.anexar)) }
             TextButton(
                 onClick = {
                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -915,12 +905,12 @@ private fun ChatScreen(vm: MainViewModel) {
                         .onFailure { vm.error = "não há reconhecedor de voz neste dispositivo" }
                 },
                 enabled = !vm.busy,
-            ) { Text("Falar") }
+            ) { Text(stringResource(R.string.ditar_texto)) }
             Spacer(Modifier.width(4.dp))
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                placeholder = { Text("Escreve uma tarefa para o agente") },
+                placeholder = { Text(stringResource(R.string.escreve_tarefa)) },
                 modifier = Modifier.weight(1f),
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -934,9 +924,9 @@ private fun ChatScreen(vm: MainViewModel) {
                 Button(
                     onClick = { val t = input; input = ""; vm.send(t) },
                     enabled = !vm.busy && (input.isNotBlank() || vm.pendingImage != null),
-                ) { Text("Enviar") }
+                ) { Text(stringResource(R.string.enviar)) }
                 if (vm.busy) {
-                    TextButton(onClick = { vm.cancelTurn() }) { Text("Parar") }
+                    TextButton(onClick = { vm.cancelTurn() }) { Text(stringResource(R.string.parar)) }
                 }
             }
         }

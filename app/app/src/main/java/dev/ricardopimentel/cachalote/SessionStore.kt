@@ -19,7 +19,7 @@ class SessionStore(private val context: Context) {
      * ("session/resume cwd mismatch"). Era isto que dava "a ligação ao motor caiu" ao trocar de
      * modo. Ver knowledge 93.
      */
-    private fun arquivoDoModo(modo: String) = File(context.filesDir, "sessao-$modo.json")
+    private fun ficheiroDoModo(modo: String) = File(context.filesDir, "sessao-$modo.json")
     private val modoAtual: String get() = context.getSharedPreferences("cachalote", Context.MODE_PRIVATE)
         .getString("mode", "daemon")!!
 
@@ -41,7 +41,7 @@ class SessionStore(private val context: Context) {
         lines: List<ChatLine>,
         titles: Map<String, String> = emptyMap(),
     ) {
-        val file = arquivoDoModo(modoAtual)
+        val file = ficheiroDoModo(modoAtual)
         val arr = JSONArray()
         lines.takeLast(300).forEach { l ->
             arr.put(
@@ -63,7 +63,7 @@ class SessionStore(private val context: Context) {
     }
 
     fun load(): Snapshot? {
-        val file = arquivoDoModo(modoAtual)
+        val file = ficheiroDoModo(modoAtual)
         if (!file.isFile) return null
         return runCatching {
             val obj = JSONObject(file.readText())
@@ -95,5 +95,5 @@ class SessionStore(private val context: Context) {
         }.getOrNull()
     }
 
-    fun clear() = runCatching { arquivoDoModo(modoAtual).delete() }.let { }
+    fun clear() = runCatching { ficheiroDoModo(modoAtual).delete() }.let { }
 }

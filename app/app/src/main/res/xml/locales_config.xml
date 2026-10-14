@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Idiomas que a app declara. É isto que a torna selecionável em Definições → Apps → Idioma
+     (e o que permite `cmd locale set-app-locales`). O inglês é a omissão; o pt-PT é explícito
+     (pt-rPT), de propósito: um aparelho em pt-BR cai no inglês, não em português do Brasil. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="pt-PT" />
+</locale-config>
