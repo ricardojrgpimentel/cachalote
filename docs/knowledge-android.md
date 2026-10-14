@@ -1507,3 +1507,30 @@ todos invisíveis no dia-a-dia do modo root:
   autorização do Shizuku é **por app** e perde-se a cada reinstalação (e um turno exigiria pôr a
   chave nessa base, que é uma decisão do dono).
 - **Origem:** **[LOCAL]**.
+
+### 123. Títulos do motor: investigados, e **não existem** do lado do cliente
+- **O que se fez:** procurou-se o título em todas as portas possíveis.
+  1. **ACP `session/list`** — devolve as sessões **sem `title`** (medido: todas).
+  2. **Registos de sessão no disco** (`home/sessions/<cwd>/<id>/session.v4.jsonl.zstd`) — 76
+     sessões, e **todas** têm **apenas o evento `session`** (o cabeçalho). O corpo não é escrito em
+     disco (fica em memória e, aparentemente, só sai ao fechar a sessão).
+  3. **Projecção** (`home/storages/session_projcache/`) — `record.identity` não tem título e
+     `record.rows` não expôs nenhum evento de título nos campos testados.
+- **Conclusão:** o plugin `session-title-llm` está ligado e gera títulos **internamente**, mas
+  nenhum caminho do cliente os vê. Não é um bug nosso — é uma lacuna da API.
+- **O que fica:** a app continua a derivar o título do **primeiro prompt** (48 caracteres) e
+  **prefere** o do motor se algum dia vier. Vale a pena pedir isso a montante (`title` no
+  `session/list`), não inventar mais voltas cá.
+- **Origem:** **[LOCAL]**.
+
+### 124. Ecrã virtual: o que sobrevive e o que não
+- **Medido:** com o ecrã virtual a correr (display 7), fechar a **interface** (HOME) não o mata —
+  `running: true`, 10,7 s de uptime. É o serviço em primeiro plano que mantém o processo vivo.
+- **E não pode ser de outra maneira:** um *virtual display* pertence a um **processo Android**. O
+  daemon é um processo **Node** — não tem `DisplayManager`. Passar o ecrã virtual "para o daemon"
+  não é uma migração possível; a alternativa seria um serviço separado, e ainda seria um processo
+  Android.
+- **O que acontece:** `am force-stop` (ou o sistema a matar a app) leva o ecrã virtual com ele
+  (0 displays). Documentado na app — *"vive dentro desta app: se ela for fechada, o ecrã virtual
+  desaparece"*.
+- **Origem:** **[LOCAL]**.

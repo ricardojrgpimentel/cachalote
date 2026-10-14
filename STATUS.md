@@ -1654,3 +1654,20 @@ do Shizuku sozinha (o diálogo apareceu). O telemóvel ficou reposto no **modo r
 
 Por verificar: a ligação app↔daemon em modo Shizuku ponta a ponta (a autorização do Shizuku é por
 app e perde-se a cada reinstalação) e um turno a sério (exigiria pôr a chave nessa base).
+
+
+---
+
+## 54. Títulos do motor e persistência do ecrã virtual: investigados até ao fim
+
+**Títulos (item 7) — não existem do lado do cliente.** Procuraram-se nas três portas possíveis:
+`session/list` (sem `title`), registos de sessão em disco (76 sessões, **todas** só com o evento de
+cabeçalho — o corpo nunca é escrito), e a projecção (sem título nos campos testados). O motor gera
+títulos internamente e não os expõe: **é uma lacuna da API, não nossa**. Fica a derivação do
+primeiro prompt (a preferir o do motor, se um dia vier) e a nota para pedir isso a montante.
+
+**Ecrã virtual (item 6) — já sobrevive ao que interessa.** Medido: com o ecrã virtual a correr
+(display 7), fechar a interface (HOME) mantém-no vivo (`running: true`, 10,7 s de uptime) — é o
+serviço em primeiro plano. Matar o processo (`am force-stop`) leva-o com ele, e **não pode ser de
+outra maneira**: um *virtual display* pertence a um processo Android, e o daemon é um processo
+**Node**. Está documentado no cartão da app.

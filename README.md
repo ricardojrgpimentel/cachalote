@@ -10,6 +10,9 @@ própria app).
 > O plano completo está em [`PLANO.md`](PLANO.md) e o que já foi verificado, com provas, em
 > [`STATUS.md`](STATUS.md).
 
+**Como está feito?** [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) — as peças, os três motores, os
+canais, os segredos e o que trava (e não trava) o agente.
+
 **Só queres usar a app?** [`docs/COMO-USAR.md`](docs/COMO-USAR.md) (português europeu) ·
 [`docs/HOW-TO-USE.md`](docs/HOW-TO-USE.md) (English). O resto deste README é para quem quer
 perceber ou mexer no código.
