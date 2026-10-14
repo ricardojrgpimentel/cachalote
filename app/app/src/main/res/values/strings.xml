@@ -72,6 +72,9 @@
     <string name="fila_juntar">Add to queue</string>
     <string name="fila_limpar">Clear finished</string>
     <string name="fila_parar">Stop the queue</string>
+    <string name="ferramenta_a_correr">running</string>
+    <string name="ferramenta_concluida">done</string>
+    <string name="ferramenta_falhada">failed</string>
     <string name="fila_falhada">failed</string>
     <string name="fila_feita">done</string>
     <string name="fila_pendente">pending</string>

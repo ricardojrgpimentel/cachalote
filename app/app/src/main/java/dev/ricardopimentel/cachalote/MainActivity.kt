@@ -951,6 +951,92 @@ private fun StatusScreen(vm: MainViewModel) {
     }
 }
 
+/** Uma mensagem da conversa: bolha do utilizador, cartão do agente, cartão de erro. */
+@Composable
+private fun CartaoDeMensagem(line: ChatLine) {
+    val ehUser = line.role == "user"
+    val ehErro = line.role == "error"
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            // O erro fica discreto (fundo igual aos outros) e é o contorno e a etiqueta que o
+            // marcam — em vermelho cheio era agressivo a mais, e o design não é assim.
+            containerColor = if (ehUser) MaterialTheme.colorScheme.surfaceContainerHigh
+            else MaterialTheme.colorScheme.surfaceContainer,
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (ehErro) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            when {
+                ehErro -> Etiqueta("erro", cor = MaterialTheme.colorScheme.error)
+                ehUser -> Etiqueta("tu")
+                else -> Etiqueta("agente")
+            }
+            Text(
+                line.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (ehErro) MaterialTheme.colorScheme.error else Color.Unspecified,
+            )
+        }
+    }
+}
+
+/** O cartão de uma ferramenta: nome em monospace, chip do estado, à maneira do design. */
+@Composable
+private fun CartaoFerramenta(line: ChatLine) {
+    val estado = line.estado.orEmpty()
+    val texto: String
+    val cor: Color
+    when {
+        estado.startsWith("completed") -> {
+            texto = stringResource(R.string.ferramenta_concluida)
+            cor = MaterialTheme.colorScheme.primaryContainer
+        }
+        estado.startsWith("failed") -> {
+            texto = stringResource(R.string.ferramenta_falhada)
+            cor = MaterialTheme.colorScheme.error
+        }
+        // Linhas antigas (retomadas de uma sessão gravada antes de o estado ser campo próprio):
+        // só se sabe se acabaram. Sem isto ficavam eternamente «a correr».
+        estado.isBlank() && line.done -> {
+            texto = stringResource(R.string.ferramenta_concluida)
+            cor = MaterialTheme.colorScheme.primaryContainer
+        }
+        else -> {
+            texto = stringResource(R.string.ferramenta_a_correr)
+            cor = MaterialTheme.colorScheme.secondary
+        }
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Build,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                line.text,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f),
+            )
+            Chip(texto, cor)
+        }
+    }
+}
+
 @Composable
 private fun KeyScreen(vm: MainViewModel) {
     var value by remember { mutableStateOf("") }
@@ -1107,38 +1193,24 @@ private fun ChatScreen(vm: MainViewModel) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             itemsIndexed(vm.transcript) { _, line ->
-                val bg = when (line.role) {
-                    "user" -> Color(0xFF1E3A5F)
-                    "assistant" -> Color(0xFF17283C)
-                    "tool" -> Color(0xFF2A2440)
-                    "error" -> Color(0xFF4A1520)
-                    else -> Color.Transparent
-                }
-                val label = when (line.role) {
-                    "user" -> "tu"
-                    "assistant" -> "agente"
-                    "thought" -> "pensamento"
-                    "tool" -> "ferramenta"
-                    "error" -> "erro"
-                    else -> "sistema"
-                }
-                Box(
-                    modifier = Modifier.fillMaxWidth().background(bg).padding(8.dp),
-                ) {
-                    Column {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                        )
-                        Text(
-                            line.text,
-                            style = if (line.role == "thought") MaterialTheme.typography.bodySmall
-                            else MaterialTheme.typography.bodyMedium,
-                            color = if (line.role == "thought") MaterialTheme.colorScheme.secondary
-                            else Color.Unspecified,
-                        )
-                    }
+                when (line.role) {
+                    // A ferramenta tem cartão próprio (nome em monospace + chip do estado), como no
+                    // design; o pensamento e as notas do sistema ficam discretos, sem cartão.
+                    "tool" -> CartaoFerramenta(line)
+                    "thought" -> Text(
+                        line.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    )
+                    "system" -> Text(
+                        line.text,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    )
+                    else -> CartaoDeMensagem(line)
                 }
             }
             item { Spacer(Modifier.height(4.dp)) }

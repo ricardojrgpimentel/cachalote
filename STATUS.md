@@ -1914,5 +1914,35 @@ crashes (`2279573`) — `72928d3..996867d` no primeiro envio.
 modelo: o `ChatLine` só tem `role` e `text`, não guarda o nome da ferramenta, o estado nem o
 resultado em separado; sem isso, um cartão de ferramenta a sério seria adivinhar a partir do texto.
 
+---
+
+## 64. O design, parte 4: os cartões da conversa (e o estado da ferramenta no modelo)
+
+A última peça do desenho que faltava — e a que precisava de mexer no modelo.
+
+**No modelo** ([`MainViewModel.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainViewModel.kt)):
+o `ChatLine` ganhou `estado`. Até aqui, o `tool_call_update` **colava** o estado ao texto
+(«nome da ferramenta  [completed]») e guardava só um `done` booleano — não dava para desenhar nada
+de jeito. Agora o estado é um campo, o texto fica limpo (o nome da ferramenta) e o `tool_call` já
+nasce com `in_progress`. Linhas retomadas de sessões gravadas antes desta mudança não têm estado:
+nessas, o `done` decide (concluída vs a correr), para não ficarem eternamente «a correr».
+
+**No ecrã** ([`MainActivity.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt)):
+a conversa deixou de ser caixas com cor de fundo e passou a cartões como no design —
+`CartaoDeMensagem` (bolha do «tu», cartão do «agente», e o erro **discreto**: fundo igual aos
+outros, contorno e etiqueta a vermelho; em vermelho cheio era agressivo a mais),
+`CartaoFerramenta` (ícone, nome em monospace e o **chip do estado**: a correr / concluída /
+falhada) e o pensamento e as notas do sistema em monospace discreto, sem cartão. Visto no telefone:
+[`design/app/conversa-cartoes.png`](design/app/conversa-cartoes.png).
+
+**Strings:** mais 3 chaves nos dois idiomas — i18n verde: **217 chaves iguais**, 195 usadas. Testes
+unitários e build verdes; percurso no aparelho (3 abas + 8 secções + assistente) → **0 crashes**.
+
+**O que não foi feito, e porquê:** a linha de telemetria do turno do desenho
+(«Em direto · 2/6 · 1.102/8.000 · 3s») precisa de contagem de passos e de tempo do turno, que o
+motor não manda; o que há (tokens e sessão) já está no cabeçalho e no Resumo. Fica anotado como
+ideia, não como dívida.
+
+
 
 

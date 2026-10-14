@@ -72,6 +72,9 @@
     <string name="fila_juntar">Juntar à fila</string>
     <string name="fila_limpar">Limpar concluídas</string>
     <string name="fila_parar">Parar a fila</string>
+    <string name="ferramenta_a_correr">a correr</string>
+    <string name="ferramenta_concluida">concluída</string>
+    <string name="ferramenta_falhada">falhada</string>
     <string name="fila_falhada">falhada</string>
     <string name="fila_feita">feita</string>
     <string name="fila_pendente">pendente</string>

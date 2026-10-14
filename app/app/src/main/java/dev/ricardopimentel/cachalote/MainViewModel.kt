@@ -41,6 +41,10 @@ data class ChatLine(
     val text: String,
     val toolId: String? = null,
     val done: Boolean = false,
+    // Estado da ferramenta tal como o motor o manda (`in_progress`, `completed`, `failed`…). É o
+    // que o cartão da ferramenta mostra no chip — antes isto ia colado ao texto («  [completed]»)
+    // e não dava para desenhar nada de jeito.
+    val estado: String? = null,
 )
 
 /**
@@ -661,7 +665,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             "agent_message_chunk" -> append("assistant", textOf(update))
             "agent_thought_chunk" -> append("thought", textOf(update))
             "tool_call" -> transcript.add(
-                ChatLine("tool", update.optString("title", "ferramenta"), update.optString("toolCallId")),
+                ChatLine(
+                    "tool",
+                    update.optString("title", "ferramenta"),
+                    update.optString("toolCallId"),
+                    estado = update.optString("status").ifBlank { "in_progress" },
+                ),
             )
             "tool_call_update" -> {
                 val id = update.optString("toolCallId")
@@ -669,8 +678,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 if (idx >= 0) {
                     val old = transcript[idx]
                     val status = update.optString("status", "")
+                    // O estado passa a ser campo próprio (o cartão mostra-o no chip), em vez de
+                    // texto colado ao nome da ferramenta.
                     transcript[idx] = old.copy(
-                        text = old.text + if (status.isNotEmpty()) "  [$status]" else "",
+                        estado = status.ifBlank { old.estado },
                         done = status == "completed" || status == "failed",
                     )
                 }

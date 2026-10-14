@@ -249,12 +249,12 @@ fun LicensesBody(
 
 /** Micro-etiqueta em maiúsculas com tracking — o rótulo do design («RESUMO DA APP»). */
 @Composable
-fun Etiqueta(texto: String, modifier: Modifier = Modifier) {
+fun Etiqueta(texto: String, modifier: Modifier = Modifier, cor: Color = MaterialTheme.colorScheme.secondary) {
     Text(
         texto.uppercase(),
         modifier = modifier,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.secondary,
+        color = cor,
         letterSpacing = 1.sp,
     )
 }
