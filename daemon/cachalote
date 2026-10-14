@@ -69,6 +69,15 @@ ctl)
   # `cachalote ctl cachalote.host.call '{"capability":"status","params":{}}'`.
   METHOD="${2:-cachalote.status}"
   PARAMS="${3:-{\}}"
+  # `@/caminho/ficheiro.json` lê os parâmetros de um ficheiro: evita o inferno de aspas quando
+  # isto é chamado por dentro de `su -c '…'` (ver tools/vscreen-tool-test.sh).
+  case "$PARAMS" in
+    @*)
+      FICHEIRO="${PARAMS#@}"
+      [ -r "$FICHEIRO" ] || { echo "ERRO: não consigo ler $FICHEIRO" >&2; exit 1; }
+      PARAMS="$(cat "$FICHEIRO")"
+      ;;
+  esac
   [ -S "$SOCK" ] || { echo "ERRO: socket ausente ($SOCK) — o daemon está a correr?" >&2; exit 1; }
   TMP="$BASE/tmp/ctl.$$.cjs"
   mkdir -p "$BASE/tmp"

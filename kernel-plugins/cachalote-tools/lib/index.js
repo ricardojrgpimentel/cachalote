@@ -25,7 +25,7 @@ const TOKEN_PATH = process.env.CACHALOTE_TOKEN_FILE ||
   path.join(process.env.DSH_HOME || path.join(process.env.HOME || ".", ".dsh"), "app.token");
 
 /** Uma chamada ao daemon: liga, autentica como "tool", pede, devolve o resultado. */
-function hostCall(capability, params = {}, timeoutMs = 30_000) {
+function ctlCall(method, params = {}, timeoutMs = 30_000) {
   return new Promise((resolve, reject) => {
     let token;
     try {
@@ -73,8 +73,8 @@ function hostCall(capability, params = {}, timeoutMs = 30_000) {
         if (msg.id === 1) {
           if (msg.error) { finish(new Error("autenticação no daemon falhou: " + msg.error.message)); return; }
           socket.write(JSON.stringify({
-            jsonrpc: "2.0", id: 2, method: "cachalote.host.call",
-            params: { capability, params, timeoutMs },
+            jsonrpc: "2.0", id: 2, method,
+            params,
           }) + "\n");
         } else if (msg.id === 2) {
           if (msg.error) finish(new Error(msg.error.message));
@@ -85,6 +85,11 @@ function hostCall(capability, params = {}, timeoutMs = 30_000) {
     socket.on("error", (error) => finish(error));
     socket.on("close", () => finish(new Error("ligação ao daemon fechada antes da resposta")));
   });
+}
+
+/** Chama uma capacidade da app (o caminho normal: `cachalote.host.call`). */
+function hostCall(capability, params = {}, timeoutMs = 30_000) {
+  return ctlCall("cachalote.host.call", { capability, params, timeoutMs }, timeoutMs);
 }
 
 /** Resultado textual padrão das ferramentas deste plugin. */
@@ -338,18 +343,29 @@ function apply(ctx) {
       "To put an app on it, run with bash: `am start --display <displayId> -n <pkg>/<activity>`. " +
       "To interact, run with bash: `input -d <displayId> tap X Y` (also swipe/text/keyevent). " +
       "The virtual screen needs NO accessibility service: the pixels come from the display and " +
-      "the input from `input -d`. Its coordinates are its own (width×height), not the phone's.",
+      "the input is injected into it. Its coordinates are its own (width×height), not the " +
+      "phone's. To open an app there use 'launch' with componente='pacote/Actividade'; to " +
+      "interact use 'tap' (x,y), 'swipe' (x,y,x2,y2), 'key' (tecla) or 'text' (texto). Every one " +
+      "of those needs displayId (from 'start'/'status').",
     parameters: {
       action: {
         type: "string",
         required: true,
-        enum: ["start", "status", "frame", "stop"],
+        enum: ["start", "status", "frame", "stop", "launch", "tap", "swipe", "key", "text"],
         description: "What to do with the virtual screen.",
       },
       width: { type: "integer", description: "start: width in pixels (default 720)." },
       height: { type: "integer", description: "start: height in pixels (default 1280)." },
       density: { type: "integer", description: "start: density in dpi (default 320)." },
       maxWidth: { type: "integer", description: "frame: downscale the capture to this width (default 720)." },
+      componente: { type: "string", description: "launch: 'pacote/Actividade' a abrir no ecrã virtual." },
+      x: { type: "integer", description: "tap/swipe: coordenada x no ecrã virtual." },
+      y: { type: "integer", description: "tap/swipe: coordenada y no ecrã virtual." },
+      x2: { type: "integer", description: "swipe: coordenada x final." },
+      y2: { type: "integer", description: "swipe: coordenada y final." },
+      duracaoMs: { type: "integer", description: "swipe: duração em milissegundos (default 300)." },
+      tecla: { type: "string", description: "key: código da tecla (ex.: KEYCODE_HOME, KEYCODE_ENTER, KEYCODE_DEL)." },
+      texto: { type: "string", description: "text: texto a escrever no campo em foco do ecrã virtual." },
     },
     output: {
       schema: {
@@ -401,6 +417,24 @@ function apply(ctx) {
       }
       if (acao === "status") {
         return { action: acao, ...(await hostCall("vscreen_status", {})) };
+      }
+      // As acções que mexem no ecrã virtual passam pelo daemon, que confirma com a app que é
+      // mesmo o ecrã dela e recusa qualquer display que não seja esse (ver knowledge 110).
+      if (acao === "launch") {
+        const r = await ctlCall("cachalote.vscreen.launch", {
+          displayId: args.displayId,
+          componente: args.componente,
+        });
+        return { action: acao, displayId: r.displayId, hint: r.saida };
+      }
+      if (acao === "tap" || acao === "swipe" || acao === "key" || acao === "text") {
+        const lista =
+          acao === "tap" ? ["tap", args.x, args.y]
+          : acao === "swipe" ? ["swipe", args.x, args.y, args.x2, args.y2, args.duracaoMs ?? 300]
+          : acao === "key" ? ["keyevent", args.tecla]
+          : ["text", args.texto ?? ""];
+        const r = await ctlCall("cachalote.vscreen.input", { displayId: args.displayId, args: lista });
+        return { action: acao, displayId: r.displayId, hint: `input ${r.comando}` };
       }
       if (acao === "frame") {
         const raw = await hostCall("vscreen_frame", { maxWidth: args.maxWidth ?? 720 });

@@ -267,12 +267,94 @@ function control(method, params) {
       return hostCall(params?.capability, params?.params ?? {}, params?.timeoutMs ?? 30_000);
     case "cachalote.host.status":
       return { appConnected: !!appSocket && !appSocket.destroyed, pending: hostPending.size };
+    case "cachalote.vscreen.input":
+      return vscreenInput(params?.displayId, params?.args);
+    case "cachalote.vscreen.launch":
+      return vscreenLaunch(params?.displayId, params?.componente);
     case "cachalote.engine.restart":
       scheduleEngineRestart("pedido explícito");
       return { ok: true, note: "motor a reiniciar" };
     default:
       return undefined;
   }
+}
+
+/* ---------------- ecrã virtual: injecção e lançamento ----------------
+ *
+ * Estreito de propósito: o daemon **não** dá um shell ao plugin. Só faz duas coisas, e só no
+ * ecrã que a **app** confirma ser o ecrã virtual dela (`vscreen_status`):
+ *   - `input -d <id> <subcomando> …` (tap/swipe/text/keyevent);
+ *   - `am start --display <id> -n <pacote>/<actividade>`.
+ * Como se usa `execFile` (sem shell), os argumentos não são interpretados — não há injecção de
+ * comandos possível, mesmo que o texto venha do modelo.
+ */
+const { execFile } = require("node:child_process");
+
+const SUBCOMANDOS = new Set(["tap", "swipe", "text", "keyevent"]);
+
+function executar(ficheiro, args, timeoutMs = 10_000) {
+  return new Promise((resolve) => {
+    execFile(ficheiro, args, { timeout: timeoutMs }, (erro, stdout, stderr) => {
+      resolve({ erro, stdout: stdout ?? "", stderr: stderr ?? "" });
+    });
+  });
+}
+
+/** Confirma, com a app, qual é o ecrã virtual activo. Nada acontece sem esta confirmação. */
+async function ecraVirtualActivo(displayId) {
+  const estado = await hostCall("vscreen_status", {}, 15_000);
+  if (!estado || estado.running !== true) {
+    throw new Error("não há ecrã virtual a correr (usa android_vscreen start)");
+  }
+  if (Number(displayId) !== Number(estado.displayId)) {
+    throw new Error(
+      `o display ${displayId} não é o ecrã virtual activo (${estado.displayId}) — só se injecta no ecrã do Cachalote`,
+    );
+  }
+  return estado.displayId;
+}
+
+/** `input -d <id> …` no ecrã virtual, com os argumentos validados. */
+async function vscreenInput(displayId, args) {
+  if (!Array.isArray(args) || args.length < 1) throw new Error("faltam os argumentos do input");
+  const sub = String(args[0]);
+  if (!SUBCOMANDOS.has(sub)) {
+    throw new Error(`subcomando '${sub}' não é permitido (tap, swipe, text, keyevent)`);
+  }
+  const id = await ecraVirtualActivo(displayId);
+  // `keyevent` aceita código numérico **ou** nome (`KEYCODE_BACK`); o resto é só números.
+  if (sub === "keyevent") {
+    if (args.length !== 2 || !/^[A-Za-z0-9_]{1,40}$/.test(String(args[1]))) {
+      throw new Error(`'keyevent' leva um código ou nome de tecla (veio: ${args[1]})`);
+    }
+  } else {
+    const numericos = sub === "text" ? 0 : args.length - 1;
+    for (let i = 1; i <= numericos; i++) {
+      if (!/^-?\d{1,5}$/.test(String(args[i]))) {
+        throw new Error(`argumento ${i} de '${sub}' tem de ser um número (veio: ${args[i]})`);
+      }
+    }
+  }
+  if (sub === "text" && (args.length !== 2 || typeof args[1] !== "string")) {
+    throw new Error("'text' leva exactamente uma string");
+  }
+  const r = await executar("input", ["-d", String(id), ...args.map(String)]);
+  if (r.erro) throw new Error(`input falhou: ${(r.stderr || r.erro.message).slice(0, 200)}`);
+  return { ok: true, displayId: id, comando: args.join(" ") };
+}
+
+/** `am start --display <id> -n <pacote>/<actividade>` no ecrã virtual. */
+async function vscreenLaunch(displayId, componente) {
+  if (typeof componente !== "string" || !/^[A-Za-z0-9_.]+\/[A-Za-z0-9_.$]+$/.test(componente)) {
+    throw new Error("componente tem de ser 'pacote/Actividade' (só letras, números, ponto, _ e $)");
+  }
+  const id = await ecraVirtualActivo(displayId);
+  const r = await executar("am", ["start", "--display", String(id), "-n", componente], 20_000);
+  const saida = (r.stdout + r.stderr).trim();
+  if (r.erro && !/Starting:|Warning:/.test(saida)) {
+    throw new Error(`am start falhou: ${saida.slice(0, 200) || r.erro.message}`);
+  }
+  return { ok: true, displayId: id, componente, saida: saida.slice(0, 300) };
 }
 
 /* ---------------- ligações ---------------- */

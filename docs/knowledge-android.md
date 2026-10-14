@@ -1333,3 +1333,42 @@ diferentes, e tratá-los como iguais era o erro:
   silenciosamente no inglês, por isso só uma comparação de ficheiros a apanha), confirma que todas
   as `R.string.*` usadas existem e recusa formas brasileiras no pt-PT.
 - **Origem:** **[LOCAL]**.
+
+### 110. Ecrã virtual: tocar sem dar um shell ao plugin
+- **O problema:** o agente tinha de fazer `bash` → `input -d <id> tap …` para cada toque. Funciona,
+  mas obriga a uma ida ao modelo por cada gesto e espalha a lógica por dois sítios.
+- **O que se fez:** o plugin ganhou as acções `launch`, `tap`, `swipe`, `key` e `text`, que passam
+  pelo daemon. O daemon **não** dá um shell: expõe dois métodos estreitos —
+  `cachalote.vscreen.input` (só `tap`/`swipe`/`text`/`keyevent`) e `cachalote.vscreen.launch`
+  (só `pacote/Actividade`) — e ambos **confirmam primeiro com a app** qual é o ecrã virtual activo.
+  Só se injecta no display que a app disser que é dela.
+- **Sem shell, sem injecção de comandos:** a execução é por `execFile` (não há shell pelo meio),
+  e os argumentos são validados (números, ou `KEYCODE_*`, ou uma string para `text`).
+- **Bug apanhado pelo próprio teste:** o `keyevent` só aceitava números e recusava
+  `KEYCODE_BACK` — corrigido para aceitar nome ou código.
+- **Verificação:** [`tools/vscreen-tool-test.sh`](../tools/vscreen-tool-test.sh) chama a ferramenta
+  **a sério** (o mesmo código que o agente) contra o daemon: recusa display alheio, recusa
+  componente inválido, lança a calculadora, tira fotograma, toca e manda `KEYCODE_BACK` → 6/6.
+- **Origem:** **[LOCAL]**.
+
+### 111. `ctl @ficheiro`: escapar JSON dentro de `su -c` é uma armadilha
+- **Sintoma:** o mesmo comando funcionava à mão e devolvia vazio dentro de um script.
+- **Causa:** `adb shell "su -c '$1'"` — as aspas simples do JSON **fechavam** o `su -c`, e o
+  comando partia-se sem erro visível.
+- **Correcção:** `cachalote ctl <método> @/caminho/params.json` lê os parâmetros de um ficheiro.
+  Os scripts empurram o JSON e deixam de ter aspas para escapar.
+- **Origem:** **[LOCAL]**.
+
+### 112. Duas armadilhas de teste que me custaram uma hora
+- **`connectedDebugAndroidTest` desinstala a app no fim** (e com ela vão as preferências: modo,
+  capacidades autorizadas, URL do kernel, MCP). Sintoma: o daemon fica sozinho, `appConnected:
+  false` para sempre, e `am start` responde *"Activity class does not exist"*. Depois de correr
+  testes instrumentados, reinstalar (`tools/install-app.sh`) e reautorizar o que for preciso.
+- **Numa instalação nova, sem `POST_NOTIFICATIONS` concedida, a app morre no arranque** — o
+  diálogo de permissões aparece, o arranque é cancelado (`result code=-92`) e não há crash no
+  `logcat` (nem no buffer de crashes) que explique nada. Sintoma: `pidof` vazio segundos depois de
+  `am start`, com o sistema bem disposto para outras apps. Correcção:
+  `adb shell pm grant <pkg> android.permission.POST_NOTIFICATIONS`.
+- **Como distinguir:** se *outras* apps arrancam e a nossa não, e não há excepção em lado nenhum,
+  procurar permissões por conceder antes de suspeitar do código.
+- **Origem:** **[LOCAL]** (custou uma hora; o registo acima vale por ela).

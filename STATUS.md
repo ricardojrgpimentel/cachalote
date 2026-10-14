@@ -616,7 +616,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**Notificação no fim do turno**~~ | ✅ **feito em §41** | avisa com a app em segundo plano (e só aí); canal próprio para poder silenciar |
 | ~~**Testes instrumentados**~~ | ✅ **feito em §42** | 9 testes no aparelho (i18n, licenças, notificação), sem um único toque; + `tools/i18n-check.sh` na CI |
 | ~~**Inglês / i18n**~~ | ✅ **feito em §43** | 106 textos em `values/` (inglês, omissão) e `values-pt-rPT/` (pt-PT); pt-BR cai no pt-PT e nunca apanha formas brasileiras |
-| **vscreen: polimento** | por fazer | `tap`/`key`/`text` próprios no ecrã virtual (hoje o agente usa `bash input -d`), pré-visualização ao vivo (auto-refresh) e `vscreen_launch` dentro da ferramenta |
+| ~~**vscreen: polimento**~~ | ✅ **feito em §44** | `launch`/`tap`/`swipe`/`key`/`text` na ferramenta, por dois métodos **estreitos** do daemon (só no ecrã que a app confirma); teste `tools/vscreen-tool-test.sh` 6/6 |
 | ~~**Ecrã de licenças na app**~~ | ✅ **feito em §40** | 13 entradas com os **textos integrais** em `assets/licenses.json` + diálogo em Poderes |
 | ~~**Publicar o kernel e a APK de release**~~ | ✅ **preparado** (§3 do `PUBLICAR.md`) | release `kernel-77fa6785a4e4` com `kernel.zip` (211 MB) + APK assinada (42 MB); falta **tornares o repo público** |
 | ~~**vscreen** (ecrã virtual)~~ | ✅ **feito em §37-39** | reimplementado do zero com APIs do AOSP (D8 = opção A, zero LGPL); sete passos verificados com prova visual |
@@ -1466,3 +1466,22 @@ segundo ecrã" — sem os testes, isto ia para o telefone.
 
 O extractor (`.work/i18n-extract.py`) ficou guardado contra apagar chaves: à primeira tentativa
 apagou o `strings.xml` que já existia (`app_name`, `accessibility_description`) e o build apanhou-o.
+
+
+---
+
+## 44. vscreen: tocar e lançar pela ferramenta (sem dar um shell ao plugin)
+
+| Peça | Como |
+|---|---|
+| Ferramenta | `android_vscreen` com `launch`, `tap`, `swipe`, `key`, `text` (além de start/status/frame/stop) |
+| Daemon | métodos **estreitos**: `cachalote.vscreen.input` (só `tap`/`swipe`/`text`/`keyevent`) e `cachalote.vscreen.launch` (só `pacote/Actividade`) |
+| Segurança | confirma **com a app** qual é o ecrã virtual activo; executa por `execFile` (sem shell, logo sem injecção); valida cada argumento |
+| Teste | [`tools/vscreen-tool-test.sh`](tools/vscreen-tool-test.sh) — chama a ferramenta a sério contra o daemon: **6/6** |
+
+O teste apanhou um bug real no caminho: o `keyevent` recusava nomes (`KEYCODE_BACK`) porque só
+aceitava números.
+
+**Duas armadilhas operacionais** (documentadas em knowledge 112, custaram uma hora): correr
+`connectedDebugAndroidTest` **desinstala a app** e apaga as preferências; e numa instalação nova a
+app **morre no arranque** sem `POST_NOTIFICATIONS` concedida — sem crash nenhum no `logcat`.
