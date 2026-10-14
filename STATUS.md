@@ -1034,3 +1034,32 @@ registada em §23.6–§23.7 e aqui.
 
 **Aberto:** o item 4, com a pergunta certa agora escrita (§24.2) em vez do caminho errado.
 ITENS 1, 2 e 3 estão fechados e verificados.
+
+
+---
+
+## 24. Kernel por download — fecha o §22.6
+
+O kernel deixou de precisar de viajar dentro da APK.
+
+| Peça | Como |
+|---|---|
+| Metadados | `tools/prepare-kernel-zip.sh --remote-url URL` escreve `assets/kernel.remote.json` (`url`, `sha256`, `bytes`) |
+| Publicação | `tools/publish-kernel.sh --repo owner/repo` cria um *release* com o zip e preenche os metadados |
+| App | ordem de preferência: ficheiro local → asset (desenvolvimento) → **download** com verificação de `sha256` e progresso no ecrã Estado |
+| Interface | botão **Descarregar kernel** (modo embutido) e campo do URL em **Poderes** (hospedagem própria) |
+
+**Verificação no S10+:**
+
+| Passo | Resultado |
+|---|---|
+| APK sem o kernel embutido | **164 MB** (era 440 MB); o runtime Node, esse, fica |
+| Servidor local + `adb reverse tcp:8080` | a app descarregou 221 747 661 bytes |
+| Integridade | `sha256` no telemóvel **igual** ao publicado (`77fa6785a4e4816a…`) |
+| Depois do download | kernel extraído e motor embutido a correr (`kernelExtracted/inner/engine/hostServer: true`) |
+
+**Nota de hospedagem:** o URL do build de teste era `http://127.0.0.1:8080` (via `adb reverse`),
+um valor de desenvolvimento — `kernel.remote.json` está no `.gitignore`. Em produção o URL tem de
+ser público; o repositório é privado, logo um asset de release aqui **não** serve à app sem
+token. Caminhos possíveis: um repositório público só para o kernel, uma release pública, ou
+qualquer hospedagem estática.

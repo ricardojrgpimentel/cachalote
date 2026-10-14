@@ -5,6 +5,10 @@
 #   ./tools/prepare-kernel-zip.sh            # gera .work/kernel.zip
 #   ./tools/prepare-kernel-zip.sh --push     # + envia para o armazenamento privado da app
 #   ./tools/prepare-kernel-zip.sh --bundle   # + mete o zip na APK (assets/) com sha256
+#   ./tools/prepare-kernel-zip.sh --remote-url URL
+#                                            # + grava assets/kernel.remote.json (url + sha256):
+#                                            #   é o caminho de distribuição (a app descarrega e
+#                                            #   verifica em vez de carregar 389 MB de kernel)
 #
 # O zip tem a raiz `dsh/` (como o tar do daemon). Sem compressão: a extracção fica muito mais
 # rápida. ATENÇÃO ao tamanho: a árvore do `app.asar` do desktop dava ~110 MB, mas a que vem do
@@ -23,6 +27,16 @@ echo "== a empacotar $SRC -> $OUT =="
 rm -f "$OUT"
 ( cd "$SRC" && zip -q -0 -r "$OUT" dsh -x "*.DS_Store" )
 ls -lh "$OUT"
+
+if [ "${1:-}" = "--remote-url" ]; then
+  URL="${2:?falta o URL}"
+  SHA="$(shasum -a 256 "$OUT" | awk '{print $1}')"
+  BYTES="$(wc -c < "$OUT" | tr -d ' ')"
+  ASSETS="$WS/app/app/src/main/assets"
+  mkdir -p "$ASSETS"
+  printf '{\n  "url": "%s",\n  "sha256": "%s",\n  "bytes": %s\n}\n' "$URL" "$SHA" "$BYTES" > "$ASSETS/kernel.remote.json"
+  echo "== kernel publicado: $URL ($(du -h "$OUT" | cut -f1), sha256=${SHA:0:16}…) =="
+fi
 
 if [ "${1:-}" = "--bundle" ]; then
   # O modo embutido passa a ser auto-suficiente: a app copia o kernel do asset na primeira

@@ -96,9 +96,14 @@ telemóvel. Ver [`STATUS.md`](STATUS.md) §21 e
 
 ```sh
 node tools/patch-android.cjs --tree .work/f0/kernel
-./tools/prepare-embed.sh                       # runtime + libs para a APK
-./tools/prepare-kernel-zip.sh --push           # kernel para o armazenamento da app
+./tools/prepare-embed.sh                       # runtime + libs para a APK (ficam na APK)
+./tools/prepare-kernel-zip.sh --push           # desenvolvimento: empurra o kernel por adb
+# ou, para distribuir (APK leve, o kernel vem por download com verificação de sha256):
+./tools/publish-kernel.sh --repo <owner>/<repo-publico>
 ```
+
+Sem o kernel na APK, a app descarrega-o na primeira utilização do modo embutido — há um botão
+**Descarregar kernel** no ecrã Estado e um campo para o URL em **Poderes** (hospedagem própria).
 
 ## Créditos e licenças
 

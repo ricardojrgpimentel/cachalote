@@ -922,3 +922,31 @@ Se algum dia testarmos em emulador: precisa de `-writable-system`, das `.so` de 
   `files/dsh-home/attachments/v1/objects/6c/6c03b438…` com o **mesmo sha256** do ficheiro de
   origem.
 - **Origem:** **[LOCAL]** (STATUS §23).
+
+---
+
+## V. Distribuição do kernel
+
+### 89. Kernel por download: a APK leve e como testar isso sem hospedagem
+- **Problema:** a árvore do kernel vinda do **npm** dá um zip de ~211–389 MB; embutida na APK
+  põe-na em ~440 MB. Não serve para distribuir.
+- **Solução:** a app traz só `assets/kernel.remote.json` (`url` + `sha256` + `bytes`) e
+  **descarrega** o kernel na primeira utilização do modo embutido, com verificação de
+  integridade antes de extrair. Ordem: ficheiro local → asset (desenvolvimento) → download.
+  `tools/prepare-kernel-zip.sh --remote-url URL` escreve os metadados;
+  `tools/publish-kernel.sh --repo owner/repo` publica o zip como *release asset* no GitHub.
+- **Efeito medido:** a APK passou de **440 MB** para **164 MB** (o que resta é o runtime Node
+  embutido, que tem de lá estar — ~89 MB — e o resto da app).
+- **Testar sem hospedagem:** servir o zip no computador e dar-lho ao telemóvel por USB:
+  ```sh
+  (cd .work && python3 -m http.server 8080 --bind 127.0.0.1) &
+  adb -s <serial> reverse tcp:8080 tcp:8080
+  ./tools/prepare-kernel-zip.sh --remote-url http://127.0.0.1:8080/kernel.zip
+  ```
+  O URL do *build* é um valor de desenvolvimento: `kernel.remote.json` está no `.gitignore`.
+  Em produção o URL tem de ser **público** — e atenção que o repositório do Cachalote é
+  privado: um asset de release num repo privado não é descarregável pela app sem token.
+- **Verificado:** com o asset removido da APK, a app descarregou 221 747 661 bytes do servidor
+  local, o `sha256` no telemóvel ficou **igual** ao publicado (`77fa6785…`), o kernel foi
+  extraído e o motor embutido arrancou (`embedded: true, engine: true, hostServer: true`).
+- **Origem:** **[LOCAL]**.

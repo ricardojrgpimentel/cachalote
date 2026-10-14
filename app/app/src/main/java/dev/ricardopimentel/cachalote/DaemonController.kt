@@ -369,7 +369,14 @@ class DaemonController(private val context: Context) {
 
     // ---------------------------------------------------------------- modo embutido
 
-    suspend fun prepareEmbedded(): Int = engine.prepare()
+    suspend fun prepareEmbedded(progress: (Long, Long) -> Unit = { _, _ -> }): Int = engine.prepare(progress)
+
+    /** De onde vem o kernel (ficheiro, asset ou download) — para a UI dizer o que vai acontecer. */
+    fun embeddedKernelSource(): String? = engine.kernelSource()
+
+    var kernelUrl: String
+        get() = prefs.kernelUrl
+        set(v) { prefs.kernelUrl = v }
 
     fun embeddedPrepared(): Boolean = engine.isPrepared()
 

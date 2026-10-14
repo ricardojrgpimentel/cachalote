@@ -425,6 +425,26 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
             }
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Kernel por download (modo embutido)", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Sem asset na APK, a app vai buscar o kernel a este URL e verifica o sha256. " +
+                        "Vazio = usa o URL gravado no build. Serve para hospedagem própria.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                OutlinedTextField(
+                    value = vm.kernelUrlText,
+                    onValueChange = { vm.kernelUrlText = it },
+                    placeholder = { Text("https://…/kernel.zip") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2,
+                )
+                OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text("Gravar URL") }
+            }
+        }
+
         Text(
             "Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. " +
                 "Estes interruptores são a barreira real — desliga o que não precisares.",
@@ -546,6 +566,11 @@ private fun StatusScreen(vm: MainViewModel) {
                         onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
                         enabled = !vm.busy,
                     ) { Text("Autorizar no Shizuku") }
+                }
+                if (vm.modeKind == DaemonController.Mode.EMBEDDED) {
+                    OutlinedButton(onClick = { vm.downloadKernel() }, enabled = !vm.busy) {
+                        Text("Descarregar kernel")
+                    }
                 }
                 if (vm.embeddedInfo.isNotBlank()) {
                     Text(vm.embeddedInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)

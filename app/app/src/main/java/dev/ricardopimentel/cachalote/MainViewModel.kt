@@ -226,22 +226,47 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             DaemonController.Mode.DAEMON -> tokenState = "(por obter)"
             DaemonController.Mode.EMBEDDED -> {
                 tokenState = "n/d (modo embutido)"
-                if (!controller.embeddedHasZip()) {
-                    error("falta kernel.zip no armazenamento privado da app — envia com tools/prepare-kernel-zip.sh --push")
-                }
-                if (!controller.embeddedPrepared()) {
-                    embeddedInfo = "a extrair o kernel (pode levar um minuto)…"
-                    val n = controller.prepareEmbedded()
-                    embeddedInfo = "kernel extraído ($n ficheiros)"
-                } else {
-                    embeddedInfo = "kernel já extraído"
-                }
+                if (!controller.embeddedPrepared()) provisionKernel()
             }
         }
         controller.ensureConnected()
         controller.ensureAcp()
         refreshStatus()
         runCatching { refreshKeyStatus() }
+    }
+
+    /**
+     * Garante o kernel no armazenamento da app. Se não houver asset embutido, **descarrega**
+     * (com verificação de sha256) — é o que permite distribuir a app sem 389 MB de kernel.
+     */
+    private suspend fun provisionKernel() {
+        val origem = controller.embeddedKernelSource()
+        if (origem == null) {
+            embeddedInfo = "sem kernel: nem embutido nem URL de download (define em Poderes)"
+            return
+        }
+        embeddedInfo = if (origem.startsWith("download")) "a descarregar o kernel…" else "a preparar o kernel ($origem)…"
+        val n = controller.prepareEmbedded { read, total ->
+            val mb = { v: Long -> "%.0f".format(v / 1048576.0) }
+            embeddedInfo = if (total > 0) "a descarregar o kernel: ${mb(read)}/${mb(total)} MB"
+                           else "a descarregar o kernel: ${mb(read)} MB"
+        }
+        embeddedInfo = if (n > 0) "kernel pronto ($n ficheiros)" else "kernel já estava pronto"
+    }
+
+    /** Botão "Descarregar kernel" (modo embutido sem kernel). */
+    fun downloadKernel() = run("kernel") {
+        if (controller.embeddedPrepared()) { embeddedInfo = "kernel já está pronto"; return@run }
+        provisionKernel()
+        controller.ensureConnected()
+        refreshStatus()
+    }
+
+    var kernelUrlText by mutableStateOf("")
+
+    fun saveKernelUrl() = run("url do kernel") {
+        controller.kernelUrl = kernelUrlText.trim()
+        transcript.add(ChatLine("system", "URL do kernel: " + kernelUrlText.trim().ifBlank { "(vazio: usa o do build)" }))
     }
 
     /** Arranca (ou liga-se ao) daemon do modo Shizuku. */

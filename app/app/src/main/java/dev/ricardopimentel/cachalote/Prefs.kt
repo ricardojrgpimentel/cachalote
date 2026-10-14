@@ -26,6 +26,14 @@ class Prefs(context: Context) {
         get() = sp.getString("sessionId", null)
         set(v) = sp.edit().putString("sessionId", v).apply()
 
+    /**
+     * URL de onde descarregar o kernel (hospedagem própria; vazio = o que vier no
+     * `assets/kernel.remote.json`). Serve para não meter 389 MB dentro da APK.
+     */
+    var kernelUrl: String
+        get() = sp.getString("kernelUrl", "")!!
+        set(v) = sp.edit().putString("kernelUrl", v).apply()
+
     /** Token do canal no modo Shizuku (o do daemon root é outro: guardar à parte). */
     var tokenShizuku: String?
         get() = sp.getString("tokenShizuku", null)

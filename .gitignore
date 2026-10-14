@@ -23,3 +23,6 @@ app/app/src/main/assets/kernel.sha256
 
 # caches locais do Kotlin/Gradle do projecto da app
 app/.kotlin/
+
+# metadados do kernel publicado (url + sha256 do build/hospedagem de cada um)
+app/app/src/main/assets/kernel.remote.json

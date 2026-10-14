@@ -40,10 +40,89 @@ class EmbeddedEngine(private val ctx: Context) {
 
     fun isPrepared(): Boolean = binJs.isFile
 
-    /** O zip existe na app **ou** vem embutido na APK (asset) — em qualquer dos casos dá. */
-    fun hasZip(): Boolean = kernelZip.isFile || assetZipPresent()
+    /** O zip existe na app, vem embutido na APK, ou há de onde o descarregar. */
+    fun hasZip(): Boolean = kernelZip.isFile || assetZipPresent() || kernelSource() != null
 
     private fun assetZipPresent(): Boolean = runCatching { ctx.assets.open("kernel.zip").close(); true }.getOrDefault(false)
+
+    /** Metadados do kernel publicado (url + sha256 + bytes), se o build os tiver deixado. */
+    private data class RemoteKernel(val url: String, val sha256: String?, val bytes: Long)
+
+    private fun remoteMeta(): RemoteKernel? = runCatching {
+        ctx.assets.open("kernel.remote.json").bufferedReader().use { reader ->
+            val json = org.json.JSONObject(reader.readText())
+            val url = json.optString("url").ifBlank { return@use null }
+            RemoteKernel(url, json.optString("sha256").takeIf { it.length == 64 }, json.optLong("bytes", 0))
+        }
+    }.getOrNull()
+
+    /**
+     * De onde vem o kernel, por ordem de preferência: 1) já cá está; 2) embutido na APK;
+     * 3) **download** (URL do utilizador ou do `assets/kernel.remote.json`).
+     */
+    fun kernelSource(): String? = when {
+        kernelZip.isFile && kernelZip.length() > 0 -> "ficheiro"
+        assetZipPresent() -> "asset"
+        userKernelUrl().isNotBlank() -> "download (${userKernelUrl()})"
+        remoteMeta() != null -> "download (${remoteMeta()!!.url})"
+        else -> null
+    }
+
+    /** URL configurado pelo utilizador (serve para hospedagem própria ou testes). */
+    private fun userKernelUrl(): String = Prefs(ctx).kernelUrl.trim()
+
+    /**
+     * Descarrega o kernel e verifica o sha256. É o caminho para distribuir sem meter 389 MB
+     * dentro da APK: a app traz só os metadados e vai buscar o ficheiro.
+     */
+    private fun downloadKernel(progress: (Long, Long) -> Unit): File {
+        val url = userKernelUrl().ifBlank { remoteMeta()?.url.orEmpty() }
+        require(url.isNotBlank()) { "não há URL do kernel (define em Poderes ou compila com --remote-url)" }
+        val expected = remoteMeta()?.sha256
+        kernelZip.parentFile?.mkdirs()
+        val tmp = File(kernelZip.parentFile, "kernel.zip.part")
+        val started = System.currentTimeMillis()
+        val connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+            connectTimeout = 20_000
+            readTimeout = 60_000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "cachalote-android")
+        }
+        connection.connect()
+        val code = connection.responseCode
+        require(code in 200..299) { "o servidor respondeu $code ao pedido do kernel ($url)" }
+        val total = connection.contentLengthLong
+        var lastReport = 0L
+        connection.inputStream.use { input ->
+            tmp.outputStream().use { out ->
+                val buffer = ByteArray(1 shl 16)
+                var read = 0L
+                while (true) {
+                    val n = input.read(buffer)
+                    if (n <= 0) break
+                    out.write(buffer, 0, n)
+                    read += n
+                    if (System.currentTimeMillis() - lastReport > 400) {
+                        lastReport = System.currentTimeMillis()
+                        progress(read, total)
+                    }
+                }
+                progress(read, total)
+            }
+        }
+        connection.disconnect()
+        require(tmp.length() > 0) { "o download do kernel veio vazio" }
+        if (expected != null) {
+            val actual = sha256(tmp)
+            require(actual.equals(expected, ignoreCase = true)) {
+                "o kernel descarregado falhou a verificação (esperado ${expected.take(16)}…, obtido ${actual.take(16)}…)"
+            }
+        }
+        if (kernelZip.exists()) kernelZip.delete()
+        require(tmp.renameTo(kernelZip)) { "não consegui guardar o kernel em ${kernelZip.absolutePath}" }
+        android.util.Log.i("cachalote-kernel", "kernel descarregado: ${kernelZip.length()} bytes em ${(System.currentTimeMillis() - started) / 1000}s")
+        return kernelZip
+    }
 
     /**
      * Garante o zip do kernel no armazenamento da app. Se não estiver lá (primeira execução,
@@ -51,11 +130,11 @@ class EmbeddedEngine(private val ctx: Context) {
      * antes de confiar nele — é a diferença entre "funciona" e "o utilizador tem de fazer
      * `adb push`".
      */
-    private fun ensureKernelZip(): File {
+    private fun ensureKernelZip(progress: (Long, Long) -> Unit = { _, _ -> }): File {
         if (kernelZip.isFile && kernelZip.length() > 0) return kernelZip
-        require(assetZipPresent()) {
-            "falta o kernel: nem em files/kernel.zip nem embutido na APK (corre tools/prepare-kernel-zip.sh --bundle)"
-        }
+        // Sem asset, o kernel vem por download (com verificação) — é o caminho de distribuição:
+        // a APK fica leve em vez de carregar 389 MB de kernel.
+        if (!assetZipPresent()) return downloadKernel(progress)
         kernelZip.parentFile?.mkdirs()
         val tmp = File(kernelZip.parentFile, "kernel.zip.part")
         ctx.assets.open("kernel.zip").use { input -> tmp.outputStream().use { input.copyTo(it) } }
@@ -122,9 +201,9 @@ class EmbeddedEngine(private val ctx: Context) {
     }
 
     /** Extrai o kernel do zip (uma vez). Devolve o número de ficheiros escritos. */
-    suspend fun prepare(): Int = withContext(Dispatchers.IO) {
+    suspend fun prepare(progress: (Long, Long) -> Unit = { _, _ -> }): Int = withContext(Dispatchers.IO) {
         if (isPrepared()) return@withContext 0
-        ensureKernelZip()
+        ensureKernelZip(progress)
         var files = 0
         ZipInputStream(kernelZip.inputStream().buffered()).use { zin ->
             while (true) {
