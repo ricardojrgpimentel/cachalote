@@ -26,3 +26,7 @@ app/.kotlin/
 
 # metadados do kernel publicado (url + sha256 do build/hospedagem de cada um)
 app/app/src/main/assets/kernel.remote.json
+
+# Cópias de segurança da chave de assinatura (e afins): nunca entram no repositório.
+*.enc
+cachalote-chave.jks.enc

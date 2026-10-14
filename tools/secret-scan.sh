@@ -23,7 +23,7 @@ falhas=0
 
 echo "== 1. árvore (ficheiros que o git segue) =="
 # Nomes que nunca podem entrar: chaves de assinatura e ficheiros com segredos.
-proibidos=$(git ls-files | grep -iE '\.(jks|keystore|p12|pfx|pem|pkcs12)$|(^|/)(id_rsa|id_ed25519|app\.token|\.env|\.credentials\.yaml)$' || true)
+proibidos=$(git ls-files | grep -iE '\.(jks|keystore|p12|pfx|pem|pkcs12|enc|age|gpg)$|(^|/)(id_rsa|id_ed25519|app\.token|\.env|\.credentials\.yaml)$' || true)
 if [ -n "$proibidos" ]; then
   echo "${VERMELHO}   [!] ficheiros proibidos versionados:${FIM}"
   echo "$proibidos" | sed 's/^/       /'
