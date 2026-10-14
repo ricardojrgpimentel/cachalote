@@ -72,6 +72,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var approval by mutableStateOf<PendingApproval?>(null)
     var configOptions by mutableStateOf<List<ConfigOption>>(emptyList())
     var sessions by mutableStateOf<List<SessionRow>>(emptyList())
+
+    /**
+     * Título por sessão. O motor pode gerar um (`session/title`), mas hoje não o expõe no
+     * `session/list` — por isso derivamos um do **primeiro prompt** do utilizador. É
+     * determinístico, não gasta chamadas e é o que faz a lista deixar de ser só hexadecimais.
+     */
+    var sessionTitles by mutableStateOf<Map<String, String>>(emptyMap())
     var showSessions by mutableStateOf(false)
     var configPicker by mutableStateOf<ConfigOption?>(null)
     var reconnecting by mutableStateOf(false)
@@ -400,6 +407,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             text.isBlank() -> "[imagem: ${img.name}]"
             else -> "$text  [imagem: ${img.name}]"
         }
+        // Primeiro prompt desta sessão → é o título que a lista mostra (o motor ainda não
+        // expõe títulos no session/list; ver knowledge 97).
+        if (sessionTitles[sid].isNullOrBlank() && shown.isNotBlank()) {
+            val limpo = shown.replace(Regex("\\s+"), " ").trim()
+            sessionTitles = sessionTitles + (sid to limpo.take(48) + if (limpo.length > 48) "…" else "")
+        }
         transcript.add(ChatLine("user", shown))
         pendingImage = null
         loaded = true
@@ -509,7 +522,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             rows.add(
                 SessionRow(
                     id = o.optString("sessionId"),
-                    title = o.optString("title").ifBlank { o.optString("sessionId").take(8) },
+                    title = o.optString("title").takeIf { it.isNotBlank() }
+                        ?: sessionTitles[o.optString("sessionId")]
+                        ?: o.optString("sessionId").take(8),
                     updatedAt = o.optString("updatedAt"),
                 ),
             )
@@ -741,7 +756,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun saveState() {
         val model = configOptions.firstOrNull { it.id == "model" }?.currentValue
         val effort = configOptions.firstOrNull { it.id == "reasoning_effort" }?.currentValue
-        store.save(sessionId, controller.workspace, model, effort, transcript)
+        store.save(sessionId, controller.workspace, model, effort, transcript, sessionTitles)
     }
 
     private fun append(role: String, chunk: String) {

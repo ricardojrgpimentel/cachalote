@@ -1097,3 +1097,26 @@ diferentes, e tratá-los como iguais era o erro:
 - **Verificação:** com tudo bom → `resultado: tudo bem`; com o daemon parado e o plugin apontado
   para um caminho inexistente → `2 problema(s) e 3 aviso(s)`, `exit=1`.
 - **Origem:** **[LOCAL]**.
+
+---
+
+## AD. Títulos de sessão
+
+### 97. O motor gera títulos… e não os mostra no `session/list`
+- **O que se tentou:** o perfil ACP desliga o `session-title-llm` (o plugin por trás é o
+  `dsh-session-title-first-prompt-llm`, uma chamada no primeiro prompt). Ligámo-lo na nossa
+  camada (`- id: session-title-llm / disabled: false`) e o motor arranca sem avisos de activação.
+- **O que se mediu:** `session/list` devolve as sessões **sem `title`** (todas), e a projecção
+  (`home/storages/session_projcache/sessions/<id>.json`) guarda `record.identity` (sem título) +
+  `record.rows` (forma que não expõe um evento de título nos campos testados). Ou seja: o título
+  pode existir internamente, mas **não chega ao cliente ACP** — que é o que a app usa.
+- **O que ficou (e é o que o utilizador vê):** a app deriva o título do **primeiro prompt** da
+  sessão (48 caracteres, sem gastar chamadas) e guarda-o por modo no instantâneo
+  (`files/sessao-<modo>.json` → `titles`). Se um dia o motor passar a devolver `title`, o código
+  **prefere-o** e o derivado só serve de recurso.
+- **Verificado:** o instantâneo da app ficou com
+  `{"e21e9a7e…": "explica-me o ceu azul em duas frases"}`.
+- **Limite honesto:** a lista mostra as primeiras ~50 sessões antigas (sem título, criadas antes
+  disto), por isso não consegui ver a linha nova no ecrã; o que está provado é o que fica gravado
+  e a ordem de preferência no código.
+- **Origem:** **[LOCAL]**.

@@ -29,9 +29,18 @@ class SessionStore(private val context: Context) {
         val model: String?,
         val effort: String?,
         val lines: List<ChatLine>,
+        /** Título por sessão (o do motor, se vier; senão o que derivamos do primeiro prompt). */
+        val titles: Map<String, String> = emptyMap(),
     )
 
-    fun save(sessionId: String?, cwd: String?, model: String?, effort: String?, lines: List<ChatLine>) {
+    fun save(
+        sessionId: String?,
+        cwd: String?,
+        model: String?,
+        effort: String?,
+        lines: List<ChatLine>,
+        titles: Map<String, String> = emptyMap(),
+    ) {
         val file = arquivoDoModo(modoAtual)
         val arr = JSONArray()
         lines.takeLast(300).forEach { l ->
@@ -49,6 +58,7 @@ class SessionStore(private val context: Context) {
             .put("model", model ?: JSONObject.NULL)
             .put("effort", effort ?: JSONObject.NULL)
             .put("lines", arr)
+            .put("titles", JSONObject(titles as Map<*, *>))
         runCatching { file.writeText(obj.toString()) }
     }
 
@@ -70,12 +80,17 @@ class SessionStore(private val context: Context) {
                     ),
                 )
             }
+            val titles = LinkedHashMap<String, String>()
+            obj.optJSONObject("titles")?.let { t ->
+                t.keys().forEach { k -> titles[k] = t.optString(k) }
+            }
             Snapshot(
                 sessionId = obj.optString("sessionId").takeIf { it.isNotBlank() && it != "null" },
                 cwd = obj.optString("cwd").takeIf { it.isNotBlank() && it != "null" },
                 model = obj.optString("model").takeIf { it.isNotBlank() && it != "null" },
                 effort = obj.optString("effort").takeIf { it.isNotBlank() && it != "null" },
                 lines = lines,
+                titles = titles,
             )
         }.getOrNull()
     }

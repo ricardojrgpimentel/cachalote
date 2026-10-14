@@ -73,3 +73,9 @@
       - id: deepseek-v4-flash
         name: DeepSeek-V4-Flash
         inputModalities: ["text", "image"]
+
+# O perfil ACP desliga a geração de títulos de sessão. É UMA chamada ao modelo no primeiro
+# prompt (o plugin por trás deste id é o `dsh-session-title-first-prompt-llm`) e é o que faz a
+# lista de sessões mostrar nomes em vez de "0d876415". Liga-se aqui, na nossa camada.
+- id: session-title-llm
+  disabled: false

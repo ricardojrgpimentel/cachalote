@@ -608,7 +608,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | Item | Estado | Nota |
 |---|---|---|
 | ~~**`cachalote doctor`**~~ | ✅ **feito em §30** | verifica ficheiros, chave, daemon, `oom_score_adj`, watchdog, canal, motor, app ponta a ponta, disco e registos; `exit=1` se houver problemas |
-| **Títulos de sessão** | por fazer | o perfil desliga `session-title-llm`; ligá-lo dá nomes às sessões em vez de `0d876415` |
+| **Títulos de sessão** | ✅ **feito em §31** | o motor gera mas **não expõe** no `session/list`; a app deriva o título do primeiro prompt (o do motor tem prioridade se vier) |
 | **LMK sob pressão real** | meio | `oom_score_adj` e watchdog feitos (§26); falta encher a RAM e ver o comportamento |
 | **Clique do ✕ na UI** | meio | o fecho funciona (ACPP medido); o teste de UI não acerta nas linhas do diálogo |
 | **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
@@ -1200,3 +1200,26 @@ resultado: tudo bem
 
 Pelo caminho ficou `cachalote ctl <método> [params]` — um cliente mínimo de controlo pelo socket
 unix, que é o que permite ao doctor perguntar o estado à ponte e às capacidades à app.
+
+
+---
+
+## 31. Títulos de sessão
+
+Ligámos o `session-title-llm` na nossa camada de patch (uma chamada ao modelo no primeiro prompt)
+e o motor arranca sem avisos — mas **o `session/list` não devolve título nenhum** (medido: todas
+as 54 sessões com `title` ausente), e a projecção interna guarda o registo numa forma que não
+expõe o evento de título.
+
+O que ficou, e é o que se vê na lista:
+
+| Peça | Como |
+|---|---|
+| Título | derivado do **primeiro prompt** da sessão (48 caracteres, sem custo de modelo) |
+| Onde vive | instantâneo por modo: `files/sessao-<modo>.json` → `titles` |
+| Prioridade | título do motor → título derivado → primeiros 8 caracteres do id |
+| Verificação | instantâneo com `{"e21e9a7e…": "explica-me o ceu azul em duas frases"}` |
+
+**Limite honesto:** a lista do diálogo começa nas sessões mais antigas (sem título, criadas antes
+disto), por isso não consegui ver a linha nova no ecrã — o que está provado é o que fica gravado e
+a ordem de preferência no código.

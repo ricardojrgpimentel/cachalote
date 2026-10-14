@@ -238,6 +238,9 @@ class EmbeddedEngine(private val ctx: Context) {
 # cachalote (modo embutido) — gerado pela app; não editar à mão.
 - id: otel
   disabled: true
+# Títulos de sessão (uma chamada no primeiro prompt) — a lista fica com nomes.
+- id: session-title-llm
+  disabled: false
 - id: session-telemetry-otel
   disabled: true
 - id: bash-sandbox
