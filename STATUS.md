@@ -1548,3 +1548,23 @@ descobriu ao ir lê-lo no instantâneo (corrigido).
 - **Consumo no cabeçalho:** a captura não foi possível (a automação de UI voltou a falhar no campo
   de escrita — o problema crónico que os testes na JVM vieram resolver); está coberto pelo
   `ConsumoTest` (2 testes Compose).
+
+
+---
+
+## 48. Identidade dos commits reescrita (noreply do GitHub)
+
+A pedido do autor: o histórico do repositório passou a ter **uma só identidade** —
+`Ricardo Pimentel <12200109+ricardojrgpimentel@users.noreply.github.com>` — para o email pessoal
+deixar de aparecer no repo (o perfil público pode continuar a mostrá-lo, é escolha dele).
+
+| | |
+|---|---|
+| Ferramenta | `git filter-repo --mailmap` (autor **e** committer; datas mantidas) |
+| Conteúdo | **inalterado** — árvore do novo `HEAD` idêntica (`d8f874de76c2`) |
+| Antes → depois | `main` `b9dd9e8` → `8cc2005` · tag `kernel-77fa6785a4e4` `ca28ace` → `a61db73` |
+| Segurança | clone *mirror* em `.work/backup-cachalote.git` + `--force-with-lease` contra o sha antigo |
+| Verificação | API do GitHub: **75/75** commits com a identidade nova; release e assets intactos |
+
+Novo commit de exemplo (já sem `ricardo@local`): `19d3216`. Instruções para o outro computador no
+[`PUBLICAR.md`](PUBLICAR.md) §2 (`git fetch origin && git reset --hard origin/main`).
