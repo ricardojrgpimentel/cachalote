@@ -28,6 +28,31 @@ O runtime que corre o motor é o **Node 24** compilado para Android, obtido dos 
 **Termux** (`nodejs-lts`) — ver [`tools/fetch-node-android.sh`](tools/fetch-node-android.sh).
 © OpenJS Foundation e contribuidores, MIT.
 
+## 3.1. Bibliotecas que viajam **dentro da APK** (modo sem root)
+
+O modo embutido põe o runtime Node e as suas dependências no `nativeLibraryDir` como `lib*.so`
+(`tools/prepare-embed.sh`, lista em `app/app/src/main/assets/embed-libs.txt`). Redistribuí-las
+obriga a manter a atribuição e a licença de **cada uma**:
+
+| Ficheiro na APK | Componente | Licença |
+|---|---|---|
+| `libnode.so` | Node.js 24.18.0 | MIT (© OpenJS Foundation e contribuidores) |
+| `libc++_shared.so` | LLVM libc++ | Apache-2.0 **com** LLVM exception |
+| `libssl_so_3.so`, `libcrypto_so_3.so` | OpenSSL 3 | Apache-2.0 |
+| `libicudata_so_78.so`, `libicui18n_so_78.so`, `libicuuc_so_78.so` | ICU 78 | Unicode License (Unicode-3.0) |
+| `libsqlite3.so` | SQLite | Domínio público |
+| `libz_so_1.so` | zlib | zlib licence |
+| `libcares.so` | c-ares | MIT |
+
+Vêm dos pacotes do Termux (`nodejs-lts`, `openssl`, `libicu`, `libsqlite`, `zlib`, `c-ares`,
+`libc++`) — ver [`tools/fetch-runtime.sh`](tools/fetch-runtime.sh), que procura os nomes no
+índice do repositório em vez de os fixar.
+
+**Pendente de cumprimento estrito:** as licenças Apache-2.0 pedem uma **cópia do texto** da
+licença e a retenção dos ficheiros `NOTICE` das obras redistribuídas. Hoje este ficheiro
+identifica e liga para os projectos; falta juntar os textos integrais numa pasta `licenses/`
+(ou num ecrã de licenças na app). É mecânico e está na lista de tarefas.
+
 ## 4. Termux — GPL-3.0 (apenas a proveniência dos binários)
 O binário de Node e as bibliotecas partilhadas vêm do repositório de pacotes do Termux. O
 Termux está sob GPL-3.0; aqui **não** redistribuímos código do Termux, apenas descarregamos
