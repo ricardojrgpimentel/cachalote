@@ -33,7 +33,7 @@ else
 fi
 
 echo "== 2. árvore (conteúdo que pareça segredo) =="
-padroes='-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}'
+padroes='-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-[A-Za-z0-9_-]{20,}|AQ\.[A-Za-z0-9_-]{30,}|AIza[0-9A-Za-z_-]{30,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}'
 achados=$(git grep -InE "$padroes" -- . ':!*.md' ':!tools/secret-scan.sh' 2>/dev/null | head -20 || true)
 if [ -n "$achados" ]; then
   echo "${VERMELHO}   [!] conteúdo suspeito:${FIM}"

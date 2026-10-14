@@ -1749,3 +1749,26 @@ cartão *Servidores MCP* da app (aceita `type: http` com cabeçalhos) e o agente
 **Por verificar:** a listagem das skills pelo agente — os turnos estão a falhar por transporte da
 API (`DeepSeek Messages transport failed`), portanto nada que precise de um turno pode ser provado
 agora.
+
+
+---
+
+## 59. Stitch MCP configurado — e a descoberta que explica tudo: o telefone está sem rede
+
+**Stitch:** o MCP é `https://stitch.googleapis.com/mcp` (remoto, cabeçalho `X-Goog-Api-Key`), com
+**15 ferramentas** de design (`generate_screen_from_text`, `edit_screens`, `generate_variants`,
+`create_design_system_from_design_md`, `apply_design_system`, `upload_design_md`…). Verifiquei a
+chave **da máquina** — `initialize` ok e as 15 ferramentas listadas — e gravei a configuração na app
+(com os cabeçalhos como **lista**, que é o que o ACP exige). O motor tentou montar e falhou com
+*"initial connection or tool synchronization failed"*.
+
+**A causa de fundo:** o **telefone está sem internet**. `ping 8.8.8.8` → *"Network is unreachable"*,
+todos os DNS → `ENOTFOUND`, e o sistema diz **"Active default network: none"** — com o Wi-Fi ligado e
+a interface móvel com IP (10.3.208.136), mas sem rota por omissão. Isto explica **todas** as falhas
+de hoje: os turnos (*"DeepSeek Messages transport failed"*) e o MCP.
+
+**A chave da DeepSeek não precisa de ser reenviada:** o ficheiro está intacto (53 bytes, modo 600,
+14/10 10:09). O erro era de transporte, não de autenticação.
+
+**Hardening:** o `tools/secret-scan.sh` passou a reconhecer os formatos de chave da Google
+(`AQ.…`, `AIza…`).

@@ -1596,3 +1596,43 @@ todos invisíveis no dia-a-dia do modo root:
 - **As skills do Stitch precisam do MCP do Stitch** para gerar de facto (é um MCP **remoto**:
   URL + credenciais, obtidos em <https://stitch.withgoogle.com/docs/mcp/setup/>).
 - **Origem:** **[LOCAL]**.
+
+### 128. Quando tudo o que é rede falha, testa a rede do telefone primeiro
+- **O sintoma:** os turnos falhavam com *"DeepSeek Messages transport failed"* e o MCP do Stitch com
+  *"mcp-client(stitch): initial connection or tool synchronization failed"*. Passei horas a culpar a
+  API e a configuração do MCP.
+- **A causa real:** o **telefone estava sem rede**. `ping 8.8.8.8` → *"Network is unreachable"*,
+  todos os DNS → `ENOTFOUND`, e `dumpsys connectivity` dizia **"Active default network: none"** —
+  com o Wi-Fi *ligado* e a interface móvel (`rmnet0`, 10.3.208.136) com IP, mas sem rota por omissão.
+- **Como se diagnostica em 20 segundos** (e devia ter sido o primeiro passo):
+
+  ```sh
+  adb shell 'ping -c 2 -W 2 8.8.8.8'          # sem DNS à mistura: é IP puro
+  adb shell 'dumpsys connectivity | grep -m1 "Active default network"'
+  ```
+  E, para ver da perspectiva do motor (root, com o nosso Node):
+  `node -e 'fetch("https://api.deepseek.com/").then(r=>console.log(r.status)).catch(e=>console.log(e.message))'`.
+- **Lição:** um erro de *transporte* não é um erro de chave nem de configuração. Antes de mexer no
+  que quer que seja, confirmar que o telefone tem internet.
+- **Correcção do lado do projecto:** o `tools/secret-scan.sh` passou a conhecer também os formatos
+  de chave da Google (`AQ.…`, `AIza…`).
+- **Origem:** **[LOCAL]**.
+
+### 129. Stitch MCP: configurado e verificado (falta só rede)
+- **O que é:** MCP **remoto** da Google — `https://stitch.googleapis.com/mcp`, autenticado por
+  cabeçalho `X-Goog-Api-Key`. Tem **15 ferramentas** e é exactamente o que faltava para desenhar:
+  `create_project`, `generate_screen_from_text`, `edit_screens`, `generate_variants`, `list_screens`,
+  `get_screen`, `upload_design_md`, `create_design_system_from_design_md`, `apply_design_system`…
+- **Verificação directa (da máquina, não do telefone):** `initialize` respondeu
+  (`serverInfo: StatelessServer`, protocolo 2024-11-05) e `tools/list` devolveu as 15. A chave é boa.
+- **Como se configura no Cachalote:** no cartão *Servidores MCP*, em JSON. ⚠️ O ACP quer os
+  cabeçalhos como **lista de entradas**, não como objecto:
+
+  ```json
+  [{"name":"stitch","type":"http","url":"https://stitch.googleapis.com/mcp",
+    "headers":[{"name":"X-Goog-Api-Key","value":"AQ.…"}]}]
+  ```
+- **Estado:** gravado na app; o motor **tentou montar** e falhou apenas por falta de rede do
+  telefone (ver item 128). A chave fica **só nas preferências da app** — não vai para o repositório e
+  o `secret-scan` já a sabe reconhecer.
+- **Origem:** **[LOCAL]**.
