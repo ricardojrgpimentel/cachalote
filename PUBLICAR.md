@@ -153,3 +153,38 @@ este portátil se perder e não houver cópia, quem tem a app instalada fica sem
 **Nota de segurança:** a password por omissão está escrita no `build-release.sh` (é pública). Serve
 para desenvolvimento; se a chave for parar a mãos erradas, quem a tiver assina como "Cachalote" com
 a password por omissão. Muda-a e guarda-a.
+
+### Como fazes a cópia (comando)
+
+```sh
+# 1. no portátil — cria uma cópia cifrada (usa uma frase tua, boa):
+CACHALOTE_BACKUP_PASS='a-tua-frase-boa' ./tools/backup-signing-key.sh --criar
+#    → cachalote-chave.jks.enc
+
+# 2. confirma o que tens de guardar a par do ficheiro (password e SHA-256 do certificado):
+./tools/backup-signing-key.sh --verificar
+
+# 3. no outro computador, depois de clonar o repositório:
+CACHALOTE_BACKUP_PASS='a-tua-frase-boa' ./tools/backup-signing-key.sh --restaurar ~/cachalote-chave.jks.enc
+./tools/build-release.sh          # constrói e mostra o SHA-256 do certificado — compara com o guardado
+```
+
+O ficheiro `.jks` **não** está no repositório (é um segredo — o `secret-scan` recusa que entre):
+a cópia é apenas a que fizeres. **Se se perder**, uma app já instalada deixa de aceitar
+actualizações — porque só aceita a mesma assinatura — e quem a tem tem de desinstalar e reinstalar.
+A keystore é válida até **2054**, portanto isto é para décadas.
+
+Para verificar uma cópia restaurada, compara o **SHA-256 do certificado** (não o do ficheiro: a
+keystore pode ser regravada com os mesmos dados e mudar de bytes):
+
+```
+Alias: cachalote · válido até 2054
+Certificado SHA-256: 881b04b0c38746eda8c61da319b99f65bb39364c01884862857a1f29895931a9
+```
+
+Opcional: mudar a password por omissão (que está escrita no `build-release.sh`, logo é pública):
+
+```sh
+keytool -storepasswd -keystore .work/cachalote-release.jks    # depois usa CACHALOTE_STORE_PASS
+```
+
