@@ -324,10 +324,34 @@ Comandos: `cachalote web-start | web-stop | web-status | web-url`.
 consegues actualizar uma app já instalada (assinaturas diferentes não se sobrepõem). Para
 instalar por cima da versão de debug é preciso desinstalar primeiro.
 
-### O que ainda falta (trabalho futuro, não bloqueia o uso)
+### O que ainda falta — actualizado em 2026-10-14
 
-| Tema | Nota |
+A tabela anterior (de §11) tinha linhas que o trabalho seguinte resolveu. Fica a versão verdadeira:
+
+| Tema | Estado |
 |---|---|
+| Confinamento do bash | ✅ feito (§12): guarda de caminhos + aprovação no telefone |
+| Flavors (embutido e Shizuku) | ✅ **feitos** — embutido (§15), Shizuku (§17) e kernel por download (§24) |
+| Onboarding | ✅ em essência: *Primeiros passos* no separador Estado, com botão **Verificar** (não é um assistente de 9 passos) |
+| Anexos e voz | ✅ feitos: imagens no prompt (§23.2) e ditado por voz |
+| SEA + snapshot V8 | ✅ medido e rejeitado (não ganha nada — § item 4) |
+
+**O que falta mesmo:**
+
+| Item | Nota |
+|---|---|
+| **`bootstrap.sh` completo** (daemon + app, do zero) | o teste real foi com `--skip-daemon --skip-app`; nunca se correu o caminho inteiro. É o que prova "instalar num telemóvel novo" |
+| **Instalar a árvore a partir do npm** | o daemon corre a árvore derivada do `app.asar` do desktop; falta provar a do npm (é a que o bootstrap usa). Falta também **gravar a origem** (não há marca no telefone — não se sabe dizer de onde veio) |
+| **Repositório público** | depende do autor (`PUBLICAR.md`); a release está pronta |
+| **Fila de tarefas** | lançar trabalho e ser avisado; a notificação de autorização (§47) foi o primeiro passo |
+| **Modo seguro** | decisão de produto: as ferramentas passarem todas pela ponte (lista de caminhos imposta) em vez de `bash` como root |
+| **vscreen persistente** | hoje vive dentro da app (fechá-la, fecha-o); passar para o daemon é trabalho médio |
+| **Títulos do motor** | os títulos existem no motor mas não chegam ao `session/list`; investigar o formato da projecção |
+| **Documento de arquitectura** | o README e o PLANO explicam muito, mas está espalhado |
+| **Re-verificar o flavor Shizuku no aparelho** | o plano diz que foi verificado numa sessão anterior; nesta não foi repetido |
+| **Cópia de segurança da chave de assinatura** | `.work/cachalote-release.jks` não é versionada: sem ela não se actualiza a app instalada |
+
+---|---|
 | ~~**Confinamento do bash**~~ | ✅ **feito** (ver §12): guarda de caminhos + aprovação no telefone, verificada A/B (aprovar → corre; recusar → bloqueado). |
 | **Flavors** | O núcleo do flavor "in-app" está **provado** (`libnode.so` executa com targetSdk 35, ver §12); falta empacotar a árvore do kernel na APK e o modo de arranque em processo. O flavor Shizuku continua por fazer. |
 | **Onboarding** | A app já guia token/acessibilidade/capacidades, mas não tem um fluxo de primeira execução (9 passos de permissões, como faz o projecto de referência). |
