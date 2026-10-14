@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -39,12 +40,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -360,22 +369,65 @@ private fun AjustesScreen(vm: MainViewModel) {
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
                 Column(modifier = Modifier.padding(8.dp)) {
+                    Etiqueta(stringResource(R.string.ajustes_titulo), Modifier.padding(start = 8.dp, top = 8.dp))
                     Text(
-                        stringResource(R.string.ajustes_titulo),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
+                        stringResource(R.string.ajustes_modulos, 8),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
                     )
-                    LinhaDeMenu(stringResource(R.string.motor), stringResource(R.string.motor_detalhe)) { secao = "motor" }
-                    LinhaDeMenu(stringResource(R.string.chave_provedor), stringResource(R.string.chave_detalhe)) { secao = "provedor" }
-                    LinhaDeMenu(stringResource(R.string.capacidades_titulo)) { secao = "capacidades" }
-                    LinhaDeMenu(stringResource(R.string.acessibilidade)) { secao = "acessibilidade" }
-                    LinhaDeMenu(stringResource(R.string.areas_bash)) { secao = "areas" }
-                    LinhaDeMenu(stringResource(R.string.mcp_titulo)) { secao = "mcp" }
-                    LinhaDeMenu(stringResource(R.string.vscreen_titulo)) { secao = "vscreen" }
-                    LinhaDeMenu(stringResource(R.string.backup_e_licencas)) { secao = "backup" }
-                    LinhaDeMenu(stringResource(R.string.wizard_repetir)) { vm.repetirWizard() }
+                    LinhaDeMenu(stringResource(R.string.motor), stringResource(R.string.motor_detalhe), Icons.Filled.Memory) { secao = "motor" }
+                    LinhaDeMenu(stringResource(R.string.chave_provedor), stringResource(R.string.chave_detalhe), Icons.Filled.Key) { secao = "provedor" }
+                    LinhaDeMenu(stringResource(R.string.capacidades_titulo), null, Icons.Filled.Tune) { secao = "capacidades" }
+                    LinhaDeMenu(stringResource(R.string.acessibilidade), null, Icons.Filled.Accessibility) { secao = "acessibilidade" }
+                    LinhaDeMenu(stringResource(R.string.areas_bash), null, Icons.Filled.Terminal) { secao = "areas" }
+                    LinhaDeMenu(stringResource(R.string.mcp_titulo), null, Icons.Filled.Hub) { secao = "mcp" }
+                    LinhaDeMenu(stringResource(R.string.vscreen_titulo), null, Icons.Filled.PhoneAndroid) { secao = "vscreen" }
+                    LinhaDeMenu(stringResource(R.string.backup_e_licencas), null, Icons.Filled.Backup) { secao = "backup" }
+                }
+            }
+
+            // Repetir o assistente fica fora da lista, destacado (como no design).
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                LinhaDeMenu(
+                    stringResource(R.string.wizard_repetir),
+                    stringResource(R.string.ajustes_repetir_detalhe),
+                    Icons.Filled.RestartAlt,
+                ) { vm.repetirWizard() }
+            }
+
+            // O aviso de perigo, em cartão próprio (o «PERIGO» do design).
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Etiqueta(stringResource(R.string.perigo), Modifier.weight(1f))
+                    }
+                    Text(
+                        stringResource(R.string.aviso_root),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -1148,11 +1200,25 @@ private fun LicensesDialog(vm: MainViewModel) {
     )
 }
 
-/** Uma linha do menu de ajustes: o nome da secção, um detalhe opcional e um chevron. */
+/** Uma linha do menu de ajustes: ícone, nome da secção, detalhe opcional e um chevron. */
 @Composable
-private fun LinhaDeMenu(titulo: String, detalhe: String? = null, onClick: () -> Unit) {
+private fun LinhaDeMenu(
+    titulo: String,
+    detalhe: String? = null,
+    icone: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    onClick: () -> Unit,
+) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            if (icone != null) {
+                Icon(
+                    icone,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.size(12.dp))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(titulo, fontWeight = FontWeight.SemiBold)
                 if (detalhe != null) {

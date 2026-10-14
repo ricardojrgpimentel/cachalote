@@ -13,6 +13,8 @@
     <string name="acessibilidade_caiu">a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)</string>
     <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
     <string name="acesso">Acesso</string>
+    <string name="ajustes_modulos">%1$d módulos configurados</string>
+    <string name="ajustes_repetir_detalhe">Voltar a correr o assistente de boas-vindas</string>
     <string name="ajustes_titulo">Ajustes</string>
     <string name="anexar">Anexar</string>
     <string name="anexar_imagem">Anexar imagem</string>
@@ -56,6 +58,9 @@
     <string name="fila_juntar">Juntar à fila</string>
     <string name="fila_limpar">Limpar concluídas</string>
     <string name="fila_parar">Parar a fila</string>
+    <string name="fila_falhada">falhada</string>
+    <string name="fila_feita">feita</string>
+    <string name="fila_pendente">pendente</string>
     <string name="fila_quantas">%1$d na fila</string>
     <string name="fila_texto">Escreve uma tarefa e toca em «Juntar à fila»: o agente corre-as uma a seguir à outra e avisa-te no fim de cada uma. Se precisar de autorização, fica à espera — e avisa-te.</string>
     <string name="fila_titulo">Fila de tarefas</string>
@@ -106,6 +111,7 @@
     <string name="obter_token">Obter token (root)</string>
     <string name="parar">Parar</string>
     <string name="parar_turno">Parar</string>
+    <string name="perigo">Perigo</string>
     <string name="placeholder_areas">/sdcard/Download</string>
     <string name="placeholder_mcp">[{"name":"…","command":"/caminho/absoluto"}]</string>
     <string name="placeholder_url">https://…/kernel.zip</string>
@@ -115,6 +121,20 @@
     <string name="reiniciar_motor">Reiniciar motor</string>
     <string name="remover">Remover</string>
     <string name="remover_chave">Remover chave</string>
+    <string name="resumo_consumo">Consumo e sessão</string>
+    <string name="resumo_diagnostico">Diagnóstico</string>
+    <string name="resumo_embutido">No modo embutido não há daemon para diagnosticar: o motor corre dentro da app e o sandbox do Android é o limite.</string>
+    <string name="resumo_nao_verifiquei">ainda não verifiquei — toca em Verificar</string>
+    <string name="resumo_por_fazer">%1$d por fazer</string>
+    <string name="resumo_resultado">%1$d problema(s) · %2$d aviso(s) · %3$s</string>
+    <string name="resumo_sem_numeros">sem números ainda — o motor só os manda depois de um turno</string>
+    <string name="resumo_tokens">tokens</string>
+    <string name="resumo_verde">tudo o resto está verde (%1$d secções verificadas)</string>
+    <string name="rotulo_esforco">esforço</string>
+    <string name="rotulo_fila">fila de tarefas</string>
+    <string name="rotulo_imagens">imagens anexadas</string>
+    <string name="rotulo_modelo">modelo</string>
+    <string name="rotulo_sessao">sessão</string>
     <string name="root_concedido">concedido</string>
     <string name="root_desconhecido">?</string>
     <string name="root_negado">negado</string>

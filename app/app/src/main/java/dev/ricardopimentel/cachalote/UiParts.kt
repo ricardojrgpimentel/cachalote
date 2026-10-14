@@ -1,11 +1,19 @@
 package dev.ricardopimentel.cachalote
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
@@ -233,3 +241,102 @@ fun LicensesBody(
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Peças do design (Stitch): micro-etiquetas, chips, barras e linhas de tabela. Ficam aqui para o
+// Resumo, os Ajustes e a Chave falarem a mesma língua visual — era o que faltava da auditoria de
+// 2026-10-14 (o tema estava aplicado, os ecrãs não).
+
+/** Micro-etiqueta em maiúsculas com tracking — o rótulo do design («RESUMO DA APP»). */
+@Composable
+fun Etiqueta(texto: String, modifier: Modifier = Modifier) {
+    Text(
+        texto.uppercase(),
+        modifier = modifier,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.secondary,
+        letterSpacing = 1.sp,
+    )
+}
+
+/** Pill pequeno com contorno subtil — o «ON-DEVICE» / «HTTPS ONLY» do design. */
+@Composable
+fun Chip(texto: String, cor: Color = MaterialTheme.colorScheme.secondary) {
+    Text(
+        texto.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = 1.sp,
+        color = cor,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
+/** Barra fina de progresso, 0..100 (o consumo de contexto do design). */
+@Composable
+fun BarraDeProgresso(percentagem: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(percentagem.coerceIn(0, 100) / 100f)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+        )
+    }
+}
+
+/** Linha rótulo/valor: rótulo discreto à esquerda, valor em monospace à direita. */
+@Composable
+fun LinhaValor(rotulo: String, valor: String, cor: Color? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            rotulo,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            valor,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = cor ?: Color.Unspecified,
+        )
+    }
+}
+
+/** Linha de verificação: ✓ / ⚠ / ✕, o texto e (quando há) o valor técnico em monospace. */
+@Composable
+fun LinhaVerificacao(texto: String, estado: String, valor: String = "") {
+    val cor = when (estado) {
+        "ok" -> MaterialTheme.colorScheme.primaryContainer
+        "aviso" -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.error
+    }
+    val glifo = when (estado) {
+        "ok" -> "\u2713"
+        "aviso" -> "\u26A0"
+        else -> "\u2715"
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+        Text(glifo, color = cor, modifier = Modifier.width(22.dp))
+        Text(texto, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        if (valor.isNotBlank()) {
+            Text(
+                valor,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    }
+}
+

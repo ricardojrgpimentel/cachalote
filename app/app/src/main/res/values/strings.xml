@@ -13,6 +13,8 @@
     <string name="acessibilidade_caiu">accessibility turned off: the agent lost its eyes and fingers on the screen (Settings → Accessibility → Cachalote)</string>
     <string name="acessibilidade_voltou">accessibility is back on</string>
     <string name="acesso">Access</string>
+    <string name="ajustes_modulos">%1$d modules configured</string>
+    <string name="ajustes_repetir_detalhe">Run the welcome wizard again</string>
     <string name="ajustes_titulo">Settings</string>
     <string name="anexar">Attach</string>
     <string name="anexar_imagem">Attach image</string>
@@ -56,6 +58,9 @@
     <string name="fila_juntar">Add to queue</string>
     <string name="fila_limpar">Clear finished</string>
     <string name="fila_parar">Stop the queue</string>
+    <string name="fila_falhada">failed</string>
+    <string name="fila_feita">done</string>
+    <string name="fila_pendente">pending</string>
     <string name="fila_quantas">%1$d in the queue</string>
     <string name="fila_texto">Write a task and tap «Add to queue»: the agent runs them one after another and notifies you at the end of each. If it needs approval it waits — and tells you.</string>
     <string name="fila_titulo">Task queue</string>
@@ -106,6 +111,7 @@
     <string name="obter_token">Get token (root)</string>
     <string name="parar">Stop</string>
     <string name="parar_turno">Stop</string>
+    <string name="perigo">Danger</string>
     <string name="placeholder_areas">/sdcard/Download</string>
     <string name="placeholder_mcp">[{"name":"…","command":"/absolute/path"}]</string>
     <string name="placeholder_url">https://…/kernel.zip</string>
@@ -115,6 +121,20 @@
     <string name="reiniciar_motor">Restart engine</string>
     <string name="remover">Remove</string>
     <string name="remover_chave">Remove key</string>
+    <string name="resumo_consumo">Consumption and session</string>
+    <string name="resumo_diagnostico">Diagnostics</string>
+    <string name="resumo_embutido">In embedded mode there is no daemon to diagnose: the engine runs inside the app and the Android sandbox is the limit.</string>
+    <string name="resumo_nao_verifiquei">not checked yet — tap Check</string>
+    <string name="resumo_por_fazer">%1$d to do</string>
+    <string name="resumo_resultado">%1$d problem(s) · %2$d warning(s) · %3$s</string>
+    <string name="resumo_sem_numeros">no numbers yet — the engine only sends them after a turn</string>
+    <string name="resumo_tokens">tokens</string>
+    <string name="resumo_verde">everything else is green (%1$d sections checked)</string>
+    <string name="rotulo_esforco">effort</string>
+    <string name="rotulo_fila">task queue</string>
+    <string name="rotulo_imagens">attached images</string>
+    <string name="rotulo_modelo">model</string>
+    <string name="rotulo_sessao">session</string>
     <string name="root_concedido">granted</string>
     <string name="root_desconhecido">?</string>
     <string name="root_negado">denied</string>

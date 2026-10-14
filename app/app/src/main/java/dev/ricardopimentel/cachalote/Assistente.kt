@@ -131,17 +131,6 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
     }
 }
 
-/** Micro-etiqueta em maiúsculas com tracking — o rótulo do design («PASSO 2 DE 6»). */
-@Composable
-private fun Etiqueta(texto: String) {
-    Text(
-        texto.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.secondary,
-        letterSpacing = 1.sp,
-    )
-}
-
 /** Barra de progresso segmentada: um segmento por passo, os já feitos a teal. */
 @Composable
 private fun ProgressoPassos(atual: Int, total: Int) {

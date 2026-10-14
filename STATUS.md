@@ -1843,8 +1843,46 @@ com contorno, linhas de benefício com visto, nota de rodapé, botão principal 
 [`design/app/assistente-novo-1.png`](design/app/assistente-novo-1.png) e
 [`design/app/assistente-novo-2.png`](design/app/assistente-novo-2.png).
 
-**Fica por fazer** (mesmo sistema visual, já com o desenho em mão): o menu dos Ajustes (ícones,
-linha de detalhe e chevron + cartão de perigo), o **Resumo** (tabela do `doctor` com valores em
-monospace e o consumo em número grande) e o ecrã da **Chave** (botão principal a toda a largura +
-cartão de privacidade), mais os cartões de ferramenta na conversa.
+**Fica por fazer** (mesmo sistema visual, já com o desenho em mão): o ecrã da **Chave** (botão
+principal a toda a largura + cartão de privacidade) e os **cartões de ferramenta na conversa**.
+
+---
+
+## 62. O design, parte 2: o menu dos Ajustes e o Resumo — e a acessibilidade de volta
+
+Feito a seguir à §61, com os desenhos de 3 abas que o Stitch gerou
+([`design/ecras/ajustes-3abas.png`](design/ecras/ajustes-3abas.png),
+[`design/ecras/resumo-3abas.png`](design/ecras/resumo-3abas.png)).
+
+**Peças novas, partilhadas** ([`UiParts.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/UiParts.kt)):
+`Etiqueta` (micro-etiqueta em maiúsculas com tracking), `Chip` (o «ON-DEVICE»/«HTTPS ONLY»),
+`BarraDeProgresso` e `LinhaValor`/`LinhaVerificacao` (a tabela com o valor em monospace à direita).
+São estas que fazem o Resumo, os Ajustes e (a seguir) a Chave falarem a mesma língua.
+
+**Menu dos Ajustes:** cartão com contorno, etiqueta «AJUSTES» e «8 módulos configurados», **um ícone
+por secção** (Motor, Chave, Capacidades, Acessibilidade, Áreas, MCP, Ecrã virtual, Backup), a linha
+**«Repetir a configuração inicial» destacada** fora da lista e um cartão **PERIGO** com o aviso do
+root — como no desenho. Visto no telefone:
+[`design/app/ajustes-menu-3abas.png`](design/app/ajustes-menu-3abas.png) e
+[`design/app/ajustes-menu-perigo.png`](design/app/ajustes-menu-perigo.png).
+
+**Resumo:** número grande em monospace com a barra de consumo e a percentagem em chip, as linhas
+rótulo/valor (sessão, modelo, esforço, fila, imagens anexadas), o **diagnóstico do `doctor` como
+tabela** — todas as verificações, com ✓/⚠/✕ e o valor técnico à direita — e a **fila de tarefas**
+em cartão. Visto no telefone: [`design/app/resumo-doctor.png`](design/app/resumo-doctor.png).
+
+**Um efeito secundário da reinstalação, apanhado pelo `doctor`:** o serviço de **acessibilidade
+tinha ficado desligado** (`enabled_accessibility_services` = `null` — a desinstalação leva o
+registo). Voltei a ligá-lo com root
+(`settings put secure enabled_accessibility_services dev.ricardopimentel.cachalote/dev.ricardopimentel.cachalote.CachaloteAccessibilityService`)
+e confirmei no `dumpsys accessibility` que está *bound*.
+
+**Strings:** mais 20 chaves nos dois idiomas (fila com estado, rótulos do resumo, módulos, perigo) —
+i18n verde: **201 chaves iguais**, 176 usadas. Verificação no aparelho depois do redesenho:
+3 abas + 8 secções + assistente → **0 crashes**.
+
+**Fica por fazer:** o ecrã da **Chave** (etiqueta «SISTEMA LOCAL E CREDENCIAIS», chip «HTTPS ONLY»,
+botão principal a toda a largura e o cartão de privacidade) e os **cartões de ferramenta na
+conversa** (estado «a correr»/«concluído», payload em monospace, a linha de telemetria do turno).
+
 
