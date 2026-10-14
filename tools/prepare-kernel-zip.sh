@@ -17,9 +17,8 @@
 # Ver STATUS §22.6.
 set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+# O dispositivo só é necessário para --push (empacotar/bundle não precisa de telemóvel).
 . "$WS/tools/lib-device.sh"
-DEV="$(cachalote_escolher_dispositivo)" || exit 1
 PKG="dev.ricardopimentel.cachalote"
 SRC="$WS/.work/f0/kernel"
 OUT="$WS/.work/kernel.zip"
@@ -52,6 +51,7 @@ if [ "${1:-}" = "--bundle" ]; then
 fi
 
 if [ "${1:-}" = "--push" ]; then
+  DEV="$(cachalote_escolher_dispositivo "${DEV:-}")" || exit 1
   echo "== a enviar para o armazenamento privado da app =="
   adb -s "$DEV" push "$OUT" /data/local/tmp/kernel.zip >/dev/null
   adb -s "$DEV" shell "su -c 'cp /data/local/tmp/kernel.zip /data/data/$PKG/files/kernel.zip && chown \$(stat -c %u:%g /data/data/$PKG/files) /data/data/$PKG/files/kernel.zip && ls -l /data/data/$PKG/files/kernel.zip'"

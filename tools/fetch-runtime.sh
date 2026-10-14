@@ -20,9 +20,9 @@
 # arquitecturas, por isso o caminho é o mesmo — só muda o índice do repositório.
 set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-# O dispositivo vem de --device/CACHALOTE_DEV ou é autodetectado (nunca fixo no repo).
+# O dispositivo (para --from-device) resolve-se só quando é preciso: este script também corre
+# sem telemóvel nenhum (a CI descarrega os pacotes do Termux, por exemplo).
 . "$WS/tools/lib-device.sh"
-DEV="$(cachalote_escolher_dispositivo)" || exit 1
 REPO="https://packages.termux.dev/apt/termux-main"
 TERMUX_PREFIX_IN_DEB="data/data/com.termux/files/usr"
 ARCH="aarch64"
@@ -55,6 +55,7 @@ if [ "$MODE" = "dir" ]; then
   rm -rf "$OUT"; mkdir -p "$OUT/root/$TERMUX_PREFIX_IN_DEB"
   cp -R "$DIR/." "$OUT/root/$TERMUX_PREFIX_IN_DEB/"
 elif [ "$MODE" = "device" ]; then
+  DEV="$(cachalote_escolher_dispositivo "${DEV:-}")" || exit 1
   echo "== a tirar o Node do Termux do telemóvel $DEV =="
   command -v adb >/dev/null || { echo "ERRO: preciso do adb"; exit 1; }
   rm -rf "$OUT"; mkdir -p "$OUT/root/$TERMUX_PREFIX_IN_DEB"
@@ -124,7 +125,12 @@ for deb in sorted(os.listdir(os.path.join(out, "debs"))):
                 member.name = name
                 if not name.startswith(prefix + "/"):
                     continue
-                tar.extract(member, root, filter="data")
+                # `filter="data"` só existe no Python 3.12+: em sistemas mais antigos extrai-se
+                # sem ele (o conteúdo destes pacotes é de confiança — vêm do repositório do Termux).
+                try:
+                    tar.extract(member, root, filter="data")
+                except TypeError:
+                    tar.extract(member, root)
         print(f"   extraído {deb}")
 PYEXTRACT
   # O `node` do Termux vem com o caminho do prefixo gravado; nada a fazer (o daemon define

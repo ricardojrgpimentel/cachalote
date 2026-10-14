@@ -1272,3 +1272,18 @@ diferentes, e tratá-los como iguais era o erro:
   fuga — é o dono a morrer com a coisa. Para o agente, a app tem de estar a correr (o serviço em
   primeiro plano é o que a mantém viva em segundo plano).
 - **Origem:** **[LOCAL]**.
+
+### 106. Um requisito de dispositivo a mais parte a CI
+- **Sintoma:** o job `apk` da CI passou a falhar em `fetch-runtime.sh` com
+  *"nenhum dispositivo ligado (adb devices vazio)"* — num runner que, por definição, não tem
+  telemóvel.
+- **Causa:** ao introduzir o `tools/lib-device.sh` (para tirar o serial do repo), pus a resolução
+  do dispositivo no **topo** de todos os scripts. O `fetch-runtime.sh` só precisa dele com
+  `--from-device`, e o `prepare-kernel-zip.sh` só com `--push`.
+- **Correcção:** resolver o dispositivo **só no ramo que usa adb**. Verificado com
+  `env PATH=/usr/bin:/bin bash tools/fetch-runtime.sh` (sem adb nenhum).
+- **Bónus apanhado na mesma simulação:** `tar.extract(..., filter="data")` só existe no Python
+  3.12+; passou a ter alternativa, senão o mesmo script falharia em máquinas com Python antigo.
+- **Lição:** um requisito novo (mesmo "higiénico", como tirar o serial) tem de ser testado no
+  caminho mais restrito onde o script corre — a CI é esse sítio.
+- **Origem:** **[LOCAL]**.
