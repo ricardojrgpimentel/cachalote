@@ -58,6 +58,17 @@ A marca existe em dois formatos: **raster** (`marca.png`, para o ícone, onde o 
 Stitch desenha em SVG, e isso está à vista em `folha-de-marca.html`. O mesmo path está em
 `app/app/src/main/res/drawable/ic_marca.xml` (o cabeçalho da app usa-o).
 
+**Uma só marca.** Numa primeira versão o ícone do lançador e a marca dentro da app saíram de dois
+desenhos diferentes (o ecrã do ícone e a folha de marca) — e notava-se. Agora o `marca.svg` é a
+fonte única: o raster deriva-se dele e o ícone deriva-se do raster.
+
+```sh
+./tools/make-logo-png.sh     # marca.svg → design/logo/marca.png (vector → raster)
+```
+
+(Duas manhas do ImageMagick, necessárias e documentadas no script: não resolve `currentColor` nem
+desenha `<line>` com `stroke`.)
+
 O ícone da app é gerado dela:
 
 ```sh
