@@ -276,6 +276,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     var kernelUrlText by mutableStateOf("")
     var mcpJsonText by mutableStateOf("")
+    var vscreenInfo by mutableStateOf("")
+    var vscreenRunning by mutableStateOf(false)
+    var vscreenBitmap by mutableStateOf<android.graphics.Bitmap?>(null)
+
+    /** Ecrã virtual: iniciar, parar, estado e ver o fotograma actual. */
+    fun vscreenStart() = run("ecrã virtual") {
+        val r = capsExecute("vscreen_start", org.json.JSONObject().put("width", 720).put("height", 1280).put("density", 320))
+        vscreenRunning = r.optBoolean("running")
+        vscreenInfo = "display ${r.optInt("displayId")} · ${r.optInt("width")}×${r.optInt("height")} @${r.optInt("density")} dpi"
+        transcript.add(ChatLine("system", "ecrã virtual iniciado: $vscreenInfo — põe apps lá com bash: am start --display ${r.optInt("displayId")} -n <pkg>/<activity>"))
+    }
+
+    fun vscreenStop() = run("ecrã virtual") {
+        capsExecute("vscreen_stop", org.json.JSONObject())
+        vscreenRunning = false
+        vscreenBitmap = null
+        vscreenInfo = "parado"
+    }
+
+    /** Pede um fotograma e guarda-o para o mostrar no ecrã (não vai para o contexto do modelo). */
+    fun vscreenRefresh() = run("ecrã virtual") {
+        val r = capsExecute("vscreen_frame", org.json.JSONObject().put("maxWidth", 540))
+        val bytes = android.util.Base64.decode(r.optString("data"), android.util.Base64.NO_WRAP)
+        vscreenBitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        vscreenRunning = true
+        vscreenInfo = "display ${r.optInt("displayId")} · ${r.optInt("width")}×${r.optInt("height")} · ${r.optInt("bytes") / 1024} KB"
+    }
+
+    /** Chama uma capacidade da app localmente (o mesmo caminho que o agente usa). */
+    private suspend fun capsExecute(capability: String, params: org.json.JSONObject): org.json.JSONObject =
+        controller.capability(capability, params)
+
     var mcpSaved by mutableStateOf("")
 
     /** Grava a lista de servidores MCP (JSON do ACP) que vai em cada sessão nova. */

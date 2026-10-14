@@ -1259,3 +1259,16 @@ diferentes, e tratá-los como iguais era o erro:
 - **Cuidado:** um ecrã virtual a correr produz fotogramas continuamente; parar (`vscreen_stop`)
   quando acaba, ou fica a consumir memória/bateria.
 - **Origem:** **[LOCAL]**.
+
+### 105. Pré-visualização do ecrã virtual na própria app
+- **O que se fez:** cartão *Ecrã virtual* no separador Poderes com `Iniciar`, `Ver fotograma`,
+  `Parar`, o estado (`display 2 · 540×960 · 51 KB`) e a **imagem do último fotograma** desenhada
+  em Compose a partir do PNG que a capacidade devolve. A app chama a capacidade pelo mesmo
+  caminho que o agente usa (`controller.capability(...)`), o que serve de teste ao próprio canal.
+- **Verificação:** com o ecrã virtual criado pelo botão (display 2) e a calculadora lançada lá,
+  o fotograma aparece no cartão — [`docs/screenshots/app-ecra-virtual.png`](../docs/screenshots/app-ecra-virtual.png).
+- **Nota de arquitectura:** o ecrã virtual vive **dentro do processo da app**; se a app for
+  fechada, ele desaparece (verificado: `dumpsys display` fica sem `cachalote-vscreen`). Não é uma
+  fuga — é o dono a morrer com a coisa. Para o agente, a app tem de estar a correr (o serviço em
+  primeiro plano é o que a mantém viva em segundo plano).
+- **Origem:** **[LOCAL]**.

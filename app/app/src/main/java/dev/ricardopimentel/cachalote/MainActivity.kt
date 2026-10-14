@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -480,6 +483,35 @@ private fun CapabilitiesScreen(vm: MainViewModel) {
                     maxLines = 2,
                 )
                 OutlinedButton(onClick = { vm.saveKernelUrl() }, enabled = !vm.busy) { Text("Gravar URL") }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Ecrã virtual", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Uma segunda tela onde o agente trabalha sem mexer no teu ecrã. Põe apps lá com " +
+                        "bash: am start --display <id> -n <pkg>/<activity>; toca com input -d <id>. " +
+                        "Vive dentro desta app: se ela for fechada, o ecrã virtual desaparece.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { vm.vscreenStart() }, enabled = !vm.busy) { Text("Iniciar") }
+                    OutlinedButton(onClick = { vm.vscreenRefresh() }, enabled = !vm.busy) { Text("Ver fotograma") }
+                    OutlinedButton(onClick = { vm.vscreenStop() }, enabled = !vm.busy) { Text("Parar") }
+                }
+                if (vm.vscreenInfo.isNotBlank()) {
+                    Text(vm.vscreenInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                }
+                vm.vscreenBitmap?.let { bmp ->
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "fotograma do ecrã virtual",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
             }
         }
 

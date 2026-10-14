@@ -1359,8 +1359,9 @@ trabalhar numa segunda tela mesmo com a acessibilidade desligada, e o telefone f
 **Ferramentas do agente (§38):** `android_vscreen` (start/status/frame/stop, pela app) e o
 `bash` para o que precisa de root (`am start --display`, `input -d`).
 
-**Falta:** a pré-visualização na app (S4) e o ecrã de licenças na app (pedido do utilizador; com os
-textos integrais e a ligação à publicação do repositório).
+**S4 — pré-visualização na app (§39):** cartão *Ecrã virtual* em Poderes com iniciar/ver/parar e
+a imagem do fotograma. **Falta:** o ecrã de licenças na app (pedido do utilizador; com os textos
+integrais e a ligação à publicação do repositório).
 
 
 ---
@@ -1386,3 +1387,26 @@ calculadora com bash, tira um fotograma e diz o número"* →
 
 Ou seja: o agente cria a segunda tela, põe lá a app, **vê-a** e lê o conteúdo — sem usar o ecrã
 do dono e **sem o serviço de acessibilidade**.
+
+
+---
+
+## 39. vscreen S4: ver o ecrã virtual na app
+
+Cartão **Ecrã virtual** no separador Poderes: `Iniciar` · `Ver fotograma` · `Parar`, a linha de
+estado (`display 2 · 540×960 · 51 KB`) e a imagem do último fotograma em Compose.
+
+![Cartão do ecrã virtual](docs/screenshots/app-ecra-virtual.png)
+
+A app chama a capacidade pelo **mesmo caminho que o agente** (`controller.capability(...)`), o que
+de caminho testa o canal. O ecrã virtual vive dentro do processo da app: fechá-la fecha-o (sem
+fugas — `dumpsys display` fica limpo).
+
+### vscreen: estado final das quatro etapas
+
+| Etapa | O que prova | Evidência |
+|---|---|---|
+| S1 criar + capturar | `createVirtualDisplay` + `ImageReader` → PNG | [`vscreen-calculadora.png`](docs/screenshots/vscreen-calculadora.png) (512) |
+| S2 pôr apps + tocar | `am start --display` e `input -d` (root) | [`vscreen-toque-registado.png`](docs/screenshots/vscreen-toque-registado.png) (5 127) |
+| S3 ferramentas do agente | o agente cria, lança, **vê** e lê o conteúdo | transcript: *"O número no visor é 5127"* |
+| S4 pré-visualização | o dono vê o que o agente está a fazer | [`app-ecra-virtual.png`](docs/screenshots/app-ecra-virtual.png) |

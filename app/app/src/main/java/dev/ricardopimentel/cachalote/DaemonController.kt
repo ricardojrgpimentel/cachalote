@@ -429,6 +429,9 @@ class DaemonController(private val context: Context) {
 
     suspend fun prepareEmbedded(progress: (Long, Long) -> Unit = { _, _ -> }): Int = engine.prepare(progress)
 
+    /** Executa uma capacidade da app localmente (o mesmo caminho que o agente usa). */
+    suspend fun capability(capability: String, params: JSONObject): JSONObject = caps.execute(capability, params)
+
     /** De onde vem o kernel (ficheiro, asset ou download) — para a UI dizer o que vai acontecer. */
     fun embeddedKernelSource(): String? = engine.kernelSource()
 
