@@ -435,6 +435,9 @@ class DaemonController(private val context: Context) {
     /** Última sessão deste modo (o id guarda-se por modo — ver knowledge 93). */
     fun lastSessionId(): String? = prefs.lastSessionId
 
+    /** Esquece a última sessão (ao fechá-la, para não voltar no arranque ou na troca de modo). */
+    fun forgetLastSession() { prefs.lastSessionId = null }
+
     fun modeLabel(): String = when (mode) {
         Mode.DAEMON -> "daemon (root)"
         Mode.SHIZUKU -> "Shizuku"

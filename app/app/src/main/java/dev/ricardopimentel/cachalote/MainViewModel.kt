@@ -570,6 +570,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         controller.closeSession(id)
         if (id == sessionId) {
             sessionId = null
+            // Sem isto, o arranque seguinte (ou a troca de modo) voltava a retomar a sessão
+            // que acabámos de fechar — verificado em teste.
+            controller.forgetLastSession()
             transcript.clear()
             transcript.add(ChatLine("system", "sessão ${id.take(8)} fechada — a próxima mensagem abre uma nova"))
         } else {

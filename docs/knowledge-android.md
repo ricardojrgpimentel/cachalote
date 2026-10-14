@@ -1183,3 +1183,17 @@ diferentes, e tratá-los como iguais era o erro:
   duas vezes. Depois, o teste de UI do ✕ fica possível.
 - **Impacto:** hoje o fecho de sessões **não é alcançável pela UI** (o protocolo funciona).
 - **Origem:** **[LOCAL]**.
+
+### 101. Fechar a sessão pela UI — e o id que voltava
+- **O que estava errado no diálogo:** o `✓`/`✕` da sessão activa nunca apareciam, apesar de o
+  estado estar certo (cabeçalho e instantâneo com `17c839db`). A leitura de `vm.sessionId`
+  dentro do lambda dos itens do `LazyColumn` ficava presa na primeira composição.
+- **Correcção:** ler a sessão activa **uma vez, no topo do diálogo**, e mostrá-la no título
+  (`activa: 17c839db`). Acrescentou-se um botão **Fechar a sessão activa** no rodapé: a lista tem
+  dezenas de sessões antigas e andar à procura da linha certa não é razoável.
+- **Verificado:** tocar em "Fechar a sessão activa" → `session/close` enviado, o diálogo passa a
+  `nenhuma sessão activa` e o `session/list` é refrescado.
+- **Bug apanhado no próprio teste:** depois de fechar, a mesma sessão voltava a aparecer activa —
+  o id ficava em `lastSessionId` e o arranque (ou a troca de modo) retomava-o. Fechar passa a
+  **esquecer** a última sessão.
+- **Origem:** **[LOCAL]**.

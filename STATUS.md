@@ -610,7 +610,7 @@ A **voz** e o **anexar imagem ao prompt** entraram em §23.
 | ~~**`cachalote doctor`**~~ | ✅ **feito em §30** | verifica ficheiros, chave, daemon, `oom_score_adj`, watchdog, canal, motor, app ponta a ponta, disco e registos; `exit=1` se houver problemas |
 | **Títulos de sessão** | ✅ **feito em §31** | o motor gera mas **não expõe** no `session/list`; a app deriva o título do primeiro prompt (o do motor tem prioridade se vier) |
 | ~~**LMK sob pressão real**~~ | ✅ **feito em §32** | 97% de RAM durante 30 s: daemon, motor e app sobreviveram sem mudar de pid |
-| **Clique do ✕ na UI** | ⚠ **bug aberto (§34)** | o diálogo das sessões não marca a sessão activa (o estado está certo) → o ✕ nunca aparece; o `session/close` funciona no protocolo |
+| ~~**Clique do ✕ na UI**~~ | ✅ **feito em §35** | bug do diálogo corrigido (leitura da sessão activa no topo) + botão **Fechar a sessão activa**; verificado pela UI |
 | **Visão em vídeo** | por fazer | o modelo aceita imagens; vídeo seria amostrar fotogramas |
 | **MCP servers configuráveis** | ✅ **feito em §33** | campo em Poderes (JSON do ACP) + passa em `session/new`/`resume`; verificado no motor (agente chamou `mcp__ping__ping` → pong) |
 | **Publicar o kernel (URL público) e uma APK de release** | por fazer | o repositório é privado: um *release asset* aqui não serve à app. Falta escolher a hospedagem |
@@ -1294,3 +1294,23 @@ uma sessão pela UI não é alcançável hoje**, apesar de o motor o aceitar.
 Próximo passo (para a próxima ronda): ler `vm.sessionId` numa `val` no topo do `SessionsDialog`,
 `key(...)` nos itens, ou perceber porque é que o conteúdo do `AlertDialog` fica preso; e só depois
 fazer o teste do clique.
+
+
+---
+
+## 35. Fechar a sessão activa pela UI (fecha o §34)
+
+**A causa do bug:** o `✓`/`✕` da sessão activa nunca apareciam porque `vm.sessionId` era lido
+**dentro** do lambda dos itens do `LazyColumn` e o valor ficava preso na primeira composição —
+apesar de o cabeçalho e o instantâneo estarem certos. Passou a ser lido uma vez, no topo do
+diálogo, e o título mostra-o (`activa: 17c839db`).
+
+| Peça | Como ficou |
+|---|---|
+| Diálogo | título com a sessão activa; ✓ na linha marcada; ✕ só nessa linha |
+| Caminho curto | botão **Fechar a sessão activa** no rodapé (a lista tem dezenas de sessões antigas) |
+| Fechar | `session/close` + esquecer a última sessão (senão voltava no arranque) |
+
+**Verificação pela UI:** tocar em *Fechar a sessão activa* → `session/close` enviado, o diálogo
+passa a **`nenhuma sessão activa`** e a lista é refrescada. Pelo caminho apanhou-se um bug do
+próprio fluxo: a sessão fechada voltava a ficar activa porque o id continuava em `lastSessionId`.

@@ -266,17 +266,28 @@ private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
 /** Lista das sessões persistidas no motor, para retomar uma conversa anterior. */
 @Composable
 private fun SessionsDialog(vm: MainViewModel) {
+    // A sessão activa é lida UMA vez, no topo: dentro dos itens do LazyColumn o valor podia
+    // ficar preso na primeira composição (o ✓ e o ✕ nunca apareciam — ver STATUS §34).
+    val atual = vm.sessionId
     AlertDialog(
         onDismissRequest = { vm.showSessions = false },
-        title = { Text("Sessões") },
-        // (a legenda do rodapé explica o ✕: só a sessão activa se pode fechar)
+        title = {
+            Column {
+                Text("Sessões")
+                Text(
+                    if (atual.isNullOrBlank()) "nenhuma sessão activa" else "activa: " + atual.take(8),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+        },
         text = {
             if (vm.sessions.isEmpty()) {
                 Text("não há sessões guardadas no motor")
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                     itemsIndexed(vm.sessions) { _, row ->
-                        val current = row.id == vm.sessionId
+                        val current = row.id == atual
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(
                                 onClick = { vm.resumeSession(row.id) },
@@ -297,8 +308,7 @@ private fun SessionsDialog(vm: MainViewModel) {
                             }
                             // O motor só fecha a sessão **activa** (`session/close` responde
                             // "unknown session" às do histórico): o ✕ aparece só na linha da
-                            // sessão actual. Para fechar outra, toca-se nela primeiro (retoma) —
-                            // ver knowledge 93.
+                            // sessão actual (ver knowledge 93).
                             if (current) {
                                 TextButton(onClick = { vm.closeSession(row.id) }, enabled = !vm.busy) {
                                     Text("✕", color = MaterialTheme.colorScheme.secondary)
@@ -312,6 +322,13 @@ private fun SessionsDialog(vm: MainViewModel) {
         confirmButton = {},
         dismissButton = {
             Column {
+                if (!atual.isNullOrBlank()) {
+                    // Caminho curto para o que interessa: fechar a sessão em uso, sem ter de a
+                    // encontrar na lista (a lista tem dezenas de sessões antigas).
+                    TextButton(onClick = { vm.closeSession(atual) }, enabled = !vm.busy) {
+                        Text("Fechar a sessão activa")
+                    }
+                }
                 Text(
                     "✕ fecha a sessão activa · toca numa linha para retomar",
                     style = MaterialTheme.typography.bodySmall,
