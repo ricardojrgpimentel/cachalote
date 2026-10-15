@@ -50,6 +50,10 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
                 "capacidade '$capability' não está autorizada na app (separador Capacidades)",
             )
         }
+        // `status` é uma leitura de saúde que a app faz sozinha (a cada actualização do ecrã), não
+        // uma acção do agente. Registá-la enchia o registo de auditoria com «status {}» e tapava o
+        // que interessa — medido no S10+ em 2026-10-15: as 25 linhas do registo eram todas isso.
+        if (capability == "status") return@withContext status()
         record(capability, params)
         when (capability) {
             "status" -> status()
@@ -93,7 +97,7 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
     }
 
     private fun notify(params: JSONObject): JSONObject {
-        if (!notificationsGranted()) throw IllegalStateException("a app não tem permissão de notificações")
+        if (!notificationsGranted()) throw IllegalStateException(context.getString(R.string.cap_sem_perm_notif))
         val title = params.optString("title", "Cachalote")
         val text = params.optString("text", "")
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -129,9 +133,9 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
         val desc = params.optString("description").takeIf { it.isNotBlank() }
         if (text != null || desc != null) {
             val node = svc.findNode(text, desc)
-                ?: throw IllegalStateException("não encontrei nenhum elemento com esse texto/descrição")
+                ?: throw IllegalStateException(context.getString(R.string.cap_elemento_nao_encontrado))
             val clicked = svc.clickNode(node)
-            if (!clicked) throw IllegalStateException("encontrei o elemento mas ele não aceita cliques")
+            if (!clicked) throw IllegalStateException(context.getString(R.string.cap_elemento_nao_clicavel))
             return JSONObject().put("ok", true).put("clicked", text ?: desc)
         }
         val x = params.optDouble("x", Double.NaN)
@@ -175,7 +179,7 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
     private fun requireService(): CachaloteAccessibilityService =
         CachaloteAccessibilityService.instance
             ?: throw IllegalStateException(
-                "o serviço de acessibilidade do Cachalote não está ligado (Definições → Acessibilidade)",
+                context.getString(R.string.cap_a11y_desligada),
             )
 
     private fun notificationsGranted(): Boolean =
@@ -185,6 +189,10 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
 
     private fun record(capability: String, params: JSONObject) {
         val summary = params.toString().take(160)
-        prefs.auditAdd("${System.currentTimeMillis()}  $capability  $summary")
+        // Hora legível, não milissegundos Unix: o registo é para uma pessoa ler (antes lia-se
+        // «1792065911667  status  {}», que não diz nada a ninguém).
+        val quando = java.text.SimpleDateFormat("dd/MM HH:mm:ss", java.util.Locale.getDefault())
+            .format(java.util.Date())
+        prefs.auditAdd("$quando  $capability  $summary")
     }
 }

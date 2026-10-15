@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -82,8 +86,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ConsumoDeContexto(uso: Uso?) {
     if (uso == null) return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     Text(
-        uso.texto(),
+        uso.texto(ctx),
         style = MaterialTheme.typography.bodySmall,
         fontFamily = Mono,
         color = MaterialTheme.colorScheme.secondary,
@@ -91,10 +96,24 @@ fun ConsumoDeContexto(uso: Uso?) {
 }
 
 /**
+ * O tema da app, num só sítio.
+ *
+ * Existe por um motivo concreto: o ecrã do «Modo completo» ([`WebModeActivity`]) usava
+ * `MaterialTheme { }` sem esquema nenhum — o que dá o esquema **claro**, com texto quase preto,
+ * sobre o fundo de janela escuro do `Theme.Cachalote`. O resultado era preto sobre preto e um ecrã
+ * aparentemente vazio (medido no S10+ em 2026-10-15). Com o tema num só sítio, isso não volta a
+ * acontecer sem se notar.
+ */
+@Composable
+fun CachaloteTema(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = cachaloteColors, typography = cachaloteTypography, content = content)
+}
+
+/**
  * Fila de tarefas: o que está à espera, o que corre agora, e os botões para a gerir.
  *
  * Tudo por dados + lambdas (nada de ViewModel) para se poder testar sem aparelho.
- */
+ */@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FilaCard(
     tarefas: List<Tarefa>,
@@ -107,6 +126,7 @@ fun FilaCard(
     onLimpar: () -> Unit,
 ) {
     val pendentes = tarefas.count { it.estado == Tarefa.PENDENTE }
+    val removerDesc = stringResource(R.string.fila_remover)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -127,7 +147,13 @@ fun FilaCard(
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // FlowRow e não Row: com três botões, a 360 dp a soma dos rótulos excede a largura e
+            // uma `Row` espremia o último até ele deixar de ter texto (medido no S10+ em
+            // 2026-10-15: comprimido vazio de 114×1072 px). Aqui os botões mudam de linha.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(onClick = onJuntar, enabled = enabled) { Text(stringResource(R.string.fila_juntar)) }
                 if (aCorrer) {
                     OutlinedButton(onClick = onParar) { Text(stringResource(R.string.fila_parar)) }
@@ -146,7 +172,15 @@ fun FilaCard(
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = { onRemover(t.id) }, enabled = enabled) { Text("✕") }
+                    TextButton(
+                        onClick = { onRemover(t.id) },
+                        enabled = enabled,
+                        // Sem isto o leitor de ecrã anunciava só «✕» — e é a única forma de
+                        // remover uma tarefa da fila.
+                        modifier = Modifier.semantics {
+                            contentDescription = removerDesc
+                        },
+                    ) { Text("✕") }
                 }
             }
         }
@@ -577,11 +611,15 @@ fun LinhaDeAjuste(
             Text(titulo, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             if (!detalhe.isNullOrBlank()) {
                 Spacer(Modifier.size(2.dp))
+                // Duas linhas e não uma: com `maxLines = 1` o menu de Ajustes cortava 1 a 6 das
+                // linhas de apoio conforme o tamanho do ecrã, sempre a meio de uma palavra
+                // («…e dia…», «…the p…»). Medido no S10+ em 2026-10-15, a 457 dp, a 360 dp e com a
+                // fonte a 1,3×. A 72 dp a linha continua a caber; só cresce quando precisa.
                 Text(
                     detalhe,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }

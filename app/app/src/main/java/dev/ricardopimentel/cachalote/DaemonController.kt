@@ -1,6 +1,8 @@
 package dev.ricardopimentel.cachalote
 
 import android.content.Context
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.io.File
 
@@ -126,9 +128,23 @@ class DaemonController(private val context: Context) {
         throw (ultimo ?: IllegalStateException("o motor não respondeu"))
     }
 
-    suspend fun connect(): JSONObject {
+    /**
+     * Uma só porta para a ligação.
+     *
+     * Havia **dois** caminhos a reconectar em paralelo — o laço do `MainViewModel` e o
+     * `client.reconnector` (chamado de dentro de cada pedido) — e os dois passam por
+     * `client.connectTcp`, que começa por `disconnect()`. Um derrubava a ligação do outro, e a app
+     * ficava presa em «motor DSH no telefone · desligado» a repetir `auth`→`initialize`→
+     * `session/resume` a cada 1–3 s, mesmo com o motor de pé (medido no S10+ em 2026-10-15).
+     *
+     * Com o mutex, quem chega segundo espera e encontra a ligação já feita.
+     */
+    private val ligacao = Mutex()
+
+    suspend fun connect(): JSONObject = ligacao.withLock {
+        if (client.connected.value) return@withLock JSONObject()
         acpReady = false
-        return try {
+        try {
             ligar()
         } catch (t: Throwable) {
             // "token inválido" acontece depois de o daemon ser reinstalado (o token dele muda, o

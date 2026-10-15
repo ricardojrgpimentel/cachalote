@@ -7,11 +7,16 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -24,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
@@ -38,15 +44,18 @@ import kotlinx.coroutines.launch
  *
  * A UI nativa continua a funcionar em paralelo: o perfil `web` corre ao lado do ACP.
  */
+@OptIn(ExperimentalLayoutApi::class)
 class WebModeActivity : ComponentActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            // O tema da app (e não `MaterialTheme { }`): sem isto o esquema é o claro, com texto
+            // quase preto sobre o fundo de janela escuro — preto sobre preto.
+            CachaloteTema {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var status by remember { mutableStateOf("a obter o URL do motor web…") }
+                    var status by remember { mutableStateOf(getString(R.string.web_a_obter)) }
                     var url by remember { mutableStateOf("") }
                     var reloadKey by remember { mutableStateOf(0) }
 
@@ -56,54 +65,82 @@ class WebModeActivity : ComponentActivity() {
                         status = runCatching {
                             val u = RootShell.cachalote("web-url", 20).getOrThrow().lineSequence()
                                 .firstOrNull { it.startsWith("http") }?.trim()
-                                ?: error("sem URL (liga o motor web)")
+                                ?: error(getString(R.string.web_sem_url))
                             url = u
-                            "interface web: " + u.substringBefore("?") + " (com token)"
-                        }.getOrElse { "motor web não está a correr: ${it.message}" }
+                            getString(R.string.web_interface_token, u.substringBefore("?"))
+                        }.getOrElse { getString(R.string.web_falhou, it.message ?: getString(R.string.web_sem_url)) }
                     }
 
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                    // Insets: sem isto os controlos ficam debaixo da barra de estado e o SystemUI
+                    // engole-lhes os toques (medido no S10+ em 2026-10-15).
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(WindowInsets.safeDrawing),
+                    ) {
+                        Text(
+                            status,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                        )
+                        // FlowRow e não Row: são três botões, e a 360 dp não caberiam numa linha.
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(
-                                status,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f),
-                            )
-                            TextButton(onClick = { reloadKey++ }) { Text("Recarregar") }
+                            TextButton(onClick = { reloadKey++ }) { Text(stringResource(R.string.web_recarregar)) }
                             OutlinedButton(onClick = {
                                 lifecycleScope.launch {
-                                    status = "a arrancar o motor web…"
+                                    status = getString(R.string.web_a_arrancar)
                                     status = runCatching { RootShell.cachalote("web-start", 90).getOrThrow() }
-                                        .getOrElse { "falhou: ${it.message}" }
+                                        .getOrElse { getString(R.string.web_falhou, it.message ?: "?") }
                                     reloadKey++
                                 }
-                            }) { Text("Ligar web") }
+                            }) { Text(stringResource(R.string.web_ligar)) }
                             OutlinedButton(onClick = {
                                 finish()
-                            }) { Text("Voltar") }
+                            }) { Text(stringResource(R.string.web_voltar)) }
                         }
 
-                        AndroidView(
-                            modifier = Modifier.fillMaxSize(),
-                            factory = { ctx ->
-                                WebView(ctx).apply {
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.useWideViewPort = true
-                                    settings.loadWithOverviewMode = true
-                                    webViewClient = object : WebViewClient() {
-                                        override fun onPageFinished(view: WebView?, u: String?) {
-                                            status = "interface web: $u"
+                        if (url.isBlank()) {
+                            // Sem motor web não há nada para mostrar: um `WebView` vazio pinta
+                            // preto e tapava o ecrã todo (era o «ecrã preto» deste ecrã). Aqui
+                            // explica-se o que falta, em vez de criar um browser sem nada.
+                            Box(
+                                modifier = Modifier.fillMaxWidth().weight(1f).padding(24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    stringResource(R.string.web_sem_motor),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            AndroidView(
+                                // `weight(1f)` e não `fillMaxSize()`: numa Column, `fillMaxSize` pede
+                                // a altura toda do pai e passa por cima da linha de controlos.
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                factory = { ctx ->
+                                    WebView(ctx).apply {
+                                        // O fundo do WebView herda o do tema, que é escuro: sem isto
+                                        // fica preto e confunde-se com uma falha.
+                                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                        settings.javaScriptEnabled = true
+                                        settings.domStorageEnabled = true
+                                        settings.useWideViewPort = true
+                                        settings.loadWithOverviewMode = true
+                                        webViewClient = object : WebViewClient() {
+                                            override fun onPageFinished(view: WebView?, u: String?) {
+                                                status = getString(R.string.web_interface, u ?: "")
+                                            }
                                         }
                                     }
-                                }
-                            },
-                            update = { wv -> if (url.isNotBlank() && wv.url != url) wv.loadUrl(url) },
-                        )
+                                },
+                                update = { wv -> if (wv.url != url) wv.loadUrl(url) },
+                            )
+                        }
                     }
                 }
             }

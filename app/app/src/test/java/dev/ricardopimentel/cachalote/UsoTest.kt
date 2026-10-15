@@ -37,14 +37,14 @@ class UsoTest {
     }
 
     @Test
-    fun formata_o_texto_como_se_usa_em_portugues() {
-        assertEquals("contexto: 120\u202F000 / 1\u202F000\u202F000 · 12%", Uso(120000, 1000000).texto())
-        assertEquals("contexto: 1\u202F000 / 1\u202F000 · 100%", Uso(1000, 1000).texto())
+    fun formata_os_numeros_como_se_usa_em_portugues() {
+        assertEquals("120\u202F000 / 1\u202F000\u202F000 · 12%", Uso(120000, 1000000).numeros())
+        assertEquals("1\u202F000 / 1\u202F000 · 100%", Uso(1000, 1000).numeros())
     }
 
     @Test
     fun sem_limite_conhecido_mostra_so_o_usado() {
-        assertEquals("contexto: 500", Uso(500, 0).texto())
+        assertEquals("500", Uso(500, 0).numeros())
         assertEquals(0, Uso(500, 0).percentagem)
     }
 

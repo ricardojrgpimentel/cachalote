@@ -137,18 +137,38 @@ class EmbeddedEngine(private val ctx: Context) {
         if (!assetZipPresent()) return downloadKernel(progress)
         kernelZip.parentFile?.mkdirs()
         val tmp = File(kernelZip.parentFile, "kernel.zip.part")
-        ctx.assets.open("kernel.zip").use { input -> tmp.outputStream().use { input.copyTo(it) } }
         val expected = expectedSha256()
-        if (expected != null) {
-            val actual = sha256(tmp)
-            require(actual.equals(expected, ignoreCase = true)) {
-                "o kernel embutido falhou a verificação de integridade (esperado ${expected.take(16)}…, obtido ${actual.take(16)}…)"
+        // Duas tentativas, e a cópia inteira dentro do lock: a primeira utilização do modo
+        // embutido falhou uma vez a verificação (esperado 0c7106ff…, obtido d2cf2cd6…) com o
+        // artefacto da APK **correcto** — verificado à mão, byte a byte, no S10+ em 2026-10-15.
+        // O que falhou foi a cópia, não o ficheiro. Duas tentativas com o `.part` apagado pelo
+        // meio resolvem o caso intermitente; e a mensagem só aparece depois de as duas falharem.
+        var ultimoErro: Throwable? = null
+        repeat(2) { tentativa ->
+            try {
+                synchronized(copiaLock) {
+                    tmp.delete()
+                    ctx.assets.open("kernel.zip").use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                    if (expected != null) {
+                        val actual = sha256(tmp)
+                        require(actual.equals(expected, ignoreCase = true)) {
+                            "o kernel embutido falhou a verificação de integridade (esperado ${expected.take(16)}…, obtido ${actual.take(16)}…)"
+                        }
+                    }
+                    if (kernelZip.exists()) kernelZip.delete()
+                    require(tmp.renameTo(kernelZip)) { "não consegui guardar o kernel em ${kernelZip.absolutePath}" }
+                }
+                return kernelZip
+            } catch (t: Throwable) {
+                ultimoErro = t
+                tmp.delete()
+                android.util.Log.w("cachalote-kernel", "cópia do kernel falhou (tentativa ${tentativa + 1}): ${t.message}")
             }
         }
-        if (kernelZip.exists()) kernelZip.delete()
-        require(tmp.renameTo(kernelZip)) { "não consegui guardar o kernel em ${kernelZip.absolutePath}" }
-        return kernelZip
+        throw ultimoErro ?: IllegalStateException("não consegui copiar o kernel embutido")
     }
+
+    private val copiaLock = Any()
 
     private fun expectedSha256(): String? = runCatching {
         ctx.assets.open("kernel.sha256").bufferedReader().use { it.readText().trim() }

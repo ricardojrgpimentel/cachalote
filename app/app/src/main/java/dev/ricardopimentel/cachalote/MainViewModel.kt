@@ -67,10 +67,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val controller = DaemonController(app)
 
-    var daemonInfo by mutableStateOf("(sem dados — toca em Atualizar)")
+    var daemonInfo by mutableStateOf("")   // preenchido no arranque; ver init()
     var rootOk by mutableStateOf<Boolean?>(null)
     var daemonInstalled by mutableStateOf<Boolean?>(null)
-    var tokenState by mutableStateOf("(por obter)")
+    var tokenState by mutableStateOf("")
+
+    /**
+     * O token do canal existe?
+     *
+     * É um booleano e não uma comparação com o texto do estado: o assistente comparava
+     * `tokenState != "(por obter)"`, ou seja, a lógica dependia de uma frase que o utilizador lê —
+     * bastava traduzi-la para o passo passar a mentir.
+     */
+    var tokenOk by mutableStateOf(false)
     var keyPresent by mutableStateOf(false)
     var keyLength by mutableStateOf(0)
     var keyUpdatedAt by mutableStateOf("")
@@ -97,10 +106,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     var conversaAberta by mutableStateOf(false)
     var configPicker by mutableStateOf<ConfigOption?>(null)
+
+    /**
+     * Pedido de navegação de outra secção (ex.: o ecrã virtual a mandar abrir «Capacidades» quando
+     * falta uma autorização). Consumido uma vez por quem o lê — ver `AjustesScreen`.
+     */
+    var pedidoDeSecao by mutableStateOf<String?>(null)
+    fun pedirSecao(secao: String) { pedidoDeSecao = secao }
     var reconnecting by mutableStateOf(false)
     var pendingImage by mutableStateOf<PendingImage?>(null)
     var audit by mutableStateOf<List<String>>(emptyList())
-    var embedTest by mutableStateOf("(não testado)")
+    var embedTest by mutableStateOf("")    // idem
 
     /**
      * Acessibilidade ligada? Lido pela MESMA via que o agente usa (`caps.status`), e não pelo
@@ -135,7 +151,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun pararFila() {
         filaACorrer = false
-        transcript.add(ChatLine("system", "fila parada (a tarefa em curso continua)"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.fila_parada)))
     }
 
     /**
@@ -147,7 +163,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (filaACorrer) return
         filaACorrer = true
         viewModelScope.launch {
-            transcript.add(ChatLine("system", "a correr a fila…"))
+            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.fila_corrida)))
             while (filaACorrer) {
                 val tarefa = fila.proxima() ?: break
                 try {
@@ -155,13 +171,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     fila.concluir(tarefa.id)
                 } catch (t: Throwable) {
                     fila.concluir(tarefa.id, falhou = true)
-                    transcript.add(ChatLine("error", "tarefa da fila falhou: ${t.message ?: "?"}"))
+                    transcript.add(ChatLine("error", getApplication<Application>().getString(R.string.fila_tarefa_falhou, t.message ?: "?")))
                 }
                 tarefas = fila.todas
             }
             filaACorrer = false
             tarefas = fila.todas
-            if (fila.vazia) transcript.add(ChatLine("system", "fila concluída"))
+            if (fila.vazia) transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.fila_concluida)))
         }
     }
 
@@ -210,6 +226,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val transcript = mutableStateListOf<ChatLine>()
 
     init {
+        // Os rótulos de estado que antes eram literais no `mutableStateOf` (agora traduzíveis).
+        daemonInfo = getApplication<Application>().getString(R.string.sem_dados_atualizar)
+        embedTest = getApplication<Application>().getString(R.string.nao_testado)
         // 1) Repor a conversa anterior (a app pode ter sido morta pelo sistema).
         var snapModel: String? = null
         var snapEffort: String? = null
@@ -257,8 +276,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         try {
                             applyConfigOptions(controller.resumeSession(sid, cwd))
                         } catch (t: Throwable) {
-                            if (isSessionAlreadyActive(t)) restoreChips(snapModel, snapEffort)
-                            else throw t
+                            when {
+                                isSessionAlreadyActive(t) -> restoreChips(snapModel, snapEffort)
+                                // O motor já não tem esta sessão (reiniciou, ou foi fechada noutro
+                                // sítio). Insistir no mesmo id prendia a app num ciclo para sempre:
+                                // «desligado» no cabeçalho, «retomar: a ligação ao motor caiu» ao
+                                // abrir uma conversa, e um `auth`/`resume` a cada 1–3 s — medido no
+                                // S10+ em 2026-10-15, e só se saía trocando de motor. Larga-se a
+                                // sessão; a próxima mensagem abre uma nova.
+                                sessaoJaNaoExiste(t) -> {
+                                    transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_perdida)))
+                                    sessionId = null
+                                    saveState()
+                                }
+                                // Queda de ligação a meio: é transitório, vale a pena tentar outra
+                                // vez com o mesmo id (o recuo do laço trata do ritmo).
+                                else -> throw t
+                            }
                         }
                     }
                 }.isSuccess
@@ -274,7 +308,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 controller.ensureConnected()
                 controller.ensureAcp()
             }.onSuccess {
-                tokenState = "obtido (guardado)"
+                tokenState = getApplication<Application>().getString(R.string.token_obtido_guardado)
+                tokenOk = true
                 agentInfo = "deepseek-harness-acp"
                 // Se temos uma sessão guardada, tentar retomá-la para recuperar as opções
                 // (modelo/esforço). Se o motor ainda a tiver activa, o resume é recusado —
@@ -286,7 +321,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         .onFailure { restoreChips(snapModel, snapEffort) }
                 }
             }.onFailure {
-                tokenState = "(toca em Obter token)" 
+                tokenState = getApplication<Application>().getString(R.string.token_toca_obter)
+                tokenOk = false
             }
             runCatching { refreshStatus() }
             runCatching { run("chave") { refreshKeyStatus() } }
@@ -329,18 +365,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         shizukuState = ""
         when (kind) {
             DaemonController.Mode.SHIZUKU -> {
-                if (!controller.shizukuAvailable()) error("o Shizuku não está a correr (abre a app Shizuku e inicia-o)")
+                if (!controller.shizukuAvailable()) error(getApplication<Application>().getString(R.string.shizuku_nao_corre))
                 if (!controller.shizukuHasPermission()) {
                     shizukuState = "falta autorizar o Cachalote no Shizuku (botão abaixo)"
                     return@run
                 }
-                shizukuState = "a arrancar o daemon via Shizuku…"
+                shizukuState = getApplication<Application>().getString(R.string.shizuku_a_arrancar)
                 controller.startDaemon()
-                shizukuState = "daemon activo via Shizuku (" + controller.ensureToken().take(6) + "…)"
+                shizukuState = getApplication<Application>().getString(R.string.shizuku_activo, controller.ensureToken().take(6))
             }
-            DaemonController.Mode.DAEMON -> tokenState = "(por obter)"
+            DaemonController.Mode.DAEMON -> { tokenState = getApplication<Application>().getString(R.string.token_por_obter); tokenOk = false }
             DaemonController.Mode.EMBEDDED -> {
-                tokenState = "n/d (modo embutido)"
+                tokenState = getApplication<Application>().getString(R.string.token_nd_embutido)
+                tokenOk = true
                 if (!controller.embeddedPrepared()) provisionKernel()
             }
         }
@@ -357,7 +394,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun provisionKernel() {
         val origem = controller.embeddedKernelSource()
         if (origem == null) {
-            embeddedInfo = "sem kernel: nem embutido nem URL de download (define em Poderes)"
+            embeddedInfo = getApplication<Application>().getString(R.string.sem_kernel)
             return
         }
         embeddedInfo = if (origem.startsWith("download")) "a descarregar o kernel…" else "a preparar o kernel ($origem)…"
@@ -408,9 +445,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         transcript.add(
             ChatLine(
                 "system",
-                "ecrã virtual iniciado: display $vscreenDisplayId · " +
-                    "${vscreenLargura}×${vscreenAltura} @${vscreenDensidade} dpi — põe apps lá com bash: " +
-                    "am start --display $vscreenDisplayId -n <pkg>/<activity>",
+                getApplication<Application>().getString(
+                    R.string.vscreen_iniciado,
+                    vscreenDisplayId, vscreenLargura, vscreenAltura, vscreenDensidade,
+                ),
             ),
         )
     }
@@ -468,21 +506,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val texto = Backup.exportar(getApplication(), Prefs(getApplication())).toString(2)
         getApplication<Application>().contentResolver.openOutputStream(uri)?.use { saida ->
             saida.write(texto.toByteArray())
-        } ?: error("não consegui abrir o destino")
+        } ?: error(getApplication<Application>().getString(R.string.nao_consegui_abrir_destino))
         backupAviso = "definições exportadas"
-        transcript.add(ChatLine("system", "definições exportadas (sem a chave nem o token — de propósito)"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.backup_exportado_sem_segredos)))
     }
 
     /** Restaura um backup. A chave e o token **não** vêm no ficheiro, por decisão do projecto. */
     fun importarDefinicoes(uri: android.net.Uri) = run("importar definições") {
         val texto = getApplication<Application>().contentResolver.openInputStream(uri)
-            ?.bufferedReader()?.use { it.readText() } ?: error("não consegui ler o ficheiro")
+            ?.bufferedReader()?.use { it.readText() } ?: error(getApplication<Application>().getString(R.string.nao_consegui_ler_ficheiro))
         val n = Backup.importar(getApplication(), Prefs(getApplication()), texto)
         refreshCapabilities()
         mcpJsonText = controller.mcpServersJson
         kernelUrlText = controller.kernelUrl
         backupAviso = "$n definições restauradas"
-        transcript.add(ChatLine("system", "backup restaurado ($n definições); a chave tem de ser reposta à mão, se for preciso"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.backup_restaurado, n)))
     }
 
     /** Lê as licenças de terceiros (textos integrais) do asset. */
@@ -504,18 +542,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             error("JSON inválido: ${it.message?.take(80)}")
         }
         controller.mcpServersJson = arr.toString()
-        mcpSaved = "gravado: ${arr.length()} servidor(es)"
-        transcript.add(ChatLine("system", "servidores MCP: ${arr.length()} configurado(s) — vale para sessões novas"))
+        mcpSaved = getApplication<Application>().resources.getQuantityString(R.plurals.mcp_gravados_n, arr.length(), arr.length())
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.mcp_gravados, arr.length())))
     }
 
     fun saveKernelUrl() = run("url do kernel") {
         controller.kernelUrl = kernelUrlText.trim()
-        transcript.add(ChatLine("system", "URL do kernel: " + kernelUrlText.trim().ifBlank { "(vazio: usa o do build)" }))
+        transcript.add(ChatLine(
+            "system",
+            getApplication<Application>().getString(R.string.kernel_url_gravado, kernelUrlText.trim().ifBlank { getApplication<Application>().getString(R.string.kernel_url_vazio) }),
+        ))
     }
 
     /** Arranca (ou liga-se ao) daemon do modo Shizuku. */
     private suspend fun startShizukuLocked() {
-        shizukuState = "a arrancar o daemon via Shizuku…"
+        shizukuState = getApplication<Application>().getString(R.string.shizuku_a_arrancar)
         controller.startDaemon()
         val token = controller.ensureToken()
         shizukuState = "daemon activo via Shizuku (" + token.take(6) + "…)"
@@ -570,12 +611,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (embeddedMode) embeddedInfo = if (controller.embeddedEngineRunning()) "motor embutido a correr" else "motor embutido parado"
         runCatching { controller.status().toString(2) }
             .onSuccess { daemonInfo = it }
-            .onFailure { daemonInfo = "não consegui falar com o daemon:\n${it.message}" }
+            .onFailure { daemonInfo = getApplication<Application>().getString(R.string.daemon_sem_resposta, it.message ?: "?") }
     }
 
     fun obtainToken(rotate: Boolean = false) = run("token") {
         val t = controller.ensureToken(rotate)
-        tokenState = "obtido (${t.length} caracteres)" + if (rotate) " — rodado" else ""
+        tokenState = getApplication<Application>().getString(R.string.token_obtido_n, t.length).let { if (rotate) getApplication<Application>().getString(R.string.token_rodado, it) else it }
+        tokenOk = true
         controller.connect()
         agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
         refreshKeyStatus()
@@ -626,7 +668,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         sessionId = res.optString("sessionId").takeIf { it.isNotBlank() }
         applyConfigOptions(res)
         transcript.clear()
-        transcript.add(ChatLine("system", "sessão ${sessionId?.take(8) ?: "?"} criada"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_criada, sessionId?.take(8) ?: "?")))
         anotarAvisoMcp()
         loaded = true
         conversaAberta = true
@@ -705,7 +747,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // turnos falhavam com «unknown session» — o utilizador não tem de saber o que é um
             // sessionId para voltar a trabalhar: abre-se sessão nova e repete-se o turno uma vez.
             if (msg.contains("unknown session", ignoreCase = true)) {
-                transcript.add(ChatLine("system", "a sessão anterior já não existe no motor — a abrir uma nova"))
+                transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_anterior_perdida)))
                 val res = controller.newSession()
                 val novo = res.optString("sessionId").takeIf { it.isNotBlank() }
                 if (novo != null) {
@@ -722,12 +764,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             resposta.ifBlank { getApplication<Application>().getString(R.string.notif_sem_texto) },
                         )
                     } catch (t2: Throwable) {
-                        transcript.add(ChatLine("error", "turno falhou (sessão nova): ${t2.message ?: t2::class.java.simpleName}"))
+                        transcript.add(ChatLine("error", getApplication<Application>().getString(R.string.turno_falhou_nova_sessao, explicaErroDoMotor(t2.message ?: t2::class.java.simpleName))))
                     }
                     return
                 }
             }
-            transcript.add(ChatLine("error", "turno falhou: $msg"))
+            transcript.add(ChatLine("error", getApplication<Application>().getString(R.string.turno_falhou, explicaErroDoMotor(msg))))
             Notificacoes.fimDeTurno(
                 getApplication(),
                 getApplication<Application>().getString(R.string.notif_turno_titulo),
@@ -796,6 +838,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Guarda as `configOptions` que o motor devolve em session/new, resume e set_config_option. */
+    /**
+     * Nome de uma opção de configuração do motor, traduzido quando é uma das conhecidas.
+     *
+     * O protocolo traz «Model» e «Reasoning effort» em inglês, e essas duas apareciam assim na UI
+     * portuguesa (visto no S10+ em 2026-10-15). Uma opção desconhecida fica com o nome que vier —
+     * é melhor mostrar o que o motor mandou do que inventar.
+     */
+    private fun nomeDaOpcao(id: String, nomeDoMotor: String): String = when (id) {
+        "model" -> getApplication<Application>().getString(R.string.config_modelo)
+        "reasoning_effort" -> getApplication<Application>().getString(R.string.config_esforco)
+        else -> nomeDoMotor
+    }
+
     private fun applyConfigOptions(res: JSONObject?) {
         val arr = res?.optJSONArray("configOptions") ?: return
         val out = ArrayList<ConfigOption>()
@@ -820,7 +875,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             out.add(
                 ConfigOption(
                     id = o.optString("id"),
-                    name = o.optString("name", o.optString("id")),
+                    // O motor manda os nomes das opções em inglês («Model», «Reasoning effort»).
+                    // Conhecem-se os dois que existem e traduzem-se; o resto fica como vier.
+                    name = nomeDaOpcao(o.optString("id"), o.optString("name", o.optString("id"))),
                     currentValue = o.optString("currentValue"),
                     choices = choices,
                 ),
@@ -900,7 +957,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         res?.let { applyConfigOptions(it) }
         if (!jaEraEsta) {
             transcript.clear()
-            transcript.add(ChatLine("system", "sessão ${id.take(8)} retomada"))
+            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_retomada, id.take(8))))
         }
         anotarAvisoMcp()
         conversaAberta = true
@@ -925,9 +982,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // que acabámos de fechar — verificado em teste.
             controller.forgetLastSession()
             transcript.clear()
-            transcript.add(ChatLine("system", "sessão ${id.take(8)} fechada — a próxima mensagem abre uma nova"))
+            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_fechada_nova, id.take(8))))
         } else {
-            transcript.add(ChatLine("system", "sessão ${id.take(8)} fechada"))
+            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_fechada, id.take(8))))
         }
         saveState()
         refreshSessions()
@@ -939,7 +996,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val res = controller.setConfigOption(sid, configId, value)
         applyConfigOptions(res)
         configPicker = null
-        transcript.add(ChatLine("system", "opção $configId = ${value.take(60)}"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.opcao_definida, configId, value.take(60))))
         saveState()
     }
 
@@ -964,7 +1021,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val dir = File(getApplication<Application>().applicationInfo.nativeLibraryDir)
         val node = File(dir, "libnode.so")
         if (!node.isFile) {
-            embedTest = "libnode.so não está no APK (corre tools/prepare-embed.sh e reconstrói)"
+            embedTest = getApplication<Application>().getString(R.string.embed_libnode_ausente)
             return@run
         }
         embedTest = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -1001,7 +1058,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val res = controller.saveAllowedRoots(allowedRootsText.trim())
         allowedRootsSaved = "gravado (" + res.optString("mode") + "): " +
             allowedRootsText.trim().lines().filter { it.isNotBlank() }.joinToString(", ")
-        transcript.add(ChatLine("system", "áreas permitidas actualizadas — motor reiniciado"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.areas_actualizadas)))
     }
 
     fun clearAudit() {
@@ -1032,7 +1089,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
                 if (result.isFailure) {
-                    transcript.add(ChatLine("error", "capacidade $capability: ${result.exceptionOrNull()?.message}"))
+                    transcript.add(ChatLine("error", getApplication<Application>().getString(R.string.capacidade_erro, capability, result.exceptionOrNull()?.message ?: "?")))
                 }
                 refreshCapabilities()
                 saveState()
@@ -1067,13 +1124,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             detail = tool?.opt("rawInput")?.toString()?.take(600) ?: "",
             options = list,
         )
-        transcript.add(ChatLine("system", "o agente pede autorização: " + (tool?.optString("title") ?: "?")))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.autorizacao_pedido, tool?.optString("title") ?: "?")))
         // Com a app em segundo plano ninguém vê o diálogo: o turno fica à espera em silêncio.
         val app = getApplication<Application>()
         Notificacoes.pedidoDeAutorizacao(
             app,
-            app.getString(R.string.notif_autorizacao_titulo),
-            app.getString(R.string.notif_autorizacao_texto, (tool?.optString("title") ?: "?")),
+            getApplication<Application>().getString(R.string.notif_autorizacao_titulo),
+            getApplication<Application>().getString(R.string.notif_autorizacao_texto, (tool?.optString("title") ?: "?")),
         )
     }
 
@@ -1095,7 +1152,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelTurn() = run("cancelar") {
         val sid = sessionId ?: return@run
         controller.client.notify("session/cancel", JSONObject().put("sessionId", sid))
-        transcript.add(ChatLine("system", "turno cancelado"))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.turno_cancelado)))
     }
 
     private fun textOf(update: JSONObject): String =
@@ -1106,8 +1163,52 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * is already active: …"). Não é uma falha: é o estado que queríamos atingir. Tratar isto
      * como erro enchia o log do motor de resumes recusados sem nada de errado acontecer.
      */
+    /**
+     * Traduz o erro do motor para algo que se possa ler num telefone.
+     *
+     * O motor responde em inglês técnico e fala de coisas que não existem nesta app — por exemplo
+     * «the web Models page writes it» e «the launching environment». Quem está a segurar o telefone
+     * não tem como saber o que isso é nem onde fica (visto no S10+ em 2026-10-15). Os casos
+     * conhecidos ganham uma frase da app; o resto fica contido, sem dominar o ecrã.
+     */
+    private fun explicaErroDoMotor(msg: String): String {
+        val m = msg.lowercase()
+        return when {
+            m.contains("no api key") || m.contains("api key") && m.contains("store") ->
+                getApplication<Application>().getString(R.string.erro_sem_chave)
+            m.contains("network is unreachable") || m.contains("unknownhost") ||
+                m.contains("transport failed") || m.contains("failed to connect") ->
+                getApplication<Application>().getString(R.string.erro_sem_rede)
+            m.contains("401") || m.contains("unauthorized") || m.contains("invalid api key") ->
+                getApplication<Application>().getString(R.string.erro_chave_recusada)
+            // Falhas de transporte: são a app a falar consigo própria, mas aparecem na faixa.
+            m.contains("ligação ao motor caiu") || m.contains("sem ligação ao motor") ->
+                getApplication<Application>().getString(R.string.erro_ligacao_caiu)
+            m.contains("motor não está a correr") || m.contains("motor não respondeu") ->
+                getApplication<Application>().getString(R.string.erro_motor_em_baixo)
+            else -> getApplication<Application>().getString(R.string.erro_do_motor, msg.take(300))
+        }
+    }
+
     private fun isSessionAlreadyActive(t: Throwable): Boolean =
         t.message?.contains("already active", ignoreCase = true) == true
+
+    /**
+     * A sessão que a app guardou já não existe no motor.
+     *
+     * Distingue-se de uma queda de ligação a meio (essa é transitória e vale a pena repetir) e de
+     * «já está activa» (essa é sucesso). Sem esta distinção, o laço de reconexão repetia o mesmo id
+     * morto para sempre.
+     */
+    private fun sessaoJaNaoExiste(t: Throwable): Boolean {
+        val m = t.message.orEmpty().lowercase()
+        if (m.contains("already active")) return false
+        if (m.contains("ligação ao motor caiu") || m.contains("sem ligação")) return false
+        return m.contains("unknown session") ||
+            m.contains("session not found") ||
+            m.contains("sessão não existe") ||
+            (m.contains("session") && m.contains("invalid"))
+    }
 
     /** Chips só com o que estava guardado (sem escolhas) — usado quando o motor recusa o resume. */
     private fun restoreChips(model: String?, effort: String?) {
@@ -1118,11 +1219,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val a = JSONArray(model)
                 a.optString(a.length() - 1)
             }.getOrNull()?.takeIf { it.isNotBlank() } ?: model
-            out.add(ConfigOption("model", "Model", model, listOf(ConfigChoice(model, label))))
+            out.add(ConfigOption("model", getApplication<Application>().getString(R.string.config_modelo), model, listOf(ConfigChoice(model, label))))
         }
         if (!effort.isNullOrBlank()) {
             val label = effort.replaceFirstChar { it.uppercase() }
-            out.add(ConfigOption("reasoning_effort", "Reasoning effort", effort, listOf(ConfigChoice(effort, label))))
+            out.add(ConfigOption("reasoning_effort", getApplication<Application>().getString(R.string.config_esforco), effort, listOf(ConfigChoice(effort, label))))
         }
         if (out.isNotEmpty()) configOptions = out
     }
@@ -1160,14 +1261,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 accessibilityOn = agora
                 if (vigia.observar(agora) != null) {
                     val app = getApplication<Application>()
-                    transcript.add(ChatLine("system", app.getString(R.string.acessibilidade_caiu)))
+                    transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.acessibilidade_caiu)))
                     // Persistir: o aviso tem de sobreviver a fechar e reabrir a app (foi por não
                     // gravar que ele não aparecia na leitura do instantâneo).
                     saveState()
                     Notificacoes.acessibilidadeDesligada(
                         app,
-                        app.getString(R.string.notif_acessibilidade_titulo),
-                        app.getString(R.string.notif_acessibilidade_texto),
+                        getApplication<Application>().getString(R.string.notif_acessibilidade_titulo),
+                        getApplication<Application>().getString(R.string.notif_acessibilidade_texto),
                     )
                 } else if (agora && vigia.ligada) {
                     // Voltou a ligar-se depois de ter caído: diz-se uma vez, sem alarme.
@@ -1187,7 +1288,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 block()
             } catch (t: Throwable) {
-                error = "$label: ${t.message ?: t::class.java.simpleName}"
+                // A faixa de erro é lida por uma pessoa: passa pelo mesmo tradutor dos turnos, para
+                // não mostrar o inglês do motor nem o jargão de transporte em bruto.
+                error = "$label: " + explicaErroDoMotor(t.message ?: t::class.java.simpleName)
                 // Falta a permissão do Shizuku? A UI pede-a sozinha (ver `precisoPermissaoShizuku`).
                 if (error.contains("permissão do Shizuku")) precisoPermissaoShizuku = true
             } finally {

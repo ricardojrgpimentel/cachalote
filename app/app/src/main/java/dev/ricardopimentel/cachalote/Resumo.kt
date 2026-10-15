@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -140,13 +141,29 @@ private fun CartaoDiagnostico(vm: MainViewModel) {
             else -> {
                 val problemas = d.optInt("problemas", 0)
                 val avisos = d.optInt("avisos", 0)
+                // O título é composto pela app (e não pelo texto do daemon): o daemon escreve em
+                // português e trazia «1 problema(s) e 4 aviso(s)» — o sufixo «(s)» à mostra e a
+                // mesma contagem repetida na linha de baixo (visto no S10+ em 2026-10-15).
+                val titulo = when {
+                    problemas == 0 && avisos == 0 -> stringResource(R.string.resumo_tudo_bem)
+                    problemas == 0 -> stringResource(
+                        R.string.resumo_sem_problemas,
+                        pluralStringResource(R.plurals.resumo_avisos, avisos, avisos),
+                    )
+                    avisos == 0 -> pluralStringResource(R.plurals.resumo_problemas, problemas, problemas)
+                    else -> stringResource(
+                        R.string.resumo_com_ambos,
+                        pluralStringResource(R.plurals.resumo_problemas, problemas, problemas),
+                        pluralStringResource(R.plurals.resumo_avisos, avisos, avisos),
+                    )
+                }
                 Text(
-                    d.optString("resultado"),
+                    titulo,
                     style = MaterialTheme.typography.titleMedium,
                     color = if (problemas == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.error,
                 )
                 Text(
-                    stringResource(R.string.resumo_resultado, problemas, avisos, d.optString("base")),
+                    stringResource(R.string.resumo_base, d.optString("base")),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,

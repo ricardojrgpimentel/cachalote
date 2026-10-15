@@ -50,8 +50,8 @@ class CachaloteAgentService : Service() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= 26) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Agente ligado", NotificationManager.IMPORTANCE_LOW)
-                    .apply { description = "Mantém a ligação ao motor enquanto o agente trabalha" },
+                NotificationChannel(CHANNEL_ID, getString(R.string.notif_canal), NotificationManager.IMPORTANCE_LOW)
+                    .apply { description = getString(R.string.notif_canal_desc) },
             )
         }
         val open = PendingIntent.getActivity(
@@ -60,8 +60,8 @@ class CachaloteAgentService : Service() {
         )
         val notif: Notification = (if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this))
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Cachalote ligado ao motor")
-            .setContentText("O agente pode continuar a trabalhar com o ecrã apagado")
+            .setContentTitle(getString(R.string.notif_titulo_servico))
+            .setContentText(getString(R.string.notif_texto_servico))
             .setContentIntent(open)
             .setOngoing(true)
             .setPriority(Notification.PRIORITY_LOW)

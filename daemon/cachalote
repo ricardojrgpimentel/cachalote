@@ -236,12 +236,21 @@ doctor)
     [ "${U:-0}" = "0" ] && ok "ponte sem ERRO no registo" || warn "$U ERRO no registo da ponte (vê logs/daemon.log)"
   fi
   echo
+  # Plural a sério, não "$N problema(s)": o resultado vai direto para o ecrã do Resumo da app
+  # e o sufixo «(s)» lia-se como texto por acabar (visto no S10+ em 2026-10-15).
+  plural() { # plural N singular plural
+    if [ "$1" = "1" ]; then echo "$1 $2"; else echo "$1 $3"; fi
+  }
+  P="$(plural "$FALHAS" problema problemas)"
+  A="$(plural "$AVISOS" aviso avisos)"
   if [ "$FALHAS" = "0" ] && [ "$AVISOS" = "0" ]; then
     echo "resultado: tudo bem"
   elif [ "$FALHAS" = "0" ]; then
-    echo "resultado: $AVISOS aviso(s), nenhum problema"
+    echo "resultado: $A, nenhum problema"
+  elif [ "$AVISOS" = "0" ]; then
+    echo "resultado: $P"
   else
-    echo "resultado: $FALHAS problema(s) e $AVISOS aviso(s)"
+    echo "resultado: $P e $A"
   fi
   [ "$FALHAS" = "0" ]
   ;;

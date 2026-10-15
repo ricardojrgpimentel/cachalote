@@ -15,13 +15,20 @@ data class Uso(val usado: Int, val limite: Int) {
     val percentagem: Int get() = if (limite > 0) (usado * 100.0 / limite).roundToIntSafe() else 0
 
     /**
-     * Texto curto para o cabeçalho: `6 290 / 1 000 000 · 1%`. Separador de milhares com espaço
-     * fino (é o que se usa em português) e sem casas decimais — isto é um indicador, não um relatório.
+     * Os números, sem prefixo: `6 290 / 1 000 000 · 1%`. Separador de milhares com espaço fino (é o
+     * que se usa em português) e sem casas decimais — isto é um indicador, não um relatório.
+     *
+     * O prefixo («contexto: …») fica no recurso, em [`texto`], para a formatação continuar a poder
+     * ser testada sem Android.
      */
-    fun texto(): String {
-        if (limite <= 0) return "contexto: ${milhares(usado)}"
-        return "contexto: ${milhares(usado)} / ${milhares(limite)} · $percentagem%"
-    }
+    fun numeros(): String =
+        if (limite <= 0) milhares(usado)
+        else "${milhares(usado)} / ${milhares(limite)} · $percentagem%"
+
+    /** Texto para o cabeçalho, com o prefixo traduzido. */
+    fun texto(ctx: android.content.Context): String =
+        if (limite <= 0) ctx.getString(R.string.contexto, numeros())
+        else ctx.getString(R.string.contexto_com_limite_simples, numeros())
 
     companion object {
         /**

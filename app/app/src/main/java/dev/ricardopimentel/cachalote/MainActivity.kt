@@ -17,6 +17,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -169,7 +172,7 @@ fun CachaloteApp() {
         runCatching { rikka.shizuku.Shizuku.addRequestPermissionResultListener(listener) }
         onDispose { runCatching { rikka.shizuku.Shizuku.removeRequestPermissionResultListener(listener) } }
     }
-    MaterialTheme(colorScheme = cachaloteColors, typography = cachaloteTypography) {
+    CachaloteTema {
         Surface(modifier = Modifier.fillMaxSize()) {
             var tab by rememberSaveable { mutableStateOf(0) }
             LaunchedEffect(Unit) { vm.refreshStatus() }
@@ -208,7 +211,12 @@ fun CachaloteApp() {
                     }
                 },
             ) { pad ->
-                Column(modifier = Modifier.padding(pad).fillMaxSize()) {
+                // A faixa de erro flutua **por cima** do ecrã (ver abaixo), e não como irmão que
+                // empurra o conteúdo: enquanto estava à vista, o cabeçalho descia 228 px e todos os
+                // alvos de toque se moviam com ele (medido no S10+ em 2026-10-15 — durante a
+                // passagem toquei várias vezes no sítio errado por causa disso).
+                Box(modifier = Modifier.padding(pad).fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
                     // Configuração inicial: o assistente ocupa o ecrã todo enquanto não estiver feita.
                     if (!vm.wizardConcluido) {
                         Assistente(vm) { vm.concluirWizard() }
@@ -217,14 +225,6 @@ fun CachaloteApp() {
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
                     if (vm.mostrarLicencas) LicensesDialog(vm)
-                    if (vm.error.isNotBlank()) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF4A1520)),
-                        ) {
-                            Text(vm.error, modifier = Modifier.padding(12.dp), color = Color(0xFFFFC9D0))
-                        }
-                    }
                     LaunchedEffect(tab) {
                         // A lista de conversas é o ecrã da aba: recarrega-se sempre que se lá chega
                         // (o motor pode ter sessões novas — de outra app, de outro turno, do boot).
@@ -232,11 +232,41 @@ fun CachaloteApp() {
                         if (tab == 1) vm.refreshDoctor()
                         if (tab == 2) vm.refreshCapabilities()
                     }
+                    // Pedido de navegação vindo de outra secção (ex.: «Iniciar» do ecrã virtual sem
+                    // autorização): muda de aba para os Ajustes, que abrem a secção pedida.
+                    LaunchedEffect(vm.pedidoDeSecao) {
+                        if (vm.pedidoDeSecao != null) tab = 2
+                    }
                     when (tab) {
                         0 -> if (emConversa) ConversaScreen(vm) else ListaDeSessoes(vm)
                         1 -> ResumoScreen(vm)
                         else -> AjustesScreen(vm)
                     }
+                }
+                if (vm.error.isNotBlank()) {
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF4A1520)),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                vm.error,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFFC9D0),
+                            )
+                            TextButton(onClick = { vm.error = "" }) {
+                                Text(stringResource(R.string.fechar), color = Color(0xFFFFC9D0))
+                            }
+                        }
+                    }
+                }
                 }
             }
         }
@@ -415,6 +445,15 @@ private val ENTRADAS_DE_AJUSTE = listOf(
 private fun AjustesScreen(vm: MainViewModel) {
     var secao by rememberSaveable { mutableStateOf("menu") }
 
+    // Outra secção pode pedir para abrir uma concreta (o ecrã virtual manda para «Capacidades»
+    // quando lhe falta uma autorização). Consome-se uma vez.
+    LaunchedEffect(vm.pedidoDeSecao) {
+        vm.pedidoDeSecao?.let {
+            secao = it
+            vm.pedidoDeSecao = null
+        }
+    }
+
     // O «voltar» do sistema não pode fechar a app a partir de uma secção: volta ao menu.
     // (Sem isto, o BACK numa secção terminava a Activity — medido no S10+ em 2026-10-14.)
     if (secao != "menu") {
@@ -575,8 +614,8 @@ private fun CartaoAcessibilidade() {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.acessibilidade), fontWeight = FontWeight.SemiBold)
             Text(
-                if (accessibilityOn) "serviço ligado — o agente consegue ver e tocar no ecrã"
-                else "serviço desligado — sem ele o agente só envia notificações",
+                if (accessibilityOn) stringResource(R.string.acessibilidade_servico_ligado)
+                else stringResource(R.string.acessibilidade_servico_desligado),
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(Modifier.height(6.dp))
@@ -632,6 +671,7 @@ private fun CartaoKernelDownload(vm: MainViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CartaoCapacidades(vm: MainViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -643,7 +683,10 @@ private fun CartaoCapacidades(vm: MainViewModel) {
                 color = MaterialTheme.colorScheme.secondary,
             )
             Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, true) } }) {
                     Text(stringResource(R.string.autorizar_todas))
                 }
@@ -663,6 +706,9 @@ private fun CartaoCapacidades(vm: MainViewModel) {
 
 @Composable
 private fun CartaoRegisto(vm: MainViewModel) {
+    // Sem isto o registo só se actualizava ao mudar de aba: abrir a secção logo a seguir a uma
+    // acção mostrava «ainda não houve pedidos» com a acção já gravada (visto no S10+ em 2026-10-15).
+    LaunchedEffect(Unit) { vm.refreshCapabilities() }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -712,29 +758,56 @@ private fun CartaoAreasBash(vm: MainViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CartaoMcp(vm: MainViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.mcp_titulo), fontWeight = FontWeight.SemiBold)
             Text(
-                stringResource(R.string.mcp_texto) + "\n" +
-                    stringResource(R.string.mcp_exemplo) + "\n" +
-                    stringResource(R.string.mcp_aviso),
+                stringResource(R.string.mcp_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            // O exemplo é uma linha de JSON com 159 caracteres (190 em português) e **sem um
+            // único espaço**: num Text normal o motor de texto parte-o a meio dos identificadores
+            // e o cartão cresce para 8–10 linhas estreitas (visto no S10+ em 2026-10-15). Aqui
+            // fica em mono e rola na horizontal, que é como se lê um comando.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    stringResource(R.string.mcp_exemplo),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = Mono,
+                    color = MaterialTheme.colorScheme.secondary,
+                    softWrap = false,
+                )
+            }
+            Text(
+                stringResource(R.string.mcp_aviso),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
             OutlinedTextField(
                 value = vm.mcpJsonText,
                 onValueChange = { vm.mcpJsonText = it },
-                placeholder = { Text("[{\"name\":\"…\",\"command\":\"/caminho/absoluto\"}]") },
+                placeholder = { Text(stringResource(R.string.placeholder_mcp)) },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 6,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(onClick = { vm.saveMcpServers() }, enabled = !vm.busy) { Text(stringResource(R.string.gravar_mcp)) }
                 if (vm.mcpSaved.isNotBlank()) {
-                    Text(vm.mcpSaved, style = MaterialTheme.typography.bodySmall)
+                    Text(vm.mcpSaved, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -757,10 +830,29 @@ private fun CartaoVscreen(vm: MainViewModel) {
     // Antes do primeiro `Iniciar` não há display nenhum: os comandos mostram o marcador, para
     // ninguém os copiar com um `--display 0` (que é o ecrã físico, não o virtual).
     val idTexto = if (id > 0) id.toString() else "<id>"
-    // Os três comandos do desenho, com o display que existe **neste** telefone (o exemplo da
-    // calculadora é o que a verificação do §21 usou).
+    // Os três comandos do desenho, com o display que existe **neste** telefone. O pacote da
+    // calculadora era `com.android.calculator2` fixo — que não existe em muitos aparelhos (o
+    // LineageOS deste usa outro). Descobre-se o que está instalado e, se não houver nenhum, o
+    // comando fica com um marcador em vez de apontar para uma app que não existe.
+    val pacoteCalculadora = remember {
+        listOf(
+            "com.android.calculator2",
+            "com.google.android.calculator",
+            "org.lineageos.calculator",
+            "com.android.calculator",
+        ).firstOrNull { p ->
+            runCatching {
+                vm.getApplication<android.app.Application>()
+                    .packageManager.getPackageInfo(p, 0)
+            }.isSuccess
+        }
+    }
     val comandos = listOf(
-        "am start --display $idTexto -n com.android.calculator2/.Calculator",
+        if (pacoteCalculadora != null) {
+            "am start --display $idTexto -n $pacoteCalculadora/.Calculator"
+        } else {
+            "am start --display $idTexto -n <pacote>/<activity>"
+        },
         "input -d $idTexto tap 105 838",
         "input -d $idTexto keyevent KEYCODE_BACK",
     )
@@ -888,6 +980,32 @@ private fun CartaoVscreen(vm: MainViewModel) {
                         fontFamily = Mono,
                         color = MaterialTheme.colorScheme.secondary,
                     )
+                }
+            }
+        }
+
+        // Sem a autorização da capacidade, o «Iniciar» só dava um erro e o utilizador tinha de
+        // descobrir sozinho onde se autoriza. Aqui diz-se e leva-se lá.
+        val vscreenAutorizado = vm.capabilityToggles["vscreen_start"] == true
+        if (!vscreenAutorizado) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.vscreen_falta_autorizacao),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = { vm.pedirSecao("capacidades") }) {
+                        Text(stringResource(R.string.vscreen_abrir_capacidades))
+                    }
                 }
             }
         }
@@ -1053,6 +1171,7 @@ private fun ChipComPonto(texto: String, cor: Color) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CartaoBackup(vm: MainViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -1069,7 +1188,10 @@ private fun CartaoBackup(vm: MainViewModel) {
             val importar = rememberLauncherForActivityResult(
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
             ) { uri -> if (uri != null) vm.importarDefinicoes(uri) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(
                     onClick = { exportar.launch(Backup.nomeFicheiro()) },
                     enabled = !vm.busy,
@@ -1112,35 +1234,46 @@ private fun OnboardingCard(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val accessibility = vm.accessibilityOn
     val allowed = vm.capabilityToggles.count { it.value }
+    // Os rótulos vinham todos escritos à mão em português, dentro do código: com a app em inglês
+    // este cartão — o primeiro que um utilizador vê — ficava em português (visto no S10+ em
+    // 2026-10-15). Passaram a recursos.
+    val sKernel = stringResource(R.string.passos_kernel_extraido)
+    val sAutomatico = stringResource(R.string.passos_automatico)
+    val sMotorEmbutido = stringResource(R.string.passos_motor_embutido)
+    val sVerificar = stringResource(R.string.passos_verificar)
+    val sChave = stringResource(R.string.passos_chave_provedor)
+    val sNaAbaChave = stringResource(R.string.passos_no_separador_chave)
+    val sA11y = stringResource(R.string.passos_acessibilidade_ligada)
+    val sAbrirA11y = stringResource(R.string.passos_abrir_acessibilidade)
+    val sCapacidades = stringResource(R.string.passos_capacidades_autorizadas)
+    val sNaAbaPoderes = stringResource(R.string.passos_no_separador_poderes)
+    val sDaemon = stringResource(R.string.passos_daemon_instalado)
+    val sLigarDaemon = stringResource(R.string.passos_ligar_daemon)
+    val sRoot = stringResource(R.string.passos_root_concedido)
+    val sObterToken = stringResource(R.string.passos_obter_token)
+    val sToken = stringResource(R.string.passos_token_canal)
+    val abrirA11y: Pair<String, () -> Unit> = sAbrirA11y to {
+        runCatching {
+            ctx.startActivity(
+                android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+        Unit
+    }
     val checks = if (vm.embeddedMode) listOf(
-        Triple("kernel extraído", vm.daemonInstalled != null && vm.embeddedInfo.contains("extraído"), "(automático)" to {}),
-        Triple("motor embutido", vm.embeddedInfo.contains("a correr") || vm.embeddedInfo.contains("extraído"), "Verificar" to {}),
-        Triple("chave do provedor", vm.keyPresent, "(no separador Chave)" to {}),
-        Triple("acessibilidade ligada", accessibility, "Abrir Acessibilidade" to {
-            runCatching {
-                ctx.startActivity(
-                    android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
-            Unit
-        }),
-        Triple("capacidades autorizadas", allowed > 0, "(no separador Poderes)" to {}),
+        Triple(sKernel, vm.daemonInstalled != null && vm.embeddedInfo.contains("extraído"), sAutomatico to {}),
+        Triple(sMotorEmbutido, vm.embeddedInfo.contains("a correr") || vm.embeddedInfo.contains("extraído"), sVerificar to {}),
+        Triple(sChave, vm.keyPresent, sNaAbaChave to {}),
+        Triple(sA11y, accessibility, abrirA11y),
+        Triple(sCapacidades, allowed > 0, sNaAbaPoderes to {}),
     ) else listOf(
-        Triple("daemon instalado", vm.daemonInstalled == true, "Ligar daemon" to { vm.startDaemon() }),
-        Triple("root concedido", vm.rootOk == true, "Obter token (root)" to { vm.obtainToken() }),
-        Triple("token do canal", vm.tokenState.contains("obtido"), "Obter token (root)" to { vm.obtainToken() }),
-        Triple("chave do provedor", vm.keyPresent, "(no separador Chave)" to {}),
-        Triple("acessibilidade ligada", accessibility, "Abrir Acessibilidade" to {
-            runCatching {
-                ctx.startActivity(
-                    android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
-            Unit
-        }),
-        Triple("capacidades autorizadas", allowed > 0, "(no separador Poderes)" to {}),
+        Triple(sDaemon, vm.daemonInstalled == true, sLigarDaemon to { vm.startDaemon() }),
+        Triple(sRoot, vm.rootOk == true, sObterToken to { vm.obtainToken() }),
+        Triple(sToken, vm.tokenOk, sObterToken to { vm.obtainToken() }),
+        Triple(sChave, vm.keyPresent, sNaAbaChave to {}),
+        Triple(sA11y, accessibility, abrirA11y),
+        Triple(sCapacidades, allowed > 0, sNaAbaPoderes to {}),
     )
     val missing = checks.count { !it.second }
     if (missing == 0) return
@@ -1173,6 +1306,7 @@ private fun OnboardingCard(vm: MainViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StatusScreen(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -1257,18 +1391,24 @@ private fun StatusScreen(vm: MainViewModel) {
                 Text(stringResource(R.string.motor_rotulo, vm.agentInfo.ifBlank { stringResource(R.string.handshake_pendente) }))
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Button(onClick = { vm.refreshStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
             OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text(stringResource(R.string.ligar_daemon)) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text(stringResource(R.string.obter_token)) }
             OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text(stringResource(R.string.reiniciar_motor)) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                if (CachaloteAgentService.running) "serviço de agente: ligado"
-                else "serviço de agente: desligado",
+                if (CachaloteAgentService.running) stringResource(R.string.servico_ligado)
+                else stringResource(R.string.servico_desligado),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -1276,7 +1416,7 @@ private fun StatusScreen(vm: MainViewModel) {
                 val ctx2 = ctx
                 if (CachaloteAgentService.running) CachaloteAgentService.stop(ctx2)
                 else CachaloteAgentService.start(ctx2)
-            }) { Text(if (CachaloteAgentService.running) "Desligar" else "Ligar") }
+            }) { Text(if (CachaloteAgentService.running) stringResource(R.string.servico_desligar) else stringResource(R.string.servico_ligar)) }
         }
         OutlinedButton(onClick = {
             // Arranca o motor do perfil web (se preciso) e abre a interface completa.
@@ -1306,9 +1446,9 @@ private fun CartaoDeMensagem(line: ChatLine) {
     ) {
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             when {
-                ehErro -> Etiqueta("erro", cor = MaterialTheme.colorScheme.error)
-                ehUser -> Etiqueta("tu")
-                else -> Etiqueta("agente")
+                ehErro -> Etiqueta(stringResource(R.string.etiqueta_erro), cor = MaterialTheme.colorScheme.error)
+                ehUser -> Etiqueta(stringResource(R.string.etiqueta_tu))
+                else -> Etiqueta(stringResource(R.string.etiqueta_agente))
             }
             Text(
                 line.text,
@@ -1486,7 +1626,7 @@ private fun KeyScreen(vm: MainViewModel) {
  * e — como num chat do WhatsApp — **não tem barra de abas nem o cabeçalho da app**: em cima só o
  * voltar, o título e o estado; em baixo só a barra de escrita.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ConversaScreen(vm: MainViewModel) {
     var input by remember { mutableStateOf("") }
@@ -1515,16 +1655,27 @@ private fun ConversaScreen(vm: MainViewModel) {
         LinhaDeTelemetria(vm, if (vm.busy) ((agora - inicio) / 1000).coerceAtLeast(0) else 0)
 
         if (vm.configOptions.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
+            // FlowRow e não Row com scroll horizontal: assim os chips mudam de linha em vez de
+            // saírem pela borda do ecrã (o «Reasoning effort» nascia cortado a 457 dp, visto no
+            // S10+ em 2026-10-15). E o rótulo inteiro cabe: antes era `take(28)`, que cortava
+            // «DeepSeek-V4-Flash» a meio — «Model: deepseek-official: DeepSeek-» — sem reticências
+            // e contra a linha de cabeçalho, que mostrava o nome todo.
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 vm.configOptions.forEach { opt ->
                     AssistChip(
                         onClick = { vm.configPicker = opt },
-                        label = { Text(opt.name + ": " + opt.currentLabel.take(28)) },
+                        label = {
+                            Text(
+                                opt.name + ": " + opt.currentLabel,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 280.dp),
+                            )
+                        },
                     )
                 }
             }
@@ -1613,13 +1764,14 @@ private fun ConversaScreen(vm: MainViewModel) {
  */
 @Composable
 private fun CabecalhoDaConversa(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val modo = when (vm.modeKind) {
         DaemonController.Mode.DAEMON -> "root"
         DaemonController.Mode.SHIZUKU -> "Shizuku"
         else -> "on-device"
     }
     val modelo = vm.configOptions.firstOrNull { it.id == "model" }?.currentLabel
-    val tecnica = listOfNotNull(modo, modelo, vm.uso?.texto()).joinToString("  \u00B7  ")
+    val tecnica = listOfNotNull(modo, modelo, vm.uso?.texto(ctx)).joinToString("  \u00B7  ")
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 6.dp, top = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1672,6 +1824,7 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
  */
 @Composable
 private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val uso = vm.uso
     if (!vm.busy && uso == null) return
 
@@ -1679,7 +1832,7 @@ private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
     val aCorrer = vm.transcript.count { it.role == "tool" && !it.done }
     val partes = ArrayList<String>(3)
     if (ferramentas > 0) partes.add(stringResource(R.string.telemetria_ferramentas, ferramentas, aCorrer))
-    uso?.let { partes.add(it.texto()) }
+    uso?.let { partes.add(it.texto(ctx)) }
     if (vm.busy) partes.add(stringResource(R.string.telemetria_tempo, segundos))
 
     Row(
@@ -1705,6 +1858,7 @@ private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
  */
 @Composable
 private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vm.attachImage(uri)
     }
@@ -1717,7 +1871,7 @@ private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> 
         when {
             result.resultCode == Activity.RESULT_OK && !spoken.isNullOrBlank() ->
                 onInput(if (input.isBlank()) spoken else "$input $spoken")
-            result.resultCode == Activity.RESULT_OK -> vm.error = "não percebi nada — tenta outra vez"
+            result.resultCode == Activity.RESULT_OK -> vm.error = ctx.getString(R.string.voz_nao_percebi)
             // Cancelado pelo utilizador: não é erro.
         }
     }
@@ -1769,10 +1923,10 @@ private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> 
                     onClick = {
                         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Fala para escrever")
+                            putExtra(RecognizerIntent.EXTRA_PROMPT, ctx.getString(R.string.voz_prompt))
                         }
                         runCatching { voice.launch(intent) }
-                            .onFailure { vm.error = "não há reconhecedor de voz neste dispositivo" }
+                            .onFailure { vm.error = ctx.getString(R.string.voz_sem_reconhecedor) }
                     },
                     enabled = !vm.busy,
                 ) {

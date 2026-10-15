@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -283,7 +286,18 @@ private fun OpcaoDeModo(
             }
             Text(detalhe, style = MaterialTheme.typography.bodySmall, color = corDetalhe)
             Text(risco, style = MaterialTheme.typography.bodySmall, color = corDetalhe)
-            TextButton(onClick = onEscolher, enabled = disponivel) {
+            // O TextButton herda a cor de conteúdo do tema (`primary`), que é #BEFFE7 — um tom
+            // mais claro do próprio fundo do cartão escolhido (#38EFC2). Medido no S10+ em
+            // 2026-10-15: 1,30:1, ou seja, praticamente invisível. Aqui segue a cor do cartão.
+            TextButton(
+                onClick = onEscolher,
+                enabled = disponivel,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = if (escolhido) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.primary,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
                 Text(
                     if (!disponivel) stringResource(R.string.wizard_modo_indisponivel)
                     else if (escolhido) stringResource(R.string.wizard_modo_escolhido)
@@ -294,6 +308,7 @@ private fun OpcaoDeModo(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LigarMotor(vm: MainViewModel) {
     Passo(
@@ -302,9 +317,15 @@ private fun LigarMotor(vm: MainViewModel) {
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             EstadoLinha(stringResource(R.string.daemon_instalado), vm.daemonInstalled == true)
-            EstadoLinha(stringResource(R.string.token_do_canal), vm.tokenState.isNotBlank() && vm.tokenState != "(por obter)")
+            EstadoLinha(stringResource(R.string.token_do_canal), vm.tokenOk)
             EstadoLinha(stringResource(R.string.motor_responde), vm.agentInfo.isNotBlank())
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // FlowRow e não Row: com três botões, a 360 dp a soma dos rótulos excede a largura e
+            // a `Row` espremia o último até ele desaparecer por completo (medido no S10+ em
+            // 2026-10-15: o «Refresh» saía da árvore de UI). Aqui mudam de linha.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text(stringResource(R.string.ligar_daemon)) }
                 OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text(stringResource(R.string.obter_token)) }
                 OutlinedButton(onClick = { vm.refreshStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
