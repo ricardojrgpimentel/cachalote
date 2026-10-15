@@ -376,4 +376,5 @@
         <item quantity="other">gravado: %d servidores</item>
     </plurals>
     <string name="contexto_com_limite_simples">contexto: %1$s</string>
+    <string name="fila_e_mais">e mais %1$d…</string>
 </resources>

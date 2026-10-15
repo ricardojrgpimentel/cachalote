@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -478,10 +479,33 @@ class FilaCardTest {
     }
 
     @Test
+    fun uma_fila_longa_nao_mostra_todas_as_linhas() {
+        // Mostram-se quatro e diz-se quantas ficaram: uma fila de vinte não pode comer a conversa.
+        card((1..6).map { Tarefa("t$it", "tarefa $it") })
+        compose.onNodeWithText("6 na fila").assertIsDisplayed()
+        compose.onNodeWithText("4. tarefa 4").assertIsDisplayed()
+        compose.onAllNodesWithText("5. tarefa 5").assertCountEquals(0)
+        compose.onNodeWithText("e mais 2…").assertIsDisplayed()
+    }
+
+    @Test
+    fun limpar_concluidas_nao_aparece_sem_concluidas() {
+        card(listOf(pendente))
+        compose.onAllNodesWithText("Limpar concluídas").assertCountEquals(0)
+    }
+
+    @Test
+    fun limpar_concluidas_aparece_quando_ha_concluidas() {
+        card(listOf(pendente.copy(estado = Tarefa.FEITA)))
+        compose.onNodeWithText("Limpar concluídas").assertIsDisplayed()
+    }
+
+    @Test
     fun o_x_remove_a_tarefa_certa() {
         var removida: String? = null
         card(listOf(pendente, Tarefa("t2", "outra")), onRemover = { removida = it })
-        compose.onAllNodesWithText("✕")[0].performClick()
+        // O botão passou a ser um ícone: procura-se pelo rótulo que o leitor de ecrã anuncia.
+        compose.onAllNodesWithContentDescription("Remover esta tarefa da fila")[0].performClick()
         assertEquals("t1", removida)
     }
 }

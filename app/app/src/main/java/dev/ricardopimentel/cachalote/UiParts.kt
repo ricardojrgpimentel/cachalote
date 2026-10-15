@@ -6,8 +6,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
@@ -110,10 +114,19 @@ fun CachaloteTema(content: @Composable () -> Unit) {
 }
 
 /**
- * Fila de tarefas: o que está à espera, o que corre agora, e os botões para a gerir.
+ * Fila de tarefas: uma **tira**, como o design a pede — não um cartão.
+ *
+ * O desenho do Stitch ([`design/ecras/conversa-sessao.png`]) mostra-a como *«a compact task-queue
+ * strip»*, **só quando tem tarefas**, numa linha: o glifo, o título, a contagem e os dois botões.
+ * A versão anterior era um cartão com um parágrafo de dica (que repetia o que o campo de escrita
+ * já diz logo abaixo) e uma linha de botões própria — 194 dp com uma tarefa, sempre à vista.
+ *
+ * Quem decide se a tira aparece é o ecrã da conversa (ver `ConversaScreen`): com a fila vazia e o
+ * campo de escrita vazio não há nada para mostrar.
  *
  * Tudo por dados + lambdas (nada de ViewModel) para se poder testar sem aparelho.
- */@OptIn(ExperimentalLayoutApi::class)
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FilaCard(
     tarefas: List<Tarefa>,
@@ -125,66 +138,152 @@ fun FilaCard(
     onRemover: (String) -> Unit,
     onLimpar: () -> Unit,
 ) {
-    val pendentes = tarefas.count { it.estado == Tarefa.PENDENTE }
+    val pendentes = tarefas.filter { it.estado == Tarefa.PENDENTE }
+    val concluidas = tarefas.size - pendentes.size
     val removerDesc = stringResource(R.string.fila_remover)
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.fila_titulo), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Text(
-                    if (pendentes == 0) stringResource(R.string.fila_vazia) else stringResource(R.string.fila_quantas, pendentes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                if (aCorrer) CircularProgressIndicator(modifier = Modifier.padding(start = 8.dp).size(16.dp), strokeWidth = 2.dp)
-            }
-            // A dica só quando a fila está vazia: com tarefas à vista o cartão fica compacto
-            // (o design mostra-o curto, e a conversa não pode perder meio ecrã com isto).
-            if (tarefas.isEmpty()) {
-                Text(
-                    stringResource(R.string.fila_dica),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-            }
-            // FlowRow e não Row: com três botões, a 360 dp a soma dos rótulos excede a largura e
-            // uma `Row` espremia o último até ele deixar de ter texto (medido no S10+ em
-            // 2026-10-15: comprimido vazio de 114×1072 px). Aqui os botões mudam de linha.
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(onClick = onJuntar, enabled = enabled) { Text(stringResource(R.string.fila_juntar)) }
-                if (aCorrer) {
-                    OutlinedButton(onClick = onParar) { Text(stringResource(R.string.fila_parar)) }
-                } else {
-                    OutlinedButton(onClick = onCorrer, enabled = enabled && pendentes > 0) { Text(stringResource(R.string.fila_correr)) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            // Duas disposições, escolhidas pela largura:
+            //   · larga (≥ 400dp) — tudo numa linha, com os rótulos dos botões a quebrar em duas
+            //     linhas dentro de um botão estreito, como no desenho («Juntar à» / «fila»);
+            //   · estreita (< 400dp) — o título numa linha e os botões noutra, com a largura
+            //     natural: sem isso os rótulos quebravam em três linhas e a tira ficava mais alta
+            //     do que o cartão que veio substituir (medido no S10+ a 360 dp em 2026-10-15).
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val estreito = maxWidth < 400.dp
+                val titulo: @Composable () -> Unit = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.List,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            stringResource(R.string.fila_titulo),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                        )
+                        Text(
+                            if (pendentes.isEmpty()) stringResource(R.string.fila_vazia)
+                            else stringResource(R.string.fila_quantas, pendentes.size),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = Mono,
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                        )
+                        if (aCorrer) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        }
+                    }
                 }
-                OutlinedButton(onClick = onLimpar, enabled = enabled && tarefas.any { it.estado != Tarefa.PENDENTE }) {
-                    Text(stringResource(R.string.fila_limpar))
+                val larguraMax = if (estreito) Dp.Unspecified else 104.dp
+                val botoes: @Composable () -> Unit = {
+                    OutlinedButton(
+                        onClick = onJuntar,
+                        enabled = enabled,
+                        modifier = if (estreito) Modifier else Modifier.widthIn(max = larguraMax),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    ) { RotuloDeFila(stringResource(R.string.fila_juntar)) }
+                    if (aCorrer) {
+                        OutlinedButton(
+                            onClick = onParar,
+                            modifier = if (estreito) Modifier else Modifier.widthIn(max = larguraMax),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        ) { RotuloDeFila(stringResource(R.string.fila_parar)) }
+                    } else {
+                        Button(
+                            onClick = onCorrer,
+                            enabled = enabled && pendentes.isNotEmpty(),
+                            modifier = if (estreito) Modifier else Modifier.widthIn(max = larguraMax),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        ) { RotuloDeFila(stringResource(R.string.fila_correr)) }
+                    }
+                }
+                if (estreito) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        titulo()
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { botoes() }
+                    }
+                } else {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        titulo()
+                        botoes()
+                    }
                 }
             }
             // Só as que ainda não correram (as concluídas desaparecem com "Limpar concluídas").
-            tarefas.filter { it.estado == Tarefa.PENDENTE }.forEachIndexed { i, t ->
+            // Mostram-se no máximo quatro: uma fila de vinte não pode comer a conversa toda.
+            pendentes.take(4).forEachIndexed { i, t ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "${i + 1}. ${t.texto}",
                         style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(
+                    // Ícone e não texto: o `✕` num `TextButton` tinha 40 dp de altura mínima e
+                    // era ele que mandava no tamanho da linha. O rótulo vai no `Icon`, que é onde
+                    // o leitor de ecrã o lê (antes anunciava só «✕»).
+                    IconButton(
                         onClick = { onRemover(t.id) },
                         enabled = enabled,
-                        // Sem isto o leitor de ecrã anunciava só «✕» — e é a única forma de
-                        // remover uma tarefa da fila.
-                        modifier = Modifier.semantics {
-                            contentDescription = removerDesc
-                        },
-                    ) { Text("✕") }
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = removerDesc,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
+            }
+            if (pendentes.size > 4) {
+                Text(
+                    stringResource(R.string.fila_e_mais, pendentes.size - 4),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            // "Limpar concluídas" só existe quando há concluídas — no desenho não está na tira,
+            // e não vale uma linha permanente por uma acção que quase nunca é preciso.
+            if (concluidas > 0) {
+                TextButton(
+                    onClick = onLimpar,
+                    enabled = enabled,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) { Text(stringResource(R.string.fila_limpar), style = MaterialTheme.typography.labelSmall) }
             }
         }
     }
+}
+
+/** Rótulo de um botão da tira da fila: cabe em duas linhas, centrado, como no desenho. */
+@Composable
+private fun RotuloDeFila(texto: String) {
+    Text(
+        texto,
+        maxLines = 2,
+        textAlign = TextAlign.Center,
+        style = MaterialTheme.typography.labelLarge,
+    )
 }
 
 /** Interruptores por capacidade — é aqui que o dono decide o que o agente pode fazer. */

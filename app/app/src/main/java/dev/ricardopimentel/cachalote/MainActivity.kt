@@ -1739,20 +1739,24 @@ private fun ConversaScreen(vm: MainViewModel) {
                 TextButton(onClick = { vm.clearImage() }) { Text(stringResource(R.string.remover)) }
             }
         }
-        // Fila de tarefas: junta ao lado do campo, para se poder lançar trabalho e sair.
-        FilaCard(
-            tarefas = vm.tarefas,
-            aCorrer = vm.filaACorrer,
-            enabled = !vm.busy,
-            onJuntar = {
-                vm.juntarATexto(input)
-                input = ""
-            },
-            onCorrer = { vm.correrFila() },
-            onParar = { vm.pararFila() },
-            onRemover = { vm.removerDaFila(it) },
-            onLimpar = { vm.limparConcluidas() },
-        )
+        // Fila de tarefas: a tira do design, e **só quando há algo para mostrar** — com tarefas na
+        // fila, ou enquanto se escreve (que é exactamente quando «Juntar à fila» faz falta). Com a
+        // fila vazia e o campo vazio não aparece nada: é espaço que volta para a conversa.
+        if (vm.tarefas.isNotEmpty() || input.isNotBlank()) {
+            FilaCard(
+                tarefas = vm.tarefas,
+                aCorrer = vm.filaACorrer,
+                enabled = !vm.busy,
+                onJuntar = {
+                    vm.juntarATexto(input)
+                    input = ""
+                },
+                onCorrer = { vm.correrFila() },
+                onParar = { vm.pararFila() },
+                onRemover = { vm.removerDaFila(it) },
+                onLimpar = { vm.limparConcluidas() },
+            )
+        }
         BarraDeInput(vm, input) { input = it }
     }
 }

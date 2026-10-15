@@ -376,4 +376,5 @@
         <item quantity="other">saved: %d servers</item>
     </plurals>
     <string name="contexto_com_limite_simples">context: %1$s</string>
+    <string name="fila_e_mais">and %1$d more…</string>
 </resources>
