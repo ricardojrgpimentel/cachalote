@@ -382,4 +382,19 @@
     <string name="autorizacao_permitir_uma">Permitir uma vez</string>
     <string name="autorizacao_recusar">Recusar</string>
     <string name="autorizacao_sem_detalhe">o agente pede autorização</string>
+    <string name="trabalho_comando">A correr um comando</string>
+    <string name="trabalho_ecra_virtual">No ecrã virtual</string>
+    <string name="trabalho_escrever">A escrever no ecrã</string>
+    <string name="trabalho_ficheiros">A mexer em ficheiros</string>
+    <string name="trabalho_ler_ecra">A ler o ecrã</string>
+    <string name="trabalho_notificar">A enviar uma notificação</string>
+    <string name="trabalho_pensar">A pensar</string>
+    <string name="trabalho_preparar">A preparar</string>
+    <string name="trabalho_procurar">A procurar</string>
+    <string name="trabalho_raciocinar">A raciocinar</string>
+    <string name="trabalho_responder">A escrever a resposta</string>
+    <string name="trabalho_tecla">A carregar numa tecla</string>
+    <string name="trabalho_tocar">A tocar no ecrã</string>
+    <string name="trabalho_trabalhar">A trabalhar</string>
+    <string name="trabalho_ver">A ver o ecrã</string>
 </resources>

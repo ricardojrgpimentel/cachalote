@@ -382,4 +382,19 @@
     <string name="autorizacao_permitir_uma">Allow once</string>
     <string name="autorizacao_recusar">Reject</string>
     <string name="autorizacao_sem_detalhe">the agent is asking for approval</string>
+    <string name="trabalho_comando">Running a command</string>
+    <string name="trabalho_ecra_virtual">On the virtual screen</string>
+    <string name="trabalho_escrever">Typing on the screen</string>
+    <string name="trabalho_ficheiros">Working on files</string>
+    <string name="trabalho_ler_ecra">Reading the screen</string>
+    <string name="trabalho_notificar">Sending a notification</string>
+    <string name="trabalho_pensar">Thinking</string>
+    <string name="trabalho_preparar">Getting ready</string>
+    <string name="trabalho_procurar">Searching</string>
+    <string name="trabalho_raciocinar">Reasoning</string>
+    <string name="trabalho_responder">Writing the reply</string>
+    <string name="trabalho_tecla">Pressing a key</string>
+    <string name="trabalho_tocar">Tapping the screen</string>
+    <string name="trabalho_trabalhar">Working</string>
+    <string name="trabalho_ver">Looking at the screen</string>
 </resources>

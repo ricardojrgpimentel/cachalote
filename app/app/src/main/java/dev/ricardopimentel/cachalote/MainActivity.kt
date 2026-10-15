@@ -14,6 +14,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1632,8 +1639,12 @@ private fun ConversaScreen(vm: MainViewModel) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(vm.transcript.size) {
-        if (vm.transcript.isNotEmpty()) listState.animateScrollToItem(vm.transcript.size - 1)
+    // Levar a vista ao fim: o último item do transcript — ou o «A trabalhar…», que é o item
+    // seguinte enquanto o turno corre. Sem contar com ele, o indicador nascia sempre abaixo da
+    // área visível e não se via nada (visto no S10+ em 2026-10-15).
+    LaunchedEffect(vm.transcript.size, vm.busy) {
+        val alvo = if (vm.busy) vm.transcript.size else vm.transcript.size - 1
+        if (alvo >= 0) listState.animateScrollToItem(alvo)
     }
 
     // Cronómetro do turno: só conta enquanto o agente trabalha (a linha «em direto» do design).
@@ -1718,6 +1729,11 @@ private fun ConversaScreen(vm: MainViewModel) {
                     )
                     else -> CartaoDeMensagem(line)
                 }
+            }
+            // «A trabalhar…» no fundo da conversa, enquanto o agente tem um turno a correr: é o
+            // que diz que a app não morreu, e a frase segue o que ele está mesmo a fazer.
+            if (vm.busy) {
+                item { EstadoDeTrabalho(vm) }
             }
             item { Spacer(Modifier.height(4.dp)) }
         }
@@ -1826,6 +1842,78 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
  * ferramentas já chamou e o consumo de contexto. Sem turno a correr e sem números do motor, não
  * ocupa espaço nenhum.
  */
+/**
+ * «A pensar…», «A correr um comando…» — o estado do agente, no fundo da conversa.
+ *
+ * A frase vem da ferramenta que está a correr ([`recursoDaFerramenta`]); só quando não há nenhuma
+ * — o agente está a pensar — é que as palavras rodam entre si. Rodar palavras ao acaso enquanto
+ * ele corre um comando seria bonito e falso.
+ */
+@Composable
+private fun EstadoDeTrabalho(vm: MainViewModel) {
+    val ferramenta = vm.transcript.lastOrNull { it.role == "tool" && !it.done }?.text
+    val especifica = ferramenta?.let { recursoDaFerramenta(it) }
+    val genericas = listOf(
+        R.string.trabalho_pensar,
+        R.string.trabalho_raciocinar,
+        R.string.trabalho_preparar,
+        R.string.trabalho_responder,
+    )
+    var volta by remember { mutableStateOf(0) }
+    LaunchedEffect(especifica) {
+        volta = 0
+        // Só roda quando não há nada de concreto para dizer.
+        if (especifica == null) {
+            while (true) {
+                kotlinx.coroutines.delay(2_600)
+                volta++
+            }
+        }
+    }
+    val frase = if (especifica != null) {
+        stringResource(especifica)
+    } else {
+        stringResource(genericas[volta % genericas.size])
+    }
+    // Os pontinhos, a mudar ao ritmo de sempre.
+    var pontos by remember { mutableStateOf(1) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(420)
+            pontos = pontos % 3 + 1
+        }
+    }
+    // O ponto pulsa de leve: dá movimento sem chamar mais atenção do que a resposta que vai chegar.
+    val pulso = rememberInfiniteTransition(label = "trabalho")
+    val alfa by pulso.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "alfa",
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .alpha(alfa)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+        )
+        Text(
+            frase + ".".repeat(pontos),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+    }
+}
+
 @Composable
 private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
     val ctx = androidx.compose.ui.platform.LocalContext.current

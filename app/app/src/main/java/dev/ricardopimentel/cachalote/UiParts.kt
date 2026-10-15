@@ -883,3 +883,31 @@ fun LinhaVerificacao(texto: String, estado: String, valor: String = "") {
     }
 }
 
+
+/**
+ * O que dizer enquanto o agente trabalha, a partir da ferramenta que está a correr.
+ *
+ * Deliberadamente **não** é uma lista de palavras bonitas ao acaso: se o agente está a correr um
+ * `bash`, dizer «A procurar» seria mentira. O que roda é o que não se sabe — quando não há
+ * ferramenta nenhuma a correr, o agente está a pensar, e aí qualquer uma das frases serve. Devolve
+ * `null` para uma ferramenta desconhecida, e quem chama cai na frase genérica.
+ */
+internal fun recursoDaFerramenta(nome: String): Int? {
+    val n = nome.lowercase()
+    return when {
+        n.contains("bash") || n.contains("shell") -> R.string.trabalho_comando
+        n.contains("vscreen") -> R.string.trabalho_ecra_virtual
+        n.contains("notify") -> R.string.trabalho_notificar
+        n.contains("see") -> R.string.trabalho_ver
+        n.contains("screenshot") -> R.string.trabalho_ver
+        n.contains("tap") -> R.string.trabalho_tocar
+        n.contains("type") -> R.string.trabalho_escrever
+        n.contains("key") -> R.string.trabalho_tecla
+        n.contains("screen") -> R.string.trabalho_ler_ecra
+        n.contains("grep") || n.contains("glob") || n.contains("search") || n.contains("find") ->
+            R.string.trabalho_procurar
+        n.contains("read") || n.contains("write") || n.contains("edit") || n.contains("patch") ->
+            R.string.trabalho_ficheiros
+        else -> null
+    }
+}

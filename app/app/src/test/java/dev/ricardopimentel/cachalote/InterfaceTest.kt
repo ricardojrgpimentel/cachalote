@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.robolectric.annotation.Config
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -507,5 +508,27 @@ class FilaCardTest {
         // O botão passou a ser um ícone: procura-se pelo rótulo que o leitor de ecrã anuncia.
         compose.onAllNodesWithContentDescription("Remover esta tarefa da fila")[0].performClick()
         assertEquals("t1", removida)
+    }
+}
+
+/** A frase que acompanha o trabalho do agente. */
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [34], qualifiers = "pt-rPT")
+class EstadoDeTrabalhoTest {
+
+    private fun nome(id: Int, ctx: android.content.Context) = ctx.getString(id)
+
+    @Test
+    fun a_frase_segue_a_ferramenta_que_corre() {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(R.string.trabalho_comando, recursoDaFerramenta("bash"))
+        assertEquals(R.string.trabalho_ver, recursoDaFerramenta("android_see"))
+        assertEquals(R.string.trabalho_tocar, recursoDaFerramenta("android_tap"))
+        assertEquals(R.string.trabalho_ecra_virtual, recursoDaFerramenta("android_vscreen"))
+        assertEquals(R.string.trabalho_ficheiros, recursoDaFerramenta("write"))
+        assertEquals(R.string.trabalho_procurar, recursoDaFerramenta("grep"))
+        // Uma ferramenta que não conhecemos não inventa: cai na frase genérica de quem chama.
+        assertNull(recursoDaFerramenta("ferramenta-nova"))
+        assertTrue(nome(R.string.trabalho_comando, ctx).isNotBlank())
     }
 }
