@@ -287,6 +287,9 @@ if (fs.existsSync(toolBashFile)) {
         "\t\t\tagent: exec.agent,",
         '\t\t\ttoolName: "bash",',
         "\t\t\tcallId: exec.callId,",
+        // O `reason` é o texto do motor (para o registo); o que a app mostra sai do `rawInput`,
+        // que é onde vai o comando e os caminhos a sério (ver o patch 8 mais abaixo).
+        "\t\t\trawInput: { command: String(command), paths: list },",
         "\t\t\treason: `cachalote guard: o comando toca em caminhos fora da área permitida: ${list.join(\", \")}`,",
         "\t\t\tdisplayReason: { en: `This command touches paths outside the allowed area: ${list.join(\", \")}`, zh: `该命令访问了允许范围之外的路径：${list.join(\", \")}` },",
         "\t\t\tsignal: exec.signal",
@@ -459,6 +462,39 @@ if (fs.existsSync(durableFile)) {
   }
 } else {
   report.push("attachment-local (fsync): AVISO — ficheiro não encontrado");
+}
+
+/* ---------- patch 8: o pedido de autorização leva o que se vai correr ---------- */
+// O mapeador do ACP para `session/request_permission` mandava só `toolCall: { toolCallId }`:
+// sem título e sem input. No telefone isso dava um painel que dizia «O agente quer correr:» e
+// nada por baixo -- o utilizador tinha de decidir às cegas (visto no S10+ em 2026-10-15).
+// Aqui passam a viajar o motivo e o `rawInput` do pedido de aprovação.
+const acpFile = HOME + "/@deepseek-ai/dsh-acp/lib/index.js";
+if (fs.existsSync(acpFile)) {
+  let src = fs.readFileSync(acpFile, "utf8");
+  const marker = "cachalote: autorizacao com contexto";
+  if (src.includes(marker)) {
+    report.push("dsh-acp (autorização): já patcheado (nada a fazer)");
+  } else {
+    const old = "\t\t\t\ttoolCall: { toolCallId: callId },";
+    if (!src.includes(old)) {
+      report.push("dsh-acp (autorização): AVISO — âncora não encontrada; versão mudou?");
+    } else {
+      const novoBloco = [
+        "\t\t\t\t// " + marker + " (ver D10 do PLANO.md).",
+        "\t\t\t\ttoolCall: {",
+        "\t\t\t\t\ttoolCallId: callId,",
+        "\t\t\t\t\ttitle: (request && (request.reason || request.toolName)) || callId,",
+        "\t\t\t\t\trawInput: (request && request.rawInput) || {}",
+        "\t\t\t\t},",
+      ].join("\n");
+      src = src.replace(old, novoBloco);
+      fs.writeFileSync(acpFile, src);
+      report.push("dsh-acp (autorização): o pedido leva título e o que se vai correr");
+    }
+  }
+} else {
+  report.push("dsh-acp (autorização): AVISO — ficheiro não encontrado");
 }
 
 /* ---------- verificação final: nenhum .node na árvore ---------- */

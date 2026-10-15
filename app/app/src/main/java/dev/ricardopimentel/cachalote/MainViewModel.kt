@@ -837,7 +837,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Guarda as `configOptions` que o motor devolve em session/new, resume e set_config_option. */
     /**
      * Nome de uma opção de configuração do motor, traduzido quando é uma das conhecidas.
      *
@@ -849,6 +848,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         "model" -> getApplication<Application>().getString(R.string.config_modelo)
         "reasoning_effort" -> getApplication<Application>().getString(R.string.config_esforco)
         else -> nomeDoMotor
+    }
+
+    /** Guarda as `configOptions` que o motor devolve em session/new, resume e set_config_option. */
+    /**
+     * Nome de uma opção de autorização, traduzido pelo `kind` do protocolo.
+     *
+     * O motor manda «Allow once» e «Reject» em inglês, que apareciam assim numa app portuguesa
+     * (visto no S10+ em 2026-10-15). Um `kind` desconhecido fica com o nome que vier.
+     */
+    private fun nomeDaOpcaoDePermissao(kind: String, nomeDoMotor: String): String {
+        val s = getApplication<Application>()
+        return when (kind) {
+            "allow_once" -> s.getString(R.string.autorizacao_permitir_uma)
+            "allow_always" -> s.getString(R.string.autorizacao_permitir_sempre)
+            "reject_once", "reject_always" -> s.getString(R.string.autorizacao_recusar)
+            else -> nomeDoMotor
+        }
     }
 
     private fun applyConfigOptions(res: JSONObject?) {
@@ -1111,20 +1127,48 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (opts != null) {
             for (i in 0 until opts.length()) {
                 val o = opts.optJSONObject(i) ?: continue
-                list.add(o.optString("optionId") to o.optString("name", o.optString("kind")))
+                // Os nomes vêm do motor em inglês («Allow once», «Reject»). Traduzem-se pelo
+                // `kind`, que é estável; um `kind` desconhecido fica com o nome que vier.
+                list.add(
+                    o.optString("optionId") to nomeDaOpcaoDePermissao(
+                        o.optString("kind"),
+                        o.optString("name", o.optString("kind")),
+                    ),
+                )
             }
         }
+        // O que o agente quer correr. O motor manda `toolCall.toolCallId` e (desde o patch à
+        // `dsh-acp`) o `title` e o `rawInput`; no caso da guarda de caminhos o `rawInput` traz o
+        // comando e os caminhos a sério. Sem isto o painel dizia «O agente quer correr:» e nada
+        // por baixo -- decidia-se às cegas (visto no S10+ em 2026-10-15).
+        val raw = tool?.optJSONObject("rawInput")
+        val comando = raw?.optString("command").orEmpty().trim()
+        val naAreaPermitida = raw?.optJSONArray("paths")?.let { arr ->
+            (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
+        } ?: emptyList()
+        // `optString` devolve "" (não null) quando a chave não existe: o `?:` antigo nunca
+        // disparava e o título ficava vazio. Daí o `ifBlank`.
+        val motorTitulo = tool?.optString("title").orEmpty().trim()
+        val titulo = comando.ifBlank { motorTitulo }.ifBlank {
+            getApplication<Application>().getString(R.string.autorizacao_sem_detalhe)
+        }
+        val detalhe = when {
+            naAreaPermitida.isNotEmpty() -> getApplication<Application>()
+                .getString(R.string.autorizacao_fora_da_area, naAreaPermitida.joinToString(", "))
+            raw != null && raw.length() > 0 -> raw.toString().take(600)
+            else -> ""
+        }
         Prefs(getApplication()).auditAdd(
-            "${System.currentTimeMillis()}  aprovação  " + (tool?.optString("title") ?: "?") +
-                "  " + (tool?.opt("rawInput")?.toString()?.take(120) ?: ""),
+            java.text.SimpleDateFormat("dd/MM HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()) +
+                "  aprovação  " + titulo.ifBlank { "?" } + "  " + naAreaPermitida.joinToString(", "),
         )
         approval = PendingApproval(
             requestId = obj.optInt("id"),
-            title = tool?.optString("title") ?: "o agente pede autorização",
-            detail = tool?.opt("rawInput")?.toString()?.take(600) ?: "",
+            title = titulo,
+            detail = detalhe,
             options = list,
         )
-        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.autorizacao_pedido, tool?.optString("title") ?: "?")))
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.autorizacao_pedido, titulo.ifBlank { "?" })))
         // Com a app em segundo plano ninguém vê o diálogo: o turno fica à espera em silêncio.
         val app = getApplication<Application>()
         Notificacoes.pedidoDeAutorizacao(

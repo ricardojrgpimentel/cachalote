@@ -377,4 +377,9 @@
     </plurals>
     <string name="contexto_com_limite_simples">context: %1$s</string>
     <string name="fila_e_mais">and %1$d more…</string>
+    <string name="autorizacao_fora_da_area">Outside the allowed area: %1$s</string>
+    <string name="autorizacao_permitir_sempre">Allow always</string>
+    <string name="autorizacao_permitir_uma">Allow once</string>
+    <string name="autorizacao_recusar">Reject</string>
+    <string name="autorizacao_sem_detalhe">the agent is asking for approval</string>
 </resources>
