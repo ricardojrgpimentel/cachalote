@@ -48,7 +48,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Security
@@ -121,6 +122,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -173,11 +175,19 @@ fun CachaloteApp() {
             var tab by rememberSaveable { mutableStateOf(0) }
             LaunchedEffect(Unit) { vm.refreshStatus() }
 
+            // Uma conversa aberta ocupa o ecrã todo — **sem barra de abas e sem o cabeçalho da
+            // app**, como um chat do WhatsApp: em cima só o voltar, o título e o estado; em baixo
+            // só a barra de escrita. Voltar (seta ou gesto do sistema) regressa à lista.
+            val emConversa = tab == 0 && vm.conversaAberta && vm.sessionId != null
+            if (emConversa) {
+                androidx.activity.compose.BackHandler { vm.fecharConversa() }
+            }
+
             Scaffold(
                 modifier = Modifier.imePadding(),
                 bottomBar = {
                     // Durante o assistente não há barra: há um caminho a seguir, não abas.
-                    if (vm.wizardConcluido) NavigationBar {
+                    if (vm.wizardConcluido && !emConversa) NavigationBar {
                         NavigationBarItem(
                             selected = tab == 0,
                             onClick = { tab = 0 },
@@ -204,10 +214,9 @@ fun CachaloteApp() {
                     if (!vm.wizardConcluido) {
                         Assistente(vm) { vm.concluirWizard() }
                     }
-                    Header(vm, busy = vm.busy)
+                    if (!emConversa) Header(vm, busy = vm.busy)
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
-                    if (vm.showSessions) SessionsDialog(vm)
                     if (vm.mostrarLicencas) LicensesDialog(vm)
                     if (vm.error.isNotBlank()) {
                         Card(
@@ -218,11 +227,14 @@ fun CachaloteApp() {
                         }
                     }
                     LaunchedEffect(tab) {
+                        // A lista de conversas é o ecrã da aba: recarrega-se sempre que se lá chega
+                        // (o motor pode ter sessões novas — de outra app, de outro turno, do boot).
+                        if (tab == 0) vm.refreshSessions()
                         if (tab == 1) vm.refreshDoctor()
                         if (tab == 2) vm.refreshCapabilities()
                     }
                     when (tab) {
-                        0 -> ChatScreen(vm)
+                        0 -> if (emConversa) ConversaScreen(vm) else ListaDeSessoes(vm)
                         1 -> ResumoScreen(vm)
                         else -> AjustesScreen(vm)
                     }
@@ -331,54 +343,46 @@ private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
     )
 }
 
-/** Lista das sessões persistidas no motor, para retomar uma conversa anterior. */
+/**
+ * O adaptador entre o modelo e a lista de conversas: resolve cada sessão do motor no que a linha
+ * mostra. A pré-visualização só existe para a sessão aberta (é a única cujo texto a app tem — as
+ * outras vivem no motor); as restantes mostram o identificador curto, que é verdadeiro.
+ */
 @Composable
-private fun SessionsDialog(vm: MainViewModel) {
-    // A sessão activa é lida UMA vez, no topo: dentro dos itens do LazyColumn o valor podia
-    // ficar preso na primeira composição (o ✓ e o ✕ nunca apareciam — ver STATUS §34).
-    val atual = vm.sessionId
-    AlertDialog(
-        onDismissRequest = { vm.showSessions = false },
-        title = {
-            Column {
-                Text(stringResource(R.string.seccoes))
-                Text(
-                    if (atual.isNullOrBlank()) stringResource(R.string.sessao_nenhuma_activa)
-                    else stringResource(R.string.sessao_activa, atual.take(8)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-            }
-        },
-        text = {
-            SessionsList(
-                sessions = vm.sessions,
-                ativo = atual,
-                enabled = !vm.busy,
-                onResume = { vm.resumeSession(it) },
-                onClose = { vm.closeSession(it) },
-            )
-        },
-        confirmButton = {},
-        dismissButton = {
-            Column {
-                if (!atual.isNullOrBlank()) {
-                    // Caminho curto para o que interessa: fechar a sessão em uso, sem ter de a
-                    // encontrar na lista (a lista tem dezenas de sessões antigas).
-                    TextButton(onClick = { vm.closeSession(atual) }, enabled = !vm.busy) {
-                        Text(stringResource(R.string.fechar_sessao_activa))
-                    }
-                }
-                Text(
-                    stringResource(R.string.legenda_sessoes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                TextButton(onClick = { vm.showSessions = false }) { Text(stringResource(R.string.fechar)) }
-            }
-        },
+private fun ListaDeSessoes(vm: MainViewModel) {
+    val previaDesconhecida = stringResource(R.string.sessao_curta)
+    val ultima = vm.transcript.lastOrNull { it.role != "system" }
+    val items = vm.sessions.map { s ->
+        val activa = s.id == vm.sessionId
+        ItemConversa(
+            id = s.id,
+            titulo = s.title,
+            previa = if (activa && ultima != null) {
+                ultima.text.replace(Regex("\\s+"), " ").trim().take(90)
+            } else {
+                previaDesconhecida.format(s.id.take(8))
+            },
+            quando = quandoCurto(s.updatedAt),
+            activa = activa,
+            falhou = activa && vm.transcript.lastOrNull()?.role == "error",
+        )
+    }
+    ListaDeConversas(
+        conversas = items,
+        onAbrir = { vm.resumeSession(it) },
+        onNova = { vm.newSession() },
     )
 }
+
+/**
+ * Quando, no formato curto do design («14/10 21:14»). O motor dá o instante em UTC; converte-se
+ * para a hora do telefone — mostrar a hora de Greenwich num telefone português era um erro de uma
+ * hora que ninguém percebia de onde vinha.
+ */
+private fun quandoCurto(iso: String): String = runCatching {
+    val t = java.time.OffsetDateTime.parse(iso).atZoneSameInstant(java.time.ZoneId.systemDefault())
+    "%02d/%02d %02d:%02d".format(t.dayOfMonth, t.monthValue, t.hour, t.minute)
+}.getOrElse { iso.replace("T", " ").take(16) }
 
 /**
  * O que o agente pode fazer no telefone: interruptores por capacidade e o registo do
@@ -1446,9 +1450,14 @@ private fun KeyScreen(vm: MainViewModel) {
     }
 }
 
+/**
+ * A **conversa aberta**, a ocupar o ecrã todo. É o ecrã a que se chega tocando numa linha da lista
+ * e — como num chat do WhatsApp — **não tem barra de abas nem o cabeçalho da app**: em cima só o
+ * voltar, o título e o estado; em baixo só a barra de escrita.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatScreen(vm: MainViewModel) {
+private fun ConversaScreen(vm: MainViewModel) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
@@ -1471,7 +1480,7 @@ private fun ChatScreen(vm: MainViewModel) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LinhaDeSessao(vm)
+        CabecalhoDaConversa(vm)
         LinhaDeTelemetria(vm, if (vm.busy) ((agora - inicio) / 1000).coerceAtLeast(0) else 0)
 
         if (vm.configOptions.isNotEmpty()) {
@@ -1566,34 +1575,59 @@ private fun ChatScreen(vm: MainViewModel) {
     }
 }
 
-/** Sessão à esquerda, acções de sessão à direita — em ícones, como no design. */
+/**
+ * O cabeçalho da conversa aberta: voltar, o título da sessão, a linha técnica em monospace
+ * («root · deepseek-v4-flash · contexto …») e o botão que fecha a sessão. A barra de abas não
+ * aparece aqui — é isso que faz a conversa parecer um chat do WhatsApp.
+ */
 @Composable
-private fun LinhaDeSessao(vm: MainViewModel) {
+private fun CabecalhoDaConversa(vm: MainViewModel) {
+    val modo = when (vm.modeKind) {
+        DaemonController.Mode.DAEMON -> "root"
+        DaemonController.Mode.SHIZUKU -> "Shizuku"
+        else -> "on-device"
+    }
+    val modelo = vm.configOptions.firstOrNull { it.id == "model" }?.currentLabel
+    val tecnica = listOfNotNull(modo, modelo, vm.uso?.texto()).joinToString("  \u00B7  ")
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 6.dp, top = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Etiqueta(stringResource(R.string.sessao_rotulo, vm.sessionId?.take(8) ?: stringResource(R.string.nenhuma)))
-            if (vm.reconnecting) {
-                Text(
-                    stringResource(R.string.a_reconectar),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-            }
-        }
-        IconButton(onClick = { vm.refreshSessions() }, enabled = !vm.busy) {
+        IconButton(onClick = { vm.fecharConversa() }) {
             Icon(
-                Icons.AutoMirrored.Filled.List,
-                contentDescription = stringResource(R.string.seccoes),
-                tint = MaterialTheme.colorScheme.secondary,
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.voltar_conversas),
+                tint = MaterialTheme.colorScheme.primaryContainer,
             )
         }
-        IconButton(onClick = { vm.newSession() }, enabled = !vm.busy) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                vm.sessionTitles[vm.sessionId]
+                    ?: stringResource(R.string.sessao_curta, vm.sessionId?.take(8) ?: stringResource(R.string.nenhuma)),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                tecnica,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.secondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (vm.reconnecting) {
+            Text(
+                stringResource(R.string.a_reconectar),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+        IconButton(onClick = { vm.sessionId?.let { vm.closeSession(it) } }, enabled = !vm.busy) {
             Icon(
-                Icons.Filled.Add,
-                contentDescription = stringResource(R.string.nova_sessao),
+                Icons.Filled.PowerSettingsNew,
+                contentDescription = stringResource(R.string.fechar_sessao_activa),
                 tint = MaterialTheme.colorScheme.secondary,
             )
         }

@@ -39,67 +39,77 @@ class InterfaceTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val sessaoA = SessionRow("aaaa1111-2222-3333-4444-555555555555", "primeira conversa", "2026-10-14T10:00:00Z")
-    private val sessaoB = SessionRow("bbbb2222-3333-4444-5555-666666666666", "segunda conversa", "2026-10-14T11:30:00Z")
+    private val conversas = listOf(
+        ItemConversa(
+            id = "aaaa1111-2222-3333-4444-555555555555",
+            titulo = "corre o comando echo cachalote-teste",
+            previa = "respondeu com 512 lido da imagem",
+            quando = "14/10 22:57",
+            activa = false,
+            falhou = false,
+        ),
+        ItemConversa(
+            id = "bbbb2222-3333-4444-5555-666666666666",
+            titulo = "estado do motor e da chave",
+            previa = "session bbbb2222",
+            quando = "14/10 21:14",
+            activa = true,
+            falhou = false,
+        ),
+    )
 
     @Test
-    fun a_lista_de_sessoes_marca_a_activa_e_so_ela_se_pode_fechar() {
-        var retomada: String? = null
-        var fechada: String? = null
+    fun a_lista_de_conversas_mostra_as_linhas_e_marca_a_activa() {
+        var aberta: String? = null
         compose.setContent {
-            SessionsList(
-                sessions = listOf(sessaoA, sessaoB),
-                ativo = sessaoB.id,
-                enabled = true,
-                onResume = { retomada = it },
-                onClose = { fechada = it },
-            )
+            ListaDeConversas(conversas = conversas, onAbrir = { aberta = it }, onNova = {})
         }
 
-        // A activa leva ✓; a outra não.
-        compose.onNodeWithText("✓ segunda conversa").assertIsDisplayed()
-        compose.onNodeWithText("primeira conversa").assertIsDisplayed()
-        // O motor só fecha a sessão activa, por isso só há **um** ✕ — e é na linha da activa.
-        compose.onAllNodesWithText("✕").assertCountEquals(1)
+        compose.onNodeWithText("corre o comando echo cachalote-teste").assertIsDisplayed()
+        compose.onNodeWithText("respondeu com 512 lido da imagem").assertIsDisplayed()
+        compose.onNodeWithText("estado do motor e da chave").assertIsDisplayed()
+        compose.onNodeWithText("14/10 22:57").assertIsDisplayed()
+        // O chip do estado só existe na linha activa; as outras não inventam um.
+        compose.onAllNodesWithText("ACTIVA").assertCountEquals(1)
+        compose.onNodeWithText("2 conversas").assertIsDisplayed()
 
-        // Tocar numa linha retoma essa sessão (não a que está activa).
-        compose.onNodeWithText("primeira conversa").performClick()
-        assertEquals(sessaoA.id, retomada)
-
-        // E o ✕ fecha a activa.
-        compose.onNodeWithText("✕").performClick()
-        assertEquals(sessaoB.id, fechada)
+        // Tocar numa linha abre **essa** conversa.
+        compose.onNodeWithText("corre o comando echo cachalote-teste").performClick()
+        assertEquals("aaaa1111-2222-3333-4444-555555555555", aberta)
     }
 
     @Test
-    fun sem_sessoes_a_lista_diz_isso_mesmo() {
-        var tocada: String? = null
-        compose.setContent {
-            SessionsList(
-                sessions = emptyList(),
-                ativo = null,
-                enabled = true,
-                onResume = { tocada = it },
-                onClose = { tocada = it },
-            )
-        }
-        compose.onNodeWithText("não há sessões guardadas no motor").assertIsDisplayed()
-        assertNull(tocada)
+    fun a_linha_da_conversa_que_falhou_leva_o_chip_de_falha() {
+        val comFalha = listOf(conversas[1].copy(falhou = true))
+        compose.setContent { ListaDeConversas(conversas = comFalha, onAbrir = {}, onNova = {}) }
+        compose.onNodeWithText("FALHA").assertIsDisplayed()
+        compose.onAllNodesWithText("ACTIVA").assertCountEquals(0)
     }
 
     @Test
-    fun a_lista_nao_deixa_mexer_enquanto_o_agente_trabalha() {
-        // Com `enabled = false` o ✕ existe mas está desactivado (é o que o `busy` faz).
-        compose.setContent {
-            SessionsList(
-                sessions = listOf(sessaoA),
-                ativo = sessaoA.id,
-                enabled = false,
-                onResume = {},
-                onClose = {},
-            )
-        }
-        compose.onNodeWithText("✕").assertIsNotEnabled()
+    fun sem_conversas_mostra_o_estado_vazio_e_o_botao_de_criar() {
+        var nova = 0
+        compose.setContent { ListaDeConversas(conversas = emptyList(), onAbrir = {}, onNova = { nova++ }) }
+        compose.onNodeWithText("Ainda não há conversas").assertIsDisplayed()
+        compose.onNodeWithText("Escreve a primeira mensagem e o agente começa a trabalhar.").assertIsDisplayed()
+        compose.onNodeWithText("Nova conversa").performClick()
+        assertEquals(1, nova)
+    }
+
+    @Test
+    fun o_botao_de_criar_conversa_esta_sempre_a_mao() {
+        var nova = 0
+        compose.setContent { ListaDeConversas(conversas = conversas, onAbrir = {}, onNova = { nova++ }) }
+        // Com conversas, o botão do canto («Nova») continua a criar uma nova.
+        compose.onNodeWithText("Nova").performClick()
+        assertEquals(1, nova)
+    }
+
+    @Test
+    fun as_iniciais_do_avatar_vem_do_titulo() {
+        assertEquals("CO", iniciais("corre o comando echo"))
+        assertEquals("ES", iniciais("  estado do motor  "))
+        assertEquals("?", iniciais("   "))
     }
 
     @Test
@@ -288,20 +298,34 @@ class InterfaceEnTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val sessao = SessionRow("cccc3333-4444-5555-6666-777777777777", "a chat", "2026-10-14T12:00:00Z")
-
     @Test
-    fun os_botoes_e_os_rotulos_estao_em_ingles() {
+    fun a_lista_de_conversas_esta_em_ingles() {
         compose.setContent {
-            SessionsList(
-                sessions = emptyList(),
-                ativo = null,
-                enabled = true,
-                onResume = {},
-                onClose = {},
+            ListaDeConversas(
+                conversas = listOf(
+                    ItemConversa(
+                        id = "cccc3333-4444-5555-6666-777777777777",
+                        titulo = "a chat",
+                        previa = "session cccc3333",
+                        quando = "14/10 12:00",
+                        activa = true,
+                        falhou = false,
+                    ),
+                ),
+                onAbrir = {},
+                onNova = {},
             )
         }
-        compose.onNodeWithText("no sessions stored in the engine").assertIsDisplayed()
+        compose.onNodeWithText("1 conversation").assertIsDisplayed()
+        compose.onNodeWithText("ACTIVE").assertIsDisplayed()
+        compose.onNodeWithText("New").assertIsDisplayed()
+    }
+
+    @Test
+    fun o_estado_vazio_esta_em_ingles() {
+        compose.setContent { ListaDeConversas(conversas = emptyList(), onAbrir = {}, onNova = {}) }
+        compose.onNodeWithText("No conversations yet").assertIsDisplayed()
+        compose.onNodeWithText("New conversation").assertIsDisplayed()
     }
 
     @Test
@@ -344,19 +368,6 @@ class InterfaceEnTest {
         compose.onNodeWithText("Reject the turn").performScrollTo().assertIsDisplayed()
     }
 
-    @Test
-    fun a_lista_de_sessoes_em_ingles_marca_a_activa() {        compose.setContent {
-            SessionsList(
-                sessions = listOf(sessao),
-                ativo = sessao.id,
-                enabled = true,
-                onResume = {},
-                onClose = {},
-            )
-        }
-        compose.onNodeWithText("✓ a chat").assertIsDisplayed()
-        compose.onNodeWithText("✕").assertIsDisplayed()
-    }
 }
 
 /** O indicador de consumo de contexto no cabeçalho. */

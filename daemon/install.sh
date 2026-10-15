@@ -79,6 +79,7 @@ for f in "$RUNTIME_SRC"/lib/*.so*; do [ -f "$f" ] && "${ADB[@]}" push "$f" "$STA
 printf '#!/system/bin/sh\nexec /system/bin/sh "$@"\n' > "$WS/.work/bash-shim"
 "${ADB[@]}" push "$WS/.work/bash-shim" "$STAGE/bin/bash" >/dev/null
 "${ADB[@]}" push "$WS/daemon/bridge.cjs" "$STAGE/bridge.cjs" >/dev/null
+"${ADB[@]}" push "$WS/daemon/session-meta.cjs" "$STAGE/session-meta.cjs" >/dev/null
 "${ADB[@]}" push "$WS/daemon/cachalote" "$STAGE/cachalote" >/dev/null
 "${ADB[@]}" push "$WS/daemon/client-smoke.cjs" "$STAGE/client-smoke.cjs" >/dev/null
 "${ADB[@]}" push "$WS/config/cachalote.patch.yml" "$STAGE/cachalote.patch.yml" >/dev/null
@@ -99,6 +100,7 @@ cp -f "$STAGE/runtime/bin/node" "$BASE/runtime/bin/node"
 cp -f "$STAGE/runtime/lib/"*.so* "$BASE/runtime/lib/"
 cp -f "$STAGE/bin/bash" "$BASE/bin/bash"
 cp -f "$STAGE/bridge.cjs" "$BASE/bridge.cjs"
+cp -f "$STAGE/session-meta.cjs" "$BASE/session-meta.cjs"
 cp -f "$STAGE/cachalote" "$BASE/bin/cachalote"
 cp -f "$STAGE/client-smoke.cjs" "$BASE/bin/client-smoke.cjs"
 [ -f "$BASE/home/.env" ] || : > "$BASE/home/.env"

@@ -2,9 +2,15 @@
 
 > ## Estado (S10+ ligado por USB)
 >
-> **§67 é o trabalho desta ronda**: o **Ecrã Virtual** era a última peça do design do Stitch por
-> aplicar — está feita e vista no telefone, e com ela todos os ecrãs do `design/ecras/` estão em
-> Compose. A ronda fechou também os dois pendentes do §66 (recuperação de sessão **provada** no
+> **§68 é o trabalho desta ronda**: a conversa passou a funcionar **como no WhatsApp** — a aba
+> Conversa é a lista de sessões (com o botão «Nova») e, ao entrar numa, o chat ocupa o ecrã inteiro
+> **sem menu no fundo**. O desenho foi pedido ao Stitch (dois ecrãs novos em `design/ecras/`), e a
+> lista só é útil porque o daemon passou a ler os títulos e as datas que o motor grava em disco
+> (`session/list` não os dá — knowledge 135). Verificado no S10+ com **77 conversas** a sério,
+> 0 crashes e 50 testes de JVM.
+>
+> **§67** aplicou o **Ecrã Virtual**, a última peça do design do Stitch que faltava: está feita e
+> vista no telefone. A ronda fechou também os dois pendentes do §66 (recuperação de sessão **provada** no
 > aparelho; painel de autorização **coberto por testes de JVM**) e deixou duas armadilhas novas
 > (133 e 134).
 >
@@ -2117,3 +2123,101 @@ se lançam apps lá dentro).
 | Linha de telemetria do turno do desenho | já anotada em §64: precisa de contagem de passos e tempo do turno, que o motor não manda |
 | Fontes do design (Space Grotesk, Geist, JetBrains Mono) | continuam por empacotar (são OFL, dá para as trazer); hoje usa-se a escala com as famílias do sistema |
 | Testes de dispositivo que precisam de um turno | `app-ui-test` passo 6 e `app-capabilities-test --full` passo 2 continuam à espera de rede/chave |
+
+---
+
+## 68. A conversa como no WhatsApp: a lista de sessões primeiro, o chat em ecrã inteiro depois
+
+O autor viu a app e disse o que queria: *«em termos de design, para o caminho igual ao WhatsApp:
+temos os menus no fundo, quando clicamos em conversa vemos as sessões todas e um botão para criar
+uma nova; ao selecionar uma entramos como as conversas do WhatsApp e não temos o menu no fundo,
+apenas o input de texto»*. Foi pedido desenho novo ao Stitch com isso em mente e implementado.
+
+### 68.1 O desenho novo (Google Stitch)
+
+Dois ecrãs, com o **mesmo sistema de design** do projecto (`projects/5379698934911994296`,
+`assets/03e1655bce57463c8396dd34bc8cf3d0`), e os pedidos versionados pela primeira vez em
+[`design/prompts/`](design/prompts) para o desenho se poder repetir ou afinar:
+
+| Ecrã | Ficheiro | O que traz |
+|---|---|---|
+| Lista de conversas | [`design/ecras/conversa-lista.png`](design/ecras/conversa-lista.png) | linha por sessão (avatar com iniciais, título, prévia, hora e chip de estado), o botão **«Nova»** a pairar, e o estado vazio |
+| Sessão aberta | [`design/ecras/conversa-sessao.png`](design/ecras/conversa-sessao.png) | conversa em ecrã inteiro, com o voltar no cabeçalho e **sem barra de abas** — só a barra de escrita |
+
+**Três adaptações à verdade da app** (o desenho não pode mandar no que a app sabe):
+
+1. **Sem filtros.** O desenho tem `Todas / Activas / Fechadas`. A app não tem o conceito de sessão
+   «fechada», e todas as que lista pertencem ao mesmo motor e modo — um filtro que não filtra nada é
+   pior do que nenhum. Fica a contagem («77 conversas»).
+2. **Sem o `NPU: 24 tok/s`** do cabeçalho: não medimos isso. A linha técnica mostra o que é medido
+   (modo · modelo · consumo de contexto).
+3. **O cabeçalho da marca fica** na aba das conversas (o desenho propunha um título «Conversa» a
+   substituí-lo): é a identidade da app e já estava verificada. As fichas de modelo/esforço também
+   ficam à vista, em vez de irem para um menu de overflow.
+
+### 68.2 O que mudou no código
+
+| Onde | O que mudou |
+|---|---|
+| [`MainActivity.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt) | a aba Conversa passa a ser a **lista**; a conversa aberta é um ecrã próprio (`ConversaScreen`) **sem `NavigationBar` e sem cabeçalho da app**; o BACK (e a seta) volta à lista; o `SessionsDialog` desapareceu (a lista é o ecrã); novo `ListaDeSessoes` (o adaptador do modelo) e `CabecalhoDaConversa` (voltar, título, linha técnica, fechar sessão) |
+| [`UiParts.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/UiParts.kt) | `ListaDeConversas` (peça sem estado, com o FAB, o realce da activa e o estado vazio) substitui o `SessionsList` do diálogo; `ItemConversa` e `iniciais()` |
+| [`MainViewModel.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainViewModel.kt) | `conversaAberta` (a navegação vive no modelo, para o `newSession`/`resumeSession` a abrirem e o `closeSession` a fechar); `refreshSessions` cruza o motor com os metadados do daemon e **ordena pela conversa mais recente** |
+| [`DaemonController.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/DaemonController.kt) / [`CachaloteClient.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/CachaloteClient.kt) | `sessionMeta()`; o `unwrap` passa a incluir o `details` do motor nas mensagens de erro (era só «Internal error»); as sessões passam a ter **alternativa sem MCP** (ver 68.4) |
+| [`daemon/session-meta.cjs`](daemon/session-meta.cjs) *(novo)* + [`daemon/bridge.cjs`](daemon/bridge.cjs) | `cachalote.sessions.meta`: lê o título e as datas que o motor grava em disco (ver 68.3) |
+
+**Strings:** +9 chaves nos dois idiomas — i18n verde: **254 chaves iguais**, 227 usadas.
+
+### 68.3 A lista só serve se as linhas disserem alguma coisa
+
+Isto era o problema a sério, e não se via no desenho: **o `session/list` do ACP devolve só
+`sessionId` e `cwd`** — nem título, nem data. A primeira versão da lista mostrou **76 linhas de
+hexadecimal, por ordem arbitrária**. Se tivesse ficado assim, a lista «à WhatsApp» seria uma lista
+de nada.
+
+O que o motor **grava** (e não expõe) está em `$DSH_HOME/sessions/<slug>/<id>/session.v4.jsonl.zstd`:
+o cabeçalho com `createdAt`/`cwd`, o `user/message` do primeiro prompt e — o melhor — o
+`session/title` que **o próprio motor gerou**. O daemon é quem pode lê-lo (root/Shizuku), e a app
+pede-lho por `cachalote.sessions.meta`. Dois pormenores que valeram armadilha (knowledge **135**): o
+título do motor vem **depois** do primeiro prompt no ficheiro, e o ficheiro é uma **concatenação de
+frames zstd** — descomprimir o ficheiro inteiro devolvia 174 bytes de 17 KB.
+
+Teste sem telefone: [`tools/session-meta-test.cjs`](tools/session-meta-test.cjs) (constrói uma
+sessão com a forma real, com um frame truncado no fim), agora na CI. **No modo embutido não há
+daemon**, portanto não há metadados: a lista fica com o que a app já sabia, sem datas inventadas.
+
+Pelo caminho caiu um **bug antigo**: o `store.load()` não repunha o mapa de títulos, e o primeiro
+`saveState()` gravava `{}` por cima — os títulos derivados do primeiro prompt duravam até ao
+arranque seguinte.
+
+### 68.4 O MCP em baixo deixou de trancar a app (fecho do knowledge 134)
+
+Com o MCP do Stitch configurado e o telefone **sem rede**, o motor respondia `Internal error` a
+`session/new` **e** a `session/resume`: com a lista, isso passou a ser **não conseguir abrir conversa
+nenhuma** — nem as antigas. Agora o `DaemonController` tenta com os servidores configurados e, se a
+falha vier do MCP, **repete sem eles**, dizendo-o no transcript («os servidores MCP configurados não
+responderam — esta sessão corre sem eles»). É o que se vê na captura da conversa aberta.
+
+### 68.5 Verificação no S10+ (2026-10-15)
+
+| Verificação | Resultado |
+|---|---|
+| A lista com títulos e datas a sério | [`design/app/conversa-lista.png`](design/app/conversa-lista.png) — **77 conversas**, a mais recente primeiro, `ACTIVA` com a barra de acento, avatares com as iniciais |
+| O daemon a dar os metadados | 77 sessões com título/data (ex.: `"usa o bash para escrever"`, `2026-10-14T13:09:53.816Z`) |
+| Abrir uma conversa | [`design/app/conversa-sessao.png`](design/app/conversa-sessao.png) — ecrã inteiro, **sem barra de abas** (a `/tmp` do teste confirmou: `exists "Resumo"` → não) |
+| Voltar | o BACK do sistema volta à lista; a seta também |
+| Criar uma nova | o FAB «Nova» cria e abre (`sessão 588d7bd8 criada`) |
+| Fechar a sessão | o botão do cabeçalho fecha-a e volta à lista (a lista passa a não ter `ACTIVA`) |
+| Outros separadores | Resumo e Ajustes continuam a abrir |
+| `logcat -b crash` | **vazio** (0) |
+| Testes de JVM | **50** (eram 48; a lista de conversas tem 5 testes novos, em pt e em inglês) |
+| `tools/session-meta-test.cjs` | tudo bem (e falha se a ordem título/prompt se inverter) |
+| i18n | 254 chaves iguais nos dois idiomas |
+
+### 68.6 O que fica por fazer
+
+| Item | Nota |
+|---|---|
+| Prévia das conversas que não estão abertas | É a única linha do desenho que não tem dados: o conteúdo das outras sessões está no motor e o `session-meta` lê o **título**, não o histórico. Fica `sessão <id curto>` em vez de um resumo inventado |
+| Metadados no modo embutido | Sem daemon não há quem leia os ficheiros (o Kotlin não tem zstd). A lista fica com os títulos que a app conhece |
+| Filtros da lista | Ficaram de fora de propósito (ver 68.1); se o motor vier a expor sessões «arquivadas», passam a fazer sentido |
+| Testes de dispositivo com turno | Continuam à espera de rede (§59) |

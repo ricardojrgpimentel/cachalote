@@ -1745,3 +1745,43 @@ todos invisíveis no dia-a-dia do modo root:
   mínimo, dizer no transcript que a sessão nova não se conseguiu abrir — hoje o utilizador só vê
   «Internal error», que não é acção nenhuma.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-15).
+
+### 135. A lista de conversas: o `session/list` não traz título nem data, e as sessões estão em frames zstd encadeados
+
+- **Sintoma:** a lista de conversas (o desenho novo, à WhatsApp) mostrava **76 linhas de
+  hexadecimal** por ordem arbitrária — sem título, sem hora. E a lista vinha sempre igual,
+  independentemente do que se tinha conversado.
+- **Causa 1 — o ACP não dá:** `session/list` devolve **só** `sessionId` e `cwd`. Confirmado com um
+  cliente directo contra o motor no S10+ (2026-10-15):
+  ```json
+  {"sessions":[{"sessionId":"269676d6-…","cwd":"/data/adb/cachalote/home/ws"}, …]}
+  ```
+  Nem `title` nem `updatedAt` — embora o motor **grave** os dois (ver abaixo). É a mesma lacuna do
+  knowledge 97, agora com consequência visível.
+- **Causa 2 — os títulos que a app guardava perdiam-se:** o `store.load()` repunha `sessionId`,
+  modelo e esforço, mas **não** `sessionTitles`; o primeiro `saveState()` gravava `{}` por cima do
+  ficheiro. Ou seja: os títulos derivados do primeiro prompt duravam até ao arranque seguinte.
+- **O que está em disco:** cada sessão é
+  `$DSH_HOME/sessions/<slug-do-cwd>/<id>/session.v4.jsonl.zstd`, e o JSONL traz tudo o que falta:
+  ```json
+  {"type":"session","createdAt":1791977431778,"cwd":"/data/adb/cachalote/home/ws"}
+  {"type":"session/title","time":1791977605055,"data":{"title":"usa o bash para escrever"}}
+  {"type":"user/message","time":1791977605015,"data":{"content":[{"type":"text","text":"usa o bash…"}]}}
+  ```
+  Dois detalhes que custaram: o **título do motor vem depois** do primeiro prompt no ficheiro (quem
+  ficar com o primeiro que aparece fica com o prompt), e o `time` do último registo é a data boa
+  (o `mtime` do ficheiro serve de fallback).
+- **A armadilha do zstd:** o ficheiro é uma **concatenação de frames zstd** (um por lote durável).
+  `zstdDecompressSync(ficheiroInteiro)` devolve só o **primeiro** frame — 174 bytes de um ficheiro
+  de 17 KB — porque cada frame é independente. O `createZstdDecompress()` em stream também pára no
+  primeiro. É preciso andar pelos frames (o kernel faz isso em
+  `dsh-session-persistence-jsonl`: magic `0xFD2FB528`, descritor, blocos) e descomprimir cada um.
+  Um frame a meio no fim (motor morto a escrever) fica de fora — e é o comportamento que se quer.
+- **Solução:** `daemon/session-meta.cjs` lê os metadados (título, `createdAt`, `updatedAt`, `cwd`),
+  expostos pelo daemon como `cachalote.sessions.meta` (na mesma ligação TCP autenticada que o ACP
+  usa). A app cruza isso com o `session/list` e ordena pela conversa mais recente. Teste sem
+  telefone: `tools/session-meta-test.cjs` (constrói uma sessão com a forma real, frames
+  encadeados e um frame truncado no fim) — está na CI.
+- **Limite honesto:** no **modo embutido** não há daemon, portanto não há metadados: a lista fica
+  com o que a app já sabia (título derivado do prompt, ou o id curto) e **sem datas inventadas**.
+- **Origem:** **[LOCAL]** (S10+, 2026-10-15, ao aplicar o desenho da lista de conversas).

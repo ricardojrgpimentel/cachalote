@@ -81,6 +81,12 @@ jobs:
             node --check "$f"
           done
 
+      # O leitor de metadados das sessões (título e datas): é o que a lista de conversas mostra e o
+      # ACP não dá. Constrói uma sessão de mentira com a forma real (frames zstd encadeados) e
+      # confirma o que se tira de lá — incluindo o frame a meio no fim.
+      - name: metadados das sessões (título e datas)
+        run: node tools/session-meta-test.cjs
+
   apk:
     name: APK de debug a partir de um clone
     runs-on: ubuntu-latest

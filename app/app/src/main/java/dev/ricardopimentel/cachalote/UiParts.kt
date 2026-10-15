@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -20,8 +21,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayArrow
@@ -32,6 +36,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.size
@@ -48,10 +54,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
@@ -135,48 +145,6 @@ fun FilaCard(
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(onClick = { onRemover(t.id) }, enabled = enabled) { Text("✕") }
-                }
-            }
-        }
-    }
-}
-
-/** Lista de sessões: ✓ na activa, ✕ só nela (o motor só fecha a sessão activa), retomar ao tocar. */
-@Composable
-fun SessionsList(
-    sessions: List<SessionRow>,
-    ativo: String?,
-    enabled: Boolean,
-    onResume: (String) -> Unit,
-    onClose: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (sessions.isEmpty()) {
-        Text(stringResource(R.string.sem_sessoes))
-        return
-    }
-    LazyColumn(modifier = modifier.heightIn(max = 420.dp)) {
-        itemsIndexed(sessions) { _, row ->
-            val atual = row.id == ativo
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { onResume(row.id) }, modifier = Modifier.weight(1f)) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            (if (atual) "✓ " else "") + row.title,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (atual) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                        )
-                        Text(
-                            row.id.take(8) + "  ·  " + row.updatedAt.replace("T", " ").take(19),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                }
-                if (atual) {
-                    TextButton(onClick = { onClose(row.id) }, enabled = enabled) {
-                        Text("✕", color = MaterialTheme.colorScheme.secondary)
-                    }
                 }
             }
         }
@@ -389,6 +357,177 @@ fun PainelDeAutorizacao(
             color = MaterialTheme.colorScheme.secondary,
         )
     }
+}
+
+/**
+ * Uma linha da lista de conversas, já resolvida para o que o ecrã mostra.
+ *
+ * A `previa` só existe para a sessão que está aberta — é a única cujo texto a app tem (as outras
+ * vivem no motor, e o `session/list` não devolve conteúdo; ver knowledge 97). Para essas, a linha
+ * mostra o identificador curto em vez de inventar um resumo.
+ */
+data class ItemConversa(
+    val id: String,
+    val titulo: String,
+    val previa: String,
+    val quando: String,
+    val activa: Boolean,
+    val falhou: Boolean,
+)
+
+/**
+ * A **lista de conversas** — o ecrã da aba «Conversa», como a lista de chats do WhatsApp: uma
+ * linha por sessão, o botão «Nova» a pairar em baixo à direita, e o estado vazio quando ainda não
+ * há nada. Tocar numa linha entra na conversa (é quem chama que decide o que isso significa).
+ *
+ * Sem estado próprio: recebe os itens já resolvidos e devolve as acções por lambda (ver knowledge
+ * 114 — é o que permite testá-la na JVM, sem aparelho).
+ */
+@Composable
+fun ListaDeConversas(
+    conversas: List<ItemConversa>,
+    onAbrir: (String) -> Unit,
+    onNova: () -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (conversas.isEmpty()) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Chat,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(40.dp),
+                )
+                Text(
+                    stringResource(R.string.conversa_vazia_titulo),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    stringResource(R.string.conversa_vazia_texto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.size(4.dp))
+                Button(onClick = onNova) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(R.string.conversa_nova_longa))
+                }
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    if (conversas.size == 1) stringResource(R.string.conversa_contagem_uma)
+                    else stringResource(R.string.conversa_contagem, conversas.size),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 4.dp),
+                )
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    items(conversas, key = { it.id }) { c ->
+                        LinhaDeConversa(c, onAbrir)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
+        }
+
+        ExtendedFloatingActionButton(
+            onClick = onNova,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.nova_sessao))
+            Spacer(Modifier.size(8.dp))
+            Text(stringResource(R.string.conversa_nova))
+        }
+    }
+}
+
+/** Uma linha da lista: iniciais, título, prévia, quando e o estado — com o realce da activa. */
+@Composable
+private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit) {
+    val destaque = MaterialTheme.colorScheme.primaryContainer
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onAbrir(c.id) }
+            .background(
+                if (c.activa) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
+            )
+            // A barra de acento da linha activa, como a linha seleccionada do WhatsApp.
+            .drawBehind {
+                if (c.activa) drawRect(color = destaque, size = Size(3.dp.toPx(), size.height))
+            }
+            .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(50))
+                .background(
+                    if (c.activa) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerHighest,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                iniciais(c.titulo),
+                style = MaterialTheme.typography.labelLarge,
+                fontFamily = FontFamily.Monospace,
+                color = if (c.activa) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.size(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                c.titulo,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                c.previa,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.size(10.dp))
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                c.quando,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            when {
+                c.falhou -> Chip(stringResource(R.string.sessao_estado_falhou), cor = MaterialTheme.colorScheme.error)
+                c.activa -> Chip(stringResource(R.string.sessao_estado_activa), cor = MaterialTheme.colorScheme.primaryContainer)
+            }
+        }
+    }
+}
+
+/**
+ * As duas primeiras letras da **primeira palavra** do título, para o avatar da lista — é o que o
+ * desenho mostra («corre o comando…» → `CO`). Nunca devolve vazio.
+ */
+internal fun iniciais(titulo: String): String {
+    val primeira = titulo.trim().split(Regex("\\s+")).firstOrNull { it.isNotBlank() } ?: return "?"
+    return primeira.take(2).uppercase()
 }
 
 /** Corpo do diálogo das licenças: a lista ou o texto integral da escolhida. */

@@ -1,0 +1,39 @@
+Cachalote is an Android app (Material 3, dark-first, portrait phone) that runs an AI coding agent
+locally on the user's phone. This screen is the new home of the CHAT TAB: a LIST OF CONVERSATIONS,
+organised like WhatsApp's chat list — NOT an open conversation.
+
+Top app bar: the title "Conversa" and, underneath, a compact status line "motor DSH no telefone ·
+ligado" with a small green dot; on the far right a compact monospace readout "contexto: 6 290 /
+1 000 000 · 1%" and a small chip with the running mode, "ROOT".
+
+Under the bar, a thin row of filter pills: "Todas", "Activas" (selected, accent fill) and
+"Fechadas"; on the far right of that row a small monospace count, "17 sessões".
+
+The list fills the rest of the screen: full-width rows separated by hairline dividers, each row
+with:
+- a leading circular avatar (40dp) containing the session's first two characters in monospace,
+  tinted with the accent colour;
+- a bold one-line title derived from the conversation's first prompt, truncated with an ellipsis
+  (real examples: "corre o comando echo cachalote-teste", "usa o bash para escrever o ficheiro
+  /sdcard/Documentos/teste-cachalote.txt", "estado do motor e da chave");
+- a second muted line, one line, truncated: the preview of the last message (examples: "o agente
+  respondeu com 512 lido da imagem", "turno falhou: sem rede no telefone", "a sessão anterior já
+  não existe no motor — a abrir uma nova");
+- on the right, aligned to the top, a timestamp in small monospace ("14/10 22:57") and, underneath
+  it, a compact chip: "ACTIVA" in the accent colour for the session in use, "6 msgs" in muted grey
+  for the others, or a small red dot for a conversation whose last turn failed;
+- the session currently in use is subtly highlighted: slightly raised surface plus a thin accent
+  left border, like WhatsApp's selected row.
+
+Also design the EMPTY STATE below the same list header, as a second frame in the same screen: a
+centred outlined glyph, the title "Ainda não há conversas", one line of explanation "Escreve a
+primeira mensagem e o agente começa a trabalhar." and a filled button "Nova conversa".
+
+Primary action: a large extended FAB in the lower right, sitting above the bottom navigation, with
+a plus glyph and the label "Nova" — it starts a brand-new conversation.
+
+Bottom navigation with exactly THREE items and glyphs: Conversa (active), Resumo, Ajustes.
+
+Style: calm, technical, trustworthy; deep blue-grey dark surfaces with a teal/cyan accent; 16dp
+rounded corners; strong typographic hierarchy; monospace for technical strings, counters and
+timestamps; generous 48dp touch targets; no gradients. All interface labels in European Portuguese.

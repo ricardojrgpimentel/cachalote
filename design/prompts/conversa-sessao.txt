@@ -1,0 +1,37 @@
+Cachalote is an Android app (Material 3, dark-first, portrait phone) that runs an AI coding agent
+locally on the user's phone. Design the OPEN CONVERSATION SCREEN — what the user reaches after
+tapping one of the rows of the conversation list. It is a focused, full-screen chat, exactly like
+WhatsApp's chat view: the BOTTOM NAVIGATION BAR IS GONE. The composer is the only thing at the
+bottom edge of the screen.
+
+Top app bar: a back arrow on the left, then the conversation title in bold, one line, truncated
+with an ellipsis (real example: "corre o comando echo cachalote-teste"); underneath the title a
+compact monospace status line "ROOT · deepseek-v4-flash · contexto 6 290 / 1 000 000 · 1%" with a
+small green dot. On the right two icon actions: a "Fechar a sessão" glyph and an overflow menu with
+"Modelo", "Esforço de raciocínio" and "Fechar a sessão activa".
+
+Transcript, scrollable, with generous vertical spacing:
+- user messages: rounded bubbles aligned RIGHT, raised surface, at most 80% of the width, with a
+  small monospace timestamp underneath;
+- agent messages: LEFT aligned plain text, no bubble, generous line height;
+- reasoning blocks: muted italic text with a small sparkle glyph and a chevron to collapse them;
+- tool-call cards: compact rounded cards with a leading glyph, the tool name in monospace
+  (examples: android_see, android_vscreen, bash, android_tap), a status chip — "a correr" with a
+  small spinner, "concluída", "falhada" — and a one-line argument preview;
+- system notices: small centred pill chips (examples: "sessão 33c12f8c criada", "a acessibilidade
+  voltou a estar ligada");
+- errors: a discreet card with a red outline, a small warning glyph and a "Tentar novamente" text
+  button.
+
+Above the composer, only when it has tasks in it, a compact task-queue strip: "Fila de tarefas",
+"2 na fila", small pill buttons "Juntar à fila" and "Correr a fila".
+
+Composer pinned to the very bottom edge, with NO navigation bar below it (this is the point):
+one wide rounded text field with the placeholder "Escreve uma tarefa para o agente", a small
+paperclip glyph INSIDE the field on the left and a microphone glyph INSIDE the field on the right,
+plus a round filled send button outside on the right; while the agent is working that round button
+becomes a stop button. The composer respects the phone's bottom gesture inset.
+
+Style: calm, technical, trustworthy; deep blue-grey dark surfaces with a teal/cyan accent; 16dp
+rounded corners; strong typographic hierarchy; monospace for technical strings and timestamps;
+generous 48dp touch targets; no gradients. All interface labels in European Portuguese.

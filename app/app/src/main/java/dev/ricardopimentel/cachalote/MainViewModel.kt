@@ -83,7 +83,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * determinístico, não gasta chamadas e é o que faz a lista deixar de ser só hexadecimais.
      */
     var sessionTitles by mutableStateOf<Map<String, String>>(emptyMap())
-    var showSessions by mutableStateOf(false)
+
+    /**
+     * A conversa está aberta a ocupar o ecrã (como um chat do WhatsApp: sem barra de abas). Vive
+     * no modelo, e não na UI, para o `newSession`/`resumeSession` a poderem abrir ao mesmo tempo
+     * que abrem a sessão — e para o `closeSession` a fechar quando a sessão deixa de existir.
+     */
+    var conversaAberta by mutableStateOf(false)
     var configPicker by mutableStateOf<ConfigOption?>(null)
     var reconnecting by mutableStateOf(false)
     var pendingImage by mutableStateOf<PendingImage?>(null)
@@ -205,6 +211,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             transcript.clear()
             transcript.addAll(snap.lines)
             sessionId = snap.sessionId
+            // Sem esta linha os títulos derivados perdiam-se a cada arranque: o primeiro
+            // `saveState()` gravava um mapa vazio por cima do que estava no ficheiro, e a lista de
+            // conversas ficava só com hexadecimais (apanhado em 2026-10-15, ao pôr a lista).
+            sessionTitles = snap.titles
             snapModel = snap.model
             snapEffort = snap.effort
             loaded = true
@@ -611,11 +621,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         applyConfigOptions(res)
         transcript.clear()
         transcript.add(ChatLine("system", "sessão ${sessionId?.take(8) ?: "?"} criada"))
+        anotarAvisoMcp()
         loaded = true
+        conversaAberta = true
         saveState()
     }
 
     fun send(text: String) = run("prompt") { enviarPrompt(text) }
+
+    /**
+     * Se o motor recusou a sessão por causa de um MCP que não responde e ela teve de correr sem
+     * eles, di-lo no transcript — o dono tem de saber que os servidores que configurou não entraram
+     * nesta sessão (ver `DaemonController.sessaoComMcp` e knowledge 134).
+     */
+    private fun anotarAvisoMcp() {
+        controller.avisoMcp?.let {
+            transcript.add(ChatLine("system", it))
+            controller.limparAvisoMcp()
+        }
+    }
+
+    /**
+     * Fecha a **conversa aberta** e volta à lista. Não fecha a sessão no motor: é só navegação —
+     * a sessão continua viva e a lista volta a mostrá-la com o realce de activa.
+     */
+    fun fecharConversa() {
+        conversaAberta = false
+    }
 
     /**
      * O corpo de um turno. Separado do `send` porque a **fila** tem de o esperar para só mandar a
@@ -631,6 +663,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             sessionId = sid
             uso = null
             applyConfigOptions(res)
+            anotarAvisoMcp()
         }
         val shown = when {
             img == null -> text
@@ -791,25 +824,49 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         saveState()
     }
 
-    /** Lista as sessões persistidas no motor (para retomar). */
+    /**
+     * A lista de conversas: as sessões do motor (`session/list`, que só traz id e cwd) cruzadas com
+     * os metadados que o daemon lê do disco (título e datas — ver `daemon/session-meta.cjs`).
+     *
+     * A ordem é a do WhatsApp: a conversa mexida mais recentemente em cima. Quando não há metadados
+     * (modo embutido, ou daemon antigo), fica a do motor e a app não inventa datas.
+     */
     fun refreshSessions() = run("sessões") {
         val res = controller.listSessions(controller.workspace)
         val arr = res.optJSONArray("sessions") ?: JSONArray()
+        val meta = runCatching { controller.sessionMeta() }.getOrNull()
+        val porId = HashMap<String, JSONObject>()
+        meta?.optJSONArray("sessions")?.let { m ->
+            for (i in 0 until m.length()) {
+                val o = m.optJSONObject(i) ?: continue
+                porId[o.optString("sessionId")] = o
+            }
+        }
         val rows = ArrayList<SessionRow>()
+        val titulos = HashMap<String, String>()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
+            val id = o.optString("sessionId")
+            val m = porId[id]
+            val doMotor = m?.optString("title")?.takeIf { it.isNotBlank() }
+            val titulo = o.optString("title").takeIf { it.isNotBlank() }
+                ?: doMotor
+                ?: sessionTitles[id]
+                ?: id.take(8)
+            if (doMotor != null) titulos[id] = doMotor
             rows.add(
                 SessionRow(
-                    id = o.optString("sessionId"),
-                    title = o.optString("title").takeIf { it.isNotBlank() }
-                        ?: sessionTitles[o.optString("sessionId")]
-                        ?: o.optString("sessionId").take(8),
-                    updatedAt = o.optString("updatedAt"),
+                    id = id,
+                    title = titulo,
+                    updatedAt = m?.optString("updatedAt")?.takeIf { it.isNotBlank() }
+                        ?: o.optString("updatedAt"),
                 ),
             )
         }
-        sessions = rows
-        showSessions = true
+        // O título do motor entra no mapa da app: é ele que o cabeçalho da conversa mostra, e
+        // sobrevive ao arranque (o do motor é curto e legível; o derivado do prompt é maior).
+        if (titulos.isNotEmpty()) sessionTitles = sessionTitles + titulos
+        sessions = rows.sortedByDescending { it.updatedAt }
     }
 
     /** Retoma uma sessão; o transcript local é substituído pelo da sessão escolhida. */
@@ -819,7 +876,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         applyConfigOptions(res)
         transcript.clear()
         transcript.add(ChatLine("system", "sessão ${id.take(8)} retomada"))
-        showSessions = false
+        anotarAvisoMcp()
+        conversaAberta = true
         saveState()
     }
 
@@ -836,6 +894,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         controller.closeSession(id)
         if (id == sessionId) {
             sessionId = null
+            conversaAberta = false
             // Sem isto, o arranque seguinte (ou a troca de modo) voltava a retomar a sessão
             // que acabámos de fechar — verificado em teste.
             controller.forgetLastSession()

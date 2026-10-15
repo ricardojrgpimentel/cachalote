@@ -165,7 +165,13 @@ class CachaloteClient {
     fun unwrap(response: JSONObject): JSONObject {
         if (response.has("error") && !response.isNull("error")) {
             val e = response.optJSONObject("error")
-            throw IllegalStateException(e?.optString("message") ?: "erro do motor")
+            // O `details` é onde o motor diz a causa a sério («mcp-client(stitch): initial
+            // connection …»). Só com o `message` ficava-se em «Internal error», que não diz nada
+            // a ninguém — e foi o que escondeu o MCP em baixo durante uma tarde inteira
+            // (knowledge 134).
+            val detalhe = e?.optJSONObject("data")?.optString("details").orEmpty()
+            val mensagem = e?.optString("message") ?: "erro do motor"
+            throw IllegalStateException(if (detalhe.isNotBlank()) "$mensagem — $detalhe" else mensagem)
         }
         return response.optJSONObject("result") ?: JSONObject()
     }

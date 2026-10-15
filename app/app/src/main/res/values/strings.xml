@@ -60,6 +60,12 @@
     <string name="chave_sistema">Local system and credentials</string>
     <string name="chave_telemetria">External telemetry</string>
     <string name="chave_zero">zero tracking</string>
+    <string name="conversa_contagem">%1$d conversations</string>
+    <string name="conversa_contagem_uma">1 conversation</string>
+    <string name="conversa_nova">New</string>
+    <string name="conversa_nova_longa">New conversation</string>
+    <string name="conversa_vazia_texto">Write the first message and the agent starts working.</string>
+    <string name="conversa_vazia_titulo">No conversations yet</string>
     <string name="daemon_instalado">daemon installed</string>
     <string name="descarregar_kernel">Download kernel</string>
     <string name="diagnostico">diagnostics: pid %1$d · a11y %2$s · ticks %3$d · direct %4$s</string>
@@ -168,6 +174,9 @@
     <string name="sem_pedidos">no requests yet</string>
     <string name="sem_sessoes">no sessions stored in the engine</string>
     <string name="sessao_activa">active: %1$s</string>
+    <string name="sessao_curta">session %1$s</string>
+    <string name="sessao_estado_activa">active</string>
+    <string name="sessao_estado_falhou">failed</string>
     <string name="sessao_nenhuma_activa">no active session</string>
     <string name="sessao_rotulo">session: %1$s</string>
     <string name="sobre">About</string>
@@ -185,6 +194,7 @@
     <string name="verificar">Check</string>
     <string name="verificar_estado">Check status</string>
     <string name="voltar">Back</string>
+    <string name="voltar_conversas">Back to the conversations</string>
     <string name="vscreen_copiado">commands copied</string>
     <string name="vscreen_copiar">Copy the commands</string>
     <string name="vscreen_display_id">display_id=%1$s</string>

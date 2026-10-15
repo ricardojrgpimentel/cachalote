@@ -198,6 +198,42 @@ class DaemonController(private val context: Context) {
      * Servidores MCP configurados (JSON do ACP). JSON inválido → lista vazia (e o erro fica
      * visível no ecrã da app, onde o utilizador o pode corrigir).
      */
+    /**
+     * O aviso do último `session/new`/`session/resume` que teve de correr **sem** os MCP. Quem
+     * chama lê-o e diz o porquê no transcript (ver `sessaoComMcp`).
+     */
+    var avisoMcp: String? = null
+        private set
+
+    /** O aviso já foi para o transcript: não se repete a cada turno. */
+    fun limparAvisoMcp() {
+        avisoMcp = null
+    }
+
+    /**
+     * Cria ou retoma uma sessão com os servidores MCP configurados e, se o motor recusar por causa
+     * de um MCP que não responde, repete **sem eles**.
+     *
+     * Porque é que isto existe: um MCP configurado e inalcançável (telefone sem rede, servidor em
+     * baixo) faz o motor responder «Internal error» a `session/new` **e** a `session/resume` — com
+     * o Stitch configurado e o telefone offline, a app ficava sem conseguir abrir conversa nenhuma,
+     * nem as antigas (medido no S10+ em 2026-10-15; knowledge 134). Uma sessão sem MCP, com o porquê
+     * dito no transcript, é melhor do que uma app parada.
+     */
+    private suspend fun sessaoComMcp(bloco: suspend (org.json.JSONArray) -> JSONObject): JSONObject {
+        val servidores = mcpServers()
+        avisoMcp = null
+        if (servidores.length() == 0) return bloco(servidores)
+        return try {
+            bloco(servidores)
+        } catch (t: Throwable) {
+            val mensagem = t.message.orEmpty()
+            if (!mensagem.contains("mcp", ignoreCase = true)) throw t
+            avisoMcp = "os servidores MCP configurados não responderam — esta sessão corre sem eles"
+            bloco(org.json.JSONArray())
+        }
+    }
+
     private fun mcpServers(): org.json.JSONArray = runCatching {
         val txt = prefs.mcpServersJson.trim().ifBlank { "[]" }
         org.json.JSONArray(txt)
@@ -209,12 +245,14 @@ class DaemonController(private val context: Context) {
 
     suspend fun newSession(): JSONObject = comMotorPronto {
         ensureAcp()
-        val res = client.callForResult(
-            "session/new",
-            // `workspace` (getter) respeita o modo: no embutido é um caminho que a app pode
-            // ler/escrever; o do daemon é root-only.
-            JSONObject().put("cwd", workspace).put("mcpServers", mcpServers()),
-        )
+        val res = sessaoComMcp { servidores ->
+            client.callForResult(
+                "session/new",
+                // `workspace` (getter) respeita o modo: no embutido é um caminho que a app pode
+                // ler/escrever; o do daemon é root-only.
+                JSONObject().put("cwd", workspace).put("mcpServers", servidores),
+            )
+        }
         res.optString("sessionId").takeIf { it.isNotBlank() }?.let { prefs.lastSessionId = it }
         res
     }
@@ -222,6 +260,20 @@ class DaemonController(private val context: Context) {
     suspend fun listSessions(cwd: String): JSONObject {
         ensureAcp()
         return client.callForResult("session/list", JSONObject().put("cwd", cwd))
+    }
+
+    /**
+     * Título e datas de todas as sessões. **Não** vem do ACP: o `session/list` do motor devolve só
+     * `sessionId` e `cwd` (medido no S10+ em 2026-10-15, com os 76 registos do telefone). Vem do
+     * daemon, que lê o que o motor grava em disco (`daemon/session-meta.cjs`).
+     *
+     * No modo embutido não há daemon: devolve vazio e a lista fica com o que a app já sabia — sem
+     * inventar títulos nem datas.
+     */
+    suspend fun sessionMeta(): JSONObject {
+        if (mode == Mode.EMBEDDED) return JSONObject()
+        ensureAcp()
+        return client.callForResult("cachalote.sessions.meta", JSONObject(), timeoutMs = 20_000)
     }
 
     /**
@@ -235,10 +287,12 @@ class DaemonController(private val context: Context) {
 
     suspend fun resumeSession(sessionId: String, cwd: String): JSONObject {
         ensureAcp()
-        return client.callForResult(
-            "session/resume",
-            JSONObject().put("sessionId", sessionId).put("cwd", cwd).put("mcpServers", mcpServers()),
-        )
+        return sessaoComMcp { servidores ->
+            client.callForResult(
+                "session/resume",
+                JSONObject().put("sessionId", sessionId).put("cwd", cwd).put("mcpServers", servidores),
+            )
+        }
     }
 
     suspend fun setConfigOption(sessionId: String, configId: String, value: String): JSONObject {

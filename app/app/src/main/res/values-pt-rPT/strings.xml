@@ -60,6 +60,12 @@
     <string name="chave_sistema">Sistema local e credenciais</string>
     <string name="chave_telemetria">Telemetria externa</string>
     <string name="chave_zero">zero rastreio</string>
+    <string name="conversa_contagem">%1$d conversas</string>
+    <string name="conversa_contagem_uma">1 conversa</string>
+    <string name="conversa_nova">Nova</string>
+    <string name="conversa_nova_longa">Nova conversa</string>
+    <string name="conversa_vazia_texto">Escreve a primeira mensagem e o agente começa a trabalhar.</string>
+    <string name="conversa_vazia_titulo">Ainda não há conversas</string>
     <string name="daemon_instalado">daemon instalado</string>
     <string name="descarregar_kernel">Descarregar kernel</string>
     <string name="diagnostico">diagnóstico: pid %1$d · a11y %2$s · ticks %3$d · direto %4$s</string>
@@ -168,6 +174,9 @@
     <string name="sem_pedidos">ainda não houve pedidos</string>
     <string name="sem_sessoes">não há sessões guardadas no motor</string>
     <string name="sessao_activa">activa: %1$s</string>
+    <string name="sessao_curta">sessão %1$s</string>
+    <string name="sessao_estado_activa">activa</string>
+    <string name="sessao_estado_falhou">falha</string>
     <string name="sessao_nenhuma_activa">nenhuma sessão activa</string>
     <string name="sessao_rotulo">sessão: %1$s</string>
     <string name="sobre">Sobre</string>
@@ -185,6 +194,7 @@
     <string name="verificar">Verificar</string>
     <string name="verificar_estado">Verificar estado</string>
     <string name="voltar">Voltar</string>
+    <string name="voltar_conversas">Voltar às conversas</string>
     <string name="vscreen_copiado">comandos copiados</string>
     <string name="vscreen_copiar">Copiar os comandos</string>
     <string name="vscreen_display_id">display_id=%1$s</string>

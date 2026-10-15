@@ -289,6 +289,20 @@ function control(method, params) {
       return vscreenInput(params?.displayId, params?.args);
     case "cachalote.vscreen.launch":
       return vscreenLaunch(params?.displayId, params?.componente);
+    case "cachalote.sessions.meta":
+      // Título e datas de todas as sessões, lidos do que o motor grava em disco: o `session/list`
+      // do ACP só devolve `sessionId` e `cwd` (medido no S10+ em 2026-10-15) e a lista de conversas
+      // da app precisa dos dois. Lê e descomprime ~76 ficheiros, por isso vai fora do ciclo de
+      // eventos (promessa) e o `require` é tardio: um ficheiro em falta não pode derrubar o daemon.
+      return Promise.resolve().then(() => {
+        let mod;
+        try {
+          mod = require("./session-meta.cjs");
+        } catch (error) {
+          throw new Error("falta o session-meta.cjs ao lado do bridge: " + error.message);
+        }
+        return mod.sessionMeta(path.join(BASE, "home"));
+      });
     case "cachalote.doctor":
       return doctorResumo();
     case "cachalote.engine.restart":

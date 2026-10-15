@@ -17,6 +17,7 @@ design que os mantém coerentes. A implementação é em Compose; aqui fica a re
 | `logo/marca.png` | a marca recortada, com transparência (para o ícone) |
 | `logo/marca.svg` | a marca **em vector** — extraída dos `<svg>` que o Stitch devolveu no HTML da folha de marca (`currentColor`, escala sem perda) |
 | `ecras/<nome>.html` | o HTML do ecrã (referência de medidas e cores exactas para a implementação) |
+| `prompts/<nome>.txt` | o pedido que gerou o ecrã — fica versionado para o desenho se poder repetir/ajustar |
 
 ## Como se reproduz (Google Stitch, MCP)
 
@@ -85,12 +86,14 @@ versão monocromática (ícones temáticos) e o XML da cor de fundo — e o mani
 | Ecrã | Estado |
 |---|---|
 | Logo, ícone e folha de marca | ✅ feitos · **no telefone** (`app/icone-no-lancador.png`, `app/marca-no-cabecalho.png`) |
-| Conversa (principal) | ✅ desenhado · **tema aplicado** |
+| Conversa (ecrã antigo, substituído pela lista + sessão aberta) | ✅ desenhado · **tema aplicado** |
 | Ajustes (menu de secções + secção aberta) | ✅ desenhado — `ecras/ajustes.png` (já com a barra de **dois** itens) |
 | Aprovação (diálogo) | ✅ desenhado |
 | Estado do sistema | ✅ desenhado |
 | Chave de API | ✅ desenhado |
 | Ecrã virtual | ✅ desenhado · **implementado** (`app/vscreen-ativo.png`, `app/vscreen-registo.png`) |
+| Conversa: **lista de sessões** (à WhatsApp, com FAB «Nova») | ✅ desenhado · **implementado** — `ecras/conversa-lista.png` · `app/conversa-lista.png` |
+| Conversa: **sessão aberta** (ecrã inteiro, **sem menu no fundo**) | ✅ desenhado · **implementado** — `ecras/conversa-sessao.png` · `app/conversa-sessao.png` |
 | Sessões (diálogo) | ✅ desenhado |
 | Primeiros passos (onboarding) | ✅ desenhado · **assistente implementado** (6 passos) |
 | ~~Poderes~~ | substituído por *Ajustes* (a IA mudou: a conversa é a primeira aba e os ajustes são um menu) |
