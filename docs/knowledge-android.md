@@ -1696,3 +1696,52 @@ todos invisíveis no dia-a-dia do modo root:
   que o primeiro aviso do doctor é este.
 - **Origem:** **[LOCAL]**.
 
+
+### 133. Libertar o `VirtualDisplay` atira as apps para o ecrã físico
+
+- **Sintoma:** o agente trabalha numa app dentro do ecrã virtual (isolado, o dono vê outra coisa no
+  telefone) e, ao tocar em **Parar** na app Cachalote, a app do agente **aparece de repente no ecrã
+  físico** — a calculadora ficou à frente, a ecrã inteiro. Medido no S10+ em 2026-10-15.
+- **Causa:** é o Android, não a app. Quando um display é **removido**, o `ActivityTaskManager` move
+  as *tasks* que lá estavam para o display por omissão em vez de as matar. O
+  `DisplayManager.createVirtualDisplay` que o `VirtualScreen` usa é um display normal: ao
+  `release()`, as activities vão atrás.
+- **Consequência prática:** o isolamento é verdadeiro **enquanto o ecrã virtual existe** (verificado
+  com `dumpsys window windows`: a janela da calculadora em `mDisplayId=8` e a app Cachalote em
+  `mDisplayId=0`); o que não sobrevive é o *fim* — quem estava lá dentro sai para o ecrã do dono.
+- **Como confirmar:** `dumpsys window windows | grep -E "Window #|mDisplayId="` antes e depois de
+  parar o ecrã virtual.
+- **Correcção (por fazer, com caminho definido):** antes de libertar o display, fechar as tasks que
+  lá estão (`am task remove <id>` ou `am force-stop <pkg>`) — pelo daemon, que em modo root/Shizuku
+  pode fazê-lo. No modo embutido não é preciso: sem root não se consegue lançar apps no ecrã virtual,
+  portanto não há nada para saltar. Enquanto não estiver feito, **avisar quem toca em «Parar»**.
+- **Origem:** **[LOCAL]** (S10+, 2026-10-15, ao aplicar o ecrã do design).
+
+### 134. Um MCP configurado e inalcançável responde «Internal error» a tudo — e esconde o erro verdadeiro
+
+- **Sintoma:** com o MCP do Stitch configurado (ver 129) e o telefone **sem rede**, um
+  `session/prompt` numa sessão que já não existe devolve `-32603 Internal error`
+  (`mcp-client(stitch): initial connection or tool synchronization failed`) em vez do
+  `-32602 Invalid params: unknown session: …` que se esperava. A app mostra
+  «prompt: Internal error» na faixa e a recuperação de sessão — que procura o texto
+  `unknown session` — **não chega a correr**, porque quem falha primeiro é o `session/new` que ela
+  tentaria a seguir.
+- **Prova, no mesmo telefone, com e sem o MCP:**
+  ```
+  (MCP configurado)   prompt → error -32603 "Internal error" (mcp-client(stitch))
+  (MCP limpo)         prompt → error -32602 "Invalid params: unknown session: 11111111-…"
+                      → a app abriu sessão nova (33c12f8c-…) e escreveu no transcript
+                        «a sessão anterior já não existe no motor — a abrir uma nova»
+  ```
+  O erro `unknown session` também fica no log do motor, mas **depois** do erro do MCP — e é o do MCP
+  que a app vê como resposta ao `prompt`.
+- **Causa:** o motor monta os servidores MCP ao criar/retomar sessão. Sem rede, cada montagem
+  rebenta e o ACP devolve esse `Internal error` genérico, que passa a ser a resposta de qualquer
+  pedido que precise de sessão.
+- **Como diagnosticar:** `su -c 'tail -30 /data/adb/cachalote/logs/engine.log'` — o `-32602 unknown
+  session` está lá, seguido do `-32603` do MCP. Para testar a recuperação de sessão, **limpar
+  primeiro o MCP** (guardar `mcpServersJson` das prefs e repor depois).
+- **A fazer (robustez):** a recuperação devia olhar também para o código de erro (`-32602`) ou, no
+  mínimo, dizer no transcript que a sessão nova não se conseguiu abrir — hoje o utilizador só vê
+  «Internal error», que não é acção nenhuma.
+- **Origem:** **[LOCAL]** (S10+, 2026-10-15).

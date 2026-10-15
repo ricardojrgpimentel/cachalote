@@ -101,12 +101,16 @@ object VirtualScreen {
         return JSONObject().put("ok", true).put("running", false)
     }
 
+    /** Frequência com que o compositor desenha neste ecrã — o `@60Hz` que a app mostra. */
+    val refreshRate: Float get() = display?.display?.refreshRate ?: 0f
+
     fun status(): JSONObject = JSONObject()
         .put("running", running)
         .put("displayId", displayId)
         .put("width", width)
         .put("height", height)
         .put("density", density)
+        .put("refreshRate", refreshRate.toDouble())
         .put("frames", frames)
         .put("uptimeMs", if (started > 0 && running) System.currentTimeMillis() - started else 0)
         .put("lastError", erro ?: JSONObject.NULL)
@@ -140,6 +144,13 @@ object VirtualScreen {
             .put("displayId", displayId)
             .put("width", largura)
             .put("height", altura)
+            // As medidas do **display** (não as da imagem reduzida): é o que a app mostra no
+            // rodapé do monitor. `width`/`height` continuam a ser os da imagem, que é o que o
+            // plugin do kernel anexa ao contexto do modelo.
+            .put("displayWidth", width)
+            .put("displayHeight", height)
+            .put("density", density)
+            .put("refreshRate", refreshRate.toDouble())
             .put("bytes", bytes.size.toLong())
             .put("mediaType", "image/png")
             .put("data", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))

@@ -185,8 +185,24 @@
     <string name="verificar">Verificar</string>
     <string name="verificar_estado">Verificar estado</string>
     <string name="voltar">Voltar</string>
-    <string name="vscreen_texto">Um segundo ecrã onde o agente trabalha sem mexer no que tens à frente. Põe apps lá com bash: am start --display &lt;id&gt; -n &lt;pkg&gt;/&lt;activity&gt;; toca com input -d &lt;id&gt;. Vive dentro desta app: se ela for fechada, o ecrã virtual desaparece.</string>
+    <string name="vscreen_copiado">comandos copiados</string>
+    <string name="vscreen_copiar">Copiar os comandos</string>
+    <string name="vscreen_display_id">display_id=%1$s</string>
+    <string name="vscreen_em_pausa">em pausa</string>
+    <string name="vscreen_etiqueta">Poderes nativos · display virtual</string>
+    <string name="vscreen_isolamento_chip">Isolamento por sandbox POSIX</string>
+    <string name="vscreen_isolamento_nota">Zero sobreposição visual</string>
+    <string name="vscreen_isolamento_titulo">Isolamento de ecrã sem intruso</string>
+    <string name="vscreen_latencia">latência: %1$d ms</string>
+    <string name="vscreen_parado">parado</string>
+    <string name="vscreen_registo_nota">Eventos injectados sem foco de toque no ecrã físico principal.</string>
+    <string name="vscreen_render">render local</string>
+    <string name="vscreen_rodape">display %1$s · %2$s · %3$d KB · RGBA_8888</string>
+    <string name="vscreen_sem_ecra">o ecrã virtual não está a correr — toca em «Iniciar»</string>
+    <string name="vscreen_sem_fotograma">ainda sem fotograma — põe uma app neste display com bash: am start --display %1$d -n &lt;pkg&gt;/&lt;activity&gt;</string>
+    <string name="vscreen_texto">Um segundo ecrã onde o agente trabalha sem mexer no que tens à frente. Vive dentro desta app: se ela for fechada, o ecrã virtual desaparece.</string>
     <string name="vscreen_titulo">Ecrã virtual</string>
+    <string name="vscreen_titulo_longo">Ecrã Virtual Isolado</string>
     <string name="wizard_acesso_nota">É a permissão mais sensível da app: com ela o agente lê o ecrã e interage. Podes desligá-la a qualquer momento.</string>
     <string name="wizard_acesso_texto">Sem o serviço de acessibilidade o agente não vê nem toca no ecrã — só envia notificações. Liga-o em Definições → Acessibilidade → Cachalote.</string>
     <string name="wizard_acesso_titulo">Dar olhos e dedos ao agente</string>

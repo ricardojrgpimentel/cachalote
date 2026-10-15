@@ -1,5 +1,9 @@
 package dev.ricardopimentel.cachalote
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -9,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.robolectric.annotation.Config
 import org.junit.Assert.assertEquals
@@ -169,9 +174,82 @@ class InterfaceTest {
         assertEquals(true, aoVivo)
     }
 
+    // ---- o painel de autorização (a última peça do design sem teste; ver STATUS §67) ----
+    //
+    // O painel só aparecia com um turno real do modelo — e um turno real precisa de rede e de
+    // chave. Extraído do `ModalBottomSheet` para o `UiParts`, passa a verificar-se aqui.
+
+    private fun painel(
+        titulo: String = "touch /sdcard/cachalote-guard.txt",
+        detalhe: String = "fora do sandbox: /sdcard não está nas áreas permitidas",
+        opcoes: List<Pair<String, String>> = listOf("once" to "Permitir uma vez", "always" to "Permitir sempre"),
+        decidido: (String?) -> Unit = {},
+    ) {
+        // O painel vive dentro de um `ModalBottomSheet`, que rola: no teste reproduz-se isso com
+        // uma coluna com scroll (o ecrã do Robolectric é pequeno e o painel é alto). Sem isto, o
+        // «Recusar o turno» e o rodapé ficavam fora da janela e o teste falhava por isso — não por
+        // o painel estar mal.
+        compose.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                PainelDeAutorizacao(
+                    requestId = 7,
+                    titulo = titulo,
+                    detalhe = detalhe,
+                    opcoes = opcoes,
+                    rodape = "PID: 1234 · modo root",
+                    onDecidir = decidido,
+                )
+            }
+        }
+    }
+
     @Test
-    fun as_licencas_listam_e_mostram_o_texto_integral() {
-        val licencas = listOf(
+    fun o_painel_de_autorizacao_mostra_o_pedido_e_o_aviso_do_sandbox() {
+        painel()
+        compose.onNodeWithText("Autorização").assertIsDisplayed()
+        compose.onNodeWithText("O AGENTE QUER CORRER:").assertIsDisplayed()
+        compose.onNodeWithText("touch /sdcard/cachalote-guard.txt").assertIsDisplayed()
+        compose.onNodeWithText("Permitir uma vez").assertIsDisplayed()
+        compose.onNodeWithText("Permitir sempre").assertIsDisplayed()
+        // O chip do design só aparece quando o pedido é mesmo fora das áreas permitidas.
+        compose.onNodeWithText("FORA DO SANDBOX").assertIsDisplayed()
+        compose.onNodeWithText("PID: 1234 · modo root").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun o_painel_sem_pedido_fora_do_sandbox_nao_mostra_o_chip() {
+        painel(detalhe = "dentro das áreas permitidas")
+        compose.onAllNodesWithText("FORA DO SANDBOX").assertCountEquals(0)
+    }
+
+    @Test
+    fun a_primeira_opcao_ja_vem_escolhida() {
+        var decidido: String? = "nada"
+        painel(decidido = { decidido = it })
+        // Sem tocar em nada, autorizar decide a primeira opção — como no desenho.
+        compose.onNodeWithText("Autorizar").performScrollTo().performClick()
+        assertEquals("once", decidido)
+    }
+
+    @Test
+    fun escolher_a_segunda_opcao_e_autorizar_decide_essa() {
+        var decidido: String? = null
+        painel(decidido = { decidido = it })
+        compose.onNodeWithText("Permitir sempre").performClick()
+        compose.onNodeWithText("Autorizar").performScrollTo().performClick()
+        assertEquals("always", decidido)
+    }
+
+    @Test
+    fun recusar_o_turno_no_painel_decide_null() {
+        var decidido: String? = "nada"
+        painel(decidido = { decidido = it })
+        compose.onNodeWithText("Recusar o turno").performScrollTo().performClick()
+        assertNull(decidido)
+    }
+
+    @Test
+    fun as_licencas_listam_e_mostram_o_texto_integral() {        val licencas = listOf(
             Licenca("Node.js 24", "MIT", "https://nodejs.org", "MIT License\n\nCopyright (c) OpenJS"),
             Licenca("ICU 78", "Unicode License V3", "https://icu.unicode.org", "UNICODE LICENSE V3"),
         )
@@ -246,8 +324,28 @@ class InterfaceEnTest {
     }
 
     @Test
-    fun a_lista_de_sessoes_em_ingles_marca_a_activa() {
+    fun o_painel_de_autorizacao_esta_em_ingles() {
         compose.setContent {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                PainelDeAutorizacao(
+                    requestId = 1,
+                    titulo = "touch /sdcard/x.txt",
+                    detalhe = "outside the sandbox",
+                    opcoes = listOf("once" to "Allow once"),
+                    rodape = "PID: 1 · mode root",
+                    onDecidir = {},
+                )
+            }
+        }
+        compose.onNodeWithText("Authorisation").assertIsDisplayed()
+        compose.onNodeWithText("THE AGENT WANTS TO RUN:").assertIsDisplayed()
+        compose.onNodeWithText("OUTSIDE THE SANDBOX").assertIsDisplayed()
+        compose.onNodeWithText("Authorise").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Reject the turn").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun a_lista_de_sessoes_em_ingles_marca_a_activa() {        compose.setContent {
             SessionsList(
                 sessions = listOf(sessao),
                 ativo = sessao.id,

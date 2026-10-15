@@ -2,15 +2,26 @@
 
 > ## Estado (S10+ ligado por USB)
 >
-> O projecto está **verde no dispositivo**: `./tools/app-ui-test.sh` **9/9** e
-> `./tools/app-capabilities-test.sh --full` **9/9**, com a chave do provedor **intacta**
-> (53 bytes, modo 600) e a funcionar. O aviso antigo de "acção necessária" para repor a chave
-> **caducou** — a chave foi reposta e há cópia de segurança em `home/.env.manual-bak`.
+> **§67 é o trabalho desta ronda**: o **Ecrã Virtual** era a última peça do design do Stitch por
+> aplicar — está feita e vista no telefone, e com ela todos os ecrãs do `design/ecras/` estão em
+> Compose. A ronda fechou também os dois pendentes do §66 (recuperação de sessão **provada** no
+> aparelho; painel de autorização **coberto por testes de JVM**) e deixou duas armadilhas novas
+> (133 e 134).
 >
-> **§21 é o trabalho desta ronda**, e inclui uma regressão silenciosa que valeu a pena
-> encontrar: o plugin `tool-cachalote` **não estava a carregar** (um `{}` sem `type` num schema
-> fazia o compilador do kernel recusá-lo), pelo que o agente estava **sem nenhuma** ferramenta
-> android_* — e nenhum teste se queixava. Corrigido, com teste de regressão e CI.
+> Nota: o telefone continua **sem rede** (§59), portanto os testes que precisam de um turno do
+> modelo (`app-ui-test` passo 6, `app-capabilities-test --full` passo 2) não correm hoje. O que se
+> verifica sem rede foi verificado: **48 testes de JVM**, **`vscreen-tool-test` 6/6**, **8/8
+> secções** dos Ajustes e `logcat -b crash` vazio.
+>
+> O projecto está **verde no dispositivo**: `./tools/app-ui-test.sh` **9/9** e
+> `./tools/app-capabilities-test.sh --full` **9/9** (última execução com rede), com a chave do
+> provedor **intacta** (53 bytes, modo 600). O aviso antigo de "acção necessária" para repor a
+> chave **caducou** — a chave foi reposta e há cópia de segurança em `home/.env.manual-bak`.
+>
+> **§21** apanhou uma regressão silenciosa que valeu a pena encontrar: o plugin `tool-cachalote`
+> **não estava a carregar** (um `{}` sem `type` num schema fazia o compilador do kernel recusá-lo),
+> pelo que o agente estava **sem nenhuma** ferramenta android_* — e nenhum teste se queixava.
+> Corrigido, com teste de regressão e CI.
 
 > Relatório para revisão. Tudo o que está marcado ✅ foi **verificado no Samsung
 > Galaxy S10+ (SM-G975F, LineageOS 23.2 / Android 16, Magisk)** — as provas estão citadas.
@@ -2013,3 +2024,96 @@ abrir uma nova»). O `Tentar novamente` do cartão de erro (do §65) também já
 
 
 
+
+---
+
+## 67. O design, parte 5: o Ecrã Virtual — e os dois pendentes do §66 fechados
+
+A última peça da comparação ecrã a ecrã do design do Stitch. Com ela, **todos** os ecrãs do
+`design/ecras/` estão aplicados em Compose.
+
+### 67.1 O que mudou
+
+| Ficheiro | O que mudou |
+|---|---|
+| [`VirtualScreen.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/VirtualScreen.kt) | passa a expor a **frequência** do compositor (`refreshRate`) e, no fotograma, as medidas do **display** (`displayWidth`/`displayHeight`/`density`) — o `width`/`height` continuam a ser os da imagem reduzida, que é o que o plugin anexa ao modelo |
+| [`MainViewModel.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainViewModel.kt) | o ecrã virtual deixou de ser uma frase: `vscreenDisplayId/Largura/Altura/Densidade/Hz/Kb/LatenciaMs` em campos próprios. A **latência é medida** (pedido → captura → PNG → base64 → volta → descodificação), não inventada |
+| [`MainActivity.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt) | `CartaoVscreen` reescrito com o desenho: micro-etiqueta «Poderes nativos · display virtual», título e chip `display_id`, **cartão do monitor** (chip do estado, resolução ×Hz, moldura com o fotograma, rodapé em monospace e linha de latência), **controlos em grelha 2×2**, cartão do isolamento e **registo em monospace** com os três comandos reais do display e botão de copiar |
+| [`UiParts.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/UiParts.kt) | `VscreenControls` em grelha (Iniciar cheio / Ver fotograma / Parar no erro / Ao vivo num cartão com o interruptor) e o **`PainelDeAutorizacao` extraído** do `ModalBottomSheet` (ver 67.3) |
+
+**Strings:** +16 chaves nos dois idiomas — i18n verde: **244 chaves iguais**, 223 usadas.
+
+**Um pormenor que o código apanhou:** antes do primeiro `Iniciar` não há display nenhum, e o
+`displayId` por omissão era `0` — que é o **ecrã físico**. Os comandos de exemplo («põe a app no
+display …») apareciam com `--display 0`, que é precisamente o que não se quer. Agora o valor é
+`-1` e o registo mostra `<id>` até haver um display a sério.
+
+### 67.2 Prova no S10+
+
+| Verificação | Resultado |
+|---|---|
+| Ecrã no telefone, parado | [`design/app/vscreen-parado.png`](design/app/vscreen-parado.png) |
+| A correr, com a calculadora lá dentro e **ao vivo** | [`design/app/vscreen-ativo.png`](design/app/vscreen-ativo.png) — `display 8 · 720×1280 · 54 KB · RGBA_8888`, `latência: 97 ms` |
+| O registo com os comandos do display real | [`design/app/vscreen-registo.png`](design/app/vscreen-registo.png) |
+| Isolamento (é mesmo um segundo ecrã) | `dumpsys window windows`: calculadora em `mDisplayId=8`, Cachalote em `mDisplayId=0` |
+| Agente a trabalhar lá dentro | `am start --display 8` + `input -d 8 tap 51 872` → a calculadora passou de **5** para **57** e a pré-visualização apanhou-o (chip passou a **AO VIVO**) |
+| Parar | `dumpsys display | grep cachalote-vscreen` → **0** ecrãs virtuais |
+| 8 secções dos Ajustes (abertas por etiqueta, não por coordenadas) | **8/8**, e `logcat -b crash` **vazio** |
+| `./tools/vscreen-tool-test.sh` (as acções do plugin, sem UI) | **6/6** |
+| Testes de JVM | **48** (eram 42; +6 do painel de autorização) |
+| i18n | 244 chaves iguais nos dois idiomas |
+
+### 67.3 Os dois pendentes do §66
+
+**1. Recuperação de sessão — verificada.** Pus a app a apontar para uma sessão que o motor não
+conhece (editei o `sessionId` no `files/sessao-daemon.json` que a app restaura), mandei um prompt e
+o que aconteceu foi o que o código promete: o motor respondeu `unknown session`, a app escreveu no
+transcript **«a sessão anterior já não existe no motor — a abrir uma nova»** e passou a
+`SESSÃO: 33C12F8C` (sessão nova, com o turno repetido uma vez).
+
+Pelo caminho apareceu uma armadilha que valeu o desvio (knowledge **134**): **com o MCP do Stitch
+configurado e o telefone sem rede, o motor responde `Internal error` a tudo** — e esse erro tapa o
+`unknown session`, portanto a recuperação não corria. Limpando o `mcpServersJson` (guardei-o e
+repus), o `unknown session` aparece e a recuperação funciona. Fica anotado como robustez a fazer:
+a recuperação devia olhar também para o código de erro.
+
+**2. Painel de autorização — coberto por testes.** Ver o painel *a aparecer* exige um turno real do
+modelo (é o modelo que pede uma ferramenta fora das áreas permitidas) e o telefone continua **sem
+rede** desde §59 — não é verificável hoje. O que se fez foi tirá-lo de dentro do
+`ModalBottomSheet` para o `UiParts` (peça sem estado, como o resto) e cobri-lo com **6 testes de
+JVM**: mostra o pedido e o aviso «FORA DO SANDBOX», não mostra o chip quando o pedido é dentro das
+áreas, a primeira opção já vem escolhida, escolher a segunda decide essa, recusar devolve `null`, e
+os rótulos estão em inglês. É a peça que faltava da rede de segurança descrita em knowledge 114.
+
+### 67.4 A instalação: a app do telefone era de outra máquina
+
+O `adb install -r` recusou com `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: a app instalada estava assinada
+por **outra keystore de debug** (a do outro computador, onde as rondas §61–§66 foram feitas — este
+clone só as recebeu pelo `pull`). Procedimento, à laia do §60, e com a autorização do autor:
+
+1. cópia da pasta de dados com root (`shared_prefs` + `files` → `.work/backup-appdata/`);
+2. desinstalar, instalar a APK desta máquina;
+3. repor os ficheiros, `chown` para o uid novo e `restorecon`;
+4. religar a acessibilidade (knowledge 132) e pré-autorizar o root no Magisk.
+
+**O que não se perdeu:** a chave do provedor (vive no daemon, não na app), o modo (daemon/root), as
+capacidades autorizadas, o token, o MCP do Stitch e o histórico. **A partir de agora o telefone tem
+a app desta máquina**, portanto os próximos `install-app.sh` voltam a ser `adb install -r` normais.
+
+### 67.5 Uma surpresa ao tocar em «Parar» (conhecimento 133)
+
+Ao parar o ecrã virtual, a calculadora que lá estava **veio para o ecrã físico**. Não é bug da app:
+quando um display é removido, o Android move as *tasks* que lá estavam para o display por omissão em
+vez de as matar. Está registado como armadilha **133**, com o caminho da correcção (fechar as tasks
+pelo daemon, que em modo root/Shizuku pode — e no modo embutido não é preciso, porque sem root não
+se lançam apps lá dentro).
+
+### 67.6 O que fica por fazer
+
+| Item | Nota |
+|---|---|
+| Fechar as tasks antes de libertar o ecrã virtual | knowledge 133; é o que evita a app do agente saltar para o ecrã do dono |
+| Recuperação de sessão olhar para o código de erro | knowledge 134; hoje um MCP em baixo esconde o erro e a app só diz «Internal error» |
+| Linha de telemetria do turno do desenho | já anotada em §64: precisa de contagem de passos e tempo do turno, que o motor não manda |
+| Fontes do design (Space Grotesk, Geist, JetBrains Mono) | continuam por empacotar (são OFL, dá para as trazer); hoje usa-se a escala com as famílias do sistema |
+| Testes de dispositivo que precisam de um turno | `app-ui-test` passo 6 e `app-capabilities-test --full` passo 2 continuam à espera de rede/chave |

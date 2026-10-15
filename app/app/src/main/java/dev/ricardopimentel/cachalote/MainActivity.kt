@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -29,13 +30,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
@@ -47,14 +53,19 @@ import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Security
@@ -112,6 +123,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
@@ -265,117 +277,27 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
-    // O pedido de autorização é um painel que sobe de baixo, como no design: cabeçalho com escudo
-    // e fechar, o que o agente quer correr em monospace, as opções **seleccionáveis** (a primeira
-    // vem escolhida) e um botão para confirmar. Antes era um AlertDialog com um botão por opção,
-    // que decidia no toque — sem se ver o que se estava a escolher.
+    // O pedido de autorização é um painel que sobe de baixo, como no design. O conteúdo vive no
+    // `UiParts.PainelDeAutorizacao` (sem estado próprio, e por isso testável na JVM); aqui fica só
+    // a folha e a ligação ao modelo. Antes era um AlertDialog com um botão por opção, que decidia
+    // no toque — sem se ver o que se estava a escolher.
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var escolhida by remember(ap.requestId) { mutableStateOf(ap.options.firstOrNull()?.first) }
-    val foraDoSandbox = ap.detail.contains("sandbox", ignoreCase = true) ||
-        ap.title.contains("sandbox", ignoreCase = true)
 
     ModalBottomSheet(onDismissRequest = { vm.answerApproval(null) }, sheetState = sheet) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Security,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    stringResource(R.string.dialogo_autorizacao),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = { vm.answerApproval(null) }) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.recusar_turno))
-                }
-            }
-
-            if (foraDoSandbox) {
-                Chip(stringResource(R.string.autorizacao_fora_sandbox), cor = MaterialTheme.colorScheme.error)
-            }
-
-            Etiqueta(stringResource(R.string.autorizacao_agente_quer))
-            Text(ap.title, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
-
-            if (ap.detail.isNotBlank()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                ) {
-                    Text(
-                        ap.detail,
-                        fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .heightIn(max = 200.dp)
-                            .verticalScroll(rememberScrollState())
-                            .padding(10.dp),
-                    )
-                }
-            }
-
-            Text(
-                stringResource(R.string.autorizacao_explicacao),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            ap.options.forEach { (id, nome) ->
-                val sel = id == escolhida
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { escolhida = id },
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (sel) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainerHigh,
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        if (sel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant,
-                    ),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            if (sel) "\u25C9" else "\u25CB",
-                            color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary,
-                        )
-                        Spacer(Modifier.size(10.dp))
-                        Text(
-                            nome,
-                            fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
-
-            Button(
-                onClick = { vm.answerApproval(escolhida) },
-                enabled = escolhida != null,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.autorizacao_confirmar)) }
-
-            TextButton(onClick = { vm.answerApproval(null) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.recusar_turno))
-            }
-
-            Text(
-                stringResource(R.string.autorizacao_rodape, android.os.Process.myPid(), vm.modeKind.name.lowercase()),
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.secondary,
+            PainelDeAutorizacao(
+                requestId = ap.requestId,
+                titulo = ap.title,
+                detalhe = ap.detail,
+                opcoes = ap.options,
+                rodape = stringResource(
+                    R.string.autorizacao_rodape,
+                    android.os.Process.myPid(),
+                    vm.modeKind.name.lowercase(),
+                ),
+                onDecidir = { vm.answerApproval(it) },
             )
         }
     }
@@ -784,47 +706,315 @@ private fun CartaoMcp(vm: MainViewModel) {
     }
 }
 
+/**
+ * O ecrã virtual, como o desenho o pede ([`design/ecras/ecra-virtual.png`]): o monitor com a
+ * moldura, o estado da pré-visualização, a resolução e a frequência, a linha técnica em
+ * monospace e a latência **medida**; os quatro controlos em grelha; o cartão do isolamento; e o
+ * registo em monospace com os comandos com que o agente põe apps lá dentro.
+ *
+ * É a última peça da comparação ecrã a ecrã do design do Stitch (ver STATUS §61–§66).
+ */
 @Composable
 private fun CartaoVscreen(vm: MainViewModel) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(stringResource(R.string.vscreen_titulo), fontWeight = FontWeight.SemiBold)
+    val clipboard = LocalClipboardManager.current
+    var copiado by remember { mutableStateOf(false) }
+    val id = vm.vscreenDisplayId
+    // Antes do primeiro `Iniciar` não há display nenhum: os comandos mostram o marcador, para
+    // ninguém os copiar com um `--display 0` (que é o ecrã físico, não o virtual).
+    val idTexto = if (id > 0) id.toString() else "<id>"
+    // Os três comandos do desenho, com o display que existe **neste** telefone (o exemplo da
+    // calculadora é o que a verificação do §21 usou).
+    val comandos = listOf(
+        "am start --display $idTexto -n com.android.calculator2/.Calculator",
+        "input -d $idTexto tap 105 838",
+        "input -d $idTexto keyevent KEYCODE_BACK",
+    )
+
+    // Ao vivo: um fotograma a cada 1,5 s enquanto o interruptor estiver ligado e o ecrã virtual
+    // existir. É o que deixa o dono *ver* o agente a trabalhar.
+    if (vm.vscreenAoVivo && vm.vscreenRunning) {
+        LaunchedEffect(vm.vscreenRunning, vm.vscreenAoVivo) {
+            while (true) {
+                vm.vscreenRefresh(silencioso = true)
+                kotlinx.coroutines.delay(1500)
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Bolt,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(Modifier.size(6.dp))
+            Etiqueta(stringResource(R.string.vscreen_etiqueta))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.vscreen_texto),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
+                stringResource(R.string.vscreen_titulo_longo),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
             )
-            VscreenControls(
-                rodando = vm.vscreenRunning,
-                aoVivo = vm.vscreenAoVivo,
-                enabled = !vm.busy,
-                onStart = { vm.vscreenStart() },
-                onRefresh = { vm.vscreenRefresh() },
-                onStop = { vm.vscreenStop() },
-                onAoVivo = { vm.vscreenAoVivo = it },
+            ChipComPonto(
+                texto = stringResource(
+                    R.string.vscreen_display_id,
+                    if (vm.vscreenRunning) id.toString() else "\u2014",
+                ),
+                cor = if (vm.vscreenRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
             )
-            // Ao vivo: um fotograma a cada 1,5 s enquanto o interruptor estiver ligado e o
-            // ecrã virtual existir. É o que deixa o dono *ver* o agente a trabalhar.
-            if (vm.vscreenAoVivo && vm.vscreenRunning) {
-                LaunchedEffect(vm.vscreenRunning, vm.vscreenAoVivo) {
-                    while (true) {
-                        vm.vscreenRefresh(silencioso = true)
-                        kotlinx.coroutines.delay(1500)
+        }
+
+        // ---- o monitor ----
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val (textoChip, corChip) = when {
+                        vm.vscreenRunning && vm.vscreenAoVivo ->
+                            stringResource(R.string.ao_vivo) to MaterialTheme.colorScheme.primary
+                        vm.vscreenRunning ->
+                            stringResource(R.string.vscreen_em_pausa) to MaterialTheme.colorScheme.secondary
+                        else ->
+                            stringResource(R.string.vscreen_parado) to MaterialTheme.colorScheme.secondary
+                    }
+                    ChipComPonto(textoChip, corChip)
+                    Spacer(Modifier.size(10.dp))
+                    Text(
+                        if (vm.vscreenLargura > 0) "${vm.vscreenLargura}\u00D7${vm.vscreenAltura} @ ${vm.vscreenHz} Hz" else "\u2014",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.Filled.Cast,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Etiqueta(stringResource(R.string.vscreen_render))
+                }
+
+                // A moldura: o fotograma vive aqui dentro, com o contorno do desenho.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val bmp = vm.vscreenBitmap
+                    if (bmp != null) {
+                        Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = stringResource(R.string.fotograma_desc),
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Text(
+                            if (vm.vscreenRunning) stringResource(R.string.vscreen_sem_fotograma, id)
+                            else stringResource(R.string.vscreen_sem_ecra),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 44.dp),
+                        )
+                    }
+                }
+
+                Text(
+                    stringResource(
+                        R.string.vscreen_rodape,
+                        idTexto,
+                        if (vm.vscreenLargura > 0) "${vm.vscreenLargura}\u00D7${vm.vscreenAltura}" else "\u2014",
+                        vm.vscreenKb,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Ponto(if (vm.vscreenRunning) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        stringResource(R.string.vscreen_latencia, vm.vscreenLatenciaMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+        }
+
+        VscreenControls(
+            rodando = vm.vscreenRunning,
+            aoVivo = vm.vscreenAoVivo,
+            enabled = !vm.busy,
+            onStart = { vm.vscreenStart() },
+            onRefresh = { vm.vscreenRefresh() },
+            onStop = { vm.vscreenStop() },
+            onAoVivo = { vm.vscreenAoVivo = it },
+        )
+
+        // ---- porque é que isto é seguro (o cartão do desenho) ----
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Filled.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Spacer(Modifier.size(10.dp))
+                    Text(
+                        stringResource(R.string.vscreen_isolamento_titulo),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    stringResource(R.string.vscreen_texto),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("\u2713", color = MaterialTheme.colorScheme.primaryContainer)
+                    Spacer(Modifier.size(8.dp))
+                    Text(stringResource(R.string.vscreen_isolamento_nota), style = MaterialTheme.typography.bodySmall)
+                }
+                Chip(stringResource(R.string.vscreen_isolamento_chip))
+            }
+        }
+
+        // ---- o registo: os comandos, como no desenho ----
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Ponto(MaterialTheme.colorScheme.error, 8)
+                    Spacer(Modifier.size(5.dp))
+                    Ponto(MaterialTheme.colorScheme.secondary, 8)
+                    Spacer(Modifier.size(5.dp))
+                    Ponto(MaterialTheme.colorScheme.primaryContainer, 8)
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        "$ cachalote-agent --display-target=$idTexto",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = {
+                            clipboard.setText(AnnotatedString(comandos.joinToString("\n")))
+                            copiado = true
+                        },
+                    ) {
+                        Icon(
+                            Icons.Filled.ContentCopy,
+                            contentDescription = stringResource(R.string.vscreen_copiar),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    comandos.forEachIndexed { i, cmd ->
+                        Row {
+                            Text(
+                                "${i + 1}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.width(18.dp),
+                            )
+                            Text(
+                                cmd,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (copiado) {
+                        Text(
+                            stringResource(R.string.vscreen_copiado),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        )
+                    }
+                    Spacer(Modifier.size(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("\u2713", color = MaterialTheme.colorScheme.primaryContainer)
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            stringResource(R.string.vscreen_registo_nota),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
-            if (vm.vscreenInfo.isNotBlank()) {
-                Text(vm.vscreenInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-            }
-            vm.vscreenBitmap?.let { bmp ->
-                Image(
-                    bitmap = bmp.asImageBitmap(),
-                    contentDescription = stringResource(R.string.fotograma_desc),
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            }
         }
+    }
+}
+
+/** O ponto de estado (verde a correr, apagado parado) — está em meia dúzia de sítios do design. */
+@Composable
+private fun Ponto(cor: Color, tamanho: Int = 7) {
+    Box(modifier = Modifier.size(tamanho.dp).clip(CircleShape).background(cor))
+}
+
+/** Pill com um ponto à esquerda: o «AO VIVO» e o `display_id=2` do desenho. */
+@Composable
+private fun ChipComPonto(texto: String, cor: Color) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Ponto(cor, 6)
+        Spacer(Modifier.size(6.dp))
+        Text(
+            texto.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 1.sp,
+            color = cor,
+        )
     }
 }
 

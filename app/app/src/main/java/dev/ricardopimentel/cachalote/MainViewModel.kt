@@ -366,26 +366,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var licencas by mutableStateOf<List<Licenca>>(emptyList())
     var licencaAberta by mutableStateOf<Licenca?>(null)
     var mostrarLicencas by mutableStateOf(false)
-    var vscreenInfo by mutableStateOf("")
     var vscreenRunning by mutableStateOf(false)
     var vscreenBitmap by mutableStateOf<android.graphics.Bitmap?>(null)
 
     /** Pré-visualização ao vivo: pede fotogramas seguidos enquanto o interruptor estiver ligado. */
     var vscreenAoVivo by mutableStateOf(false)
 
+    // Os números do ecrã virtual em campos próprios: o ecrã do design mostra cada um no seu
+    // sítio (chip do display, rodapé do monitor, linha da latência) e uma frase só não dava.
+    // -1 = ainda não houve ecrã virtual nenhum. Nunca 0: o display 0 é o **ecrã físico**, e os
+    // comandos de exemplo do registo não podem apontar para lá.
+    var vscreenDisplayId by mutableStateOf(-1)
+    var vscreenLargura by mutableStateOf(0)
+    var vscreenAltura by mutableStateOf(0)
+    var vscreenDensidade by mutableStateOf(0)
+    var vscreenHz by mutableStateOf(0)
+    var vscreenKb by mutableStateOf(0)
+    var vscreenLatenciaMs by mutableStateOf(0L)
+
     /** Ecrã virtual: iniciar, parar, estado e ver o fotograma actual. */
     fun vscreenStart() = run("ecrã virtual") {
         val r = capsExecute("vscreen_start", org.json.JSONObject().put("width", 720).put("height", 1280).put("density", 320))
+        lerVscreen(r)
         vscreenRunning = r.optBoolean("running")
-        vscreenInfo = "display ${r.optInt("displayId")} · ${r.optInt("width")}×${r.optInt("height")} @${r.optInt("density")} dpi"
-        transcript.add(ChatLine("system", "ecrã virtual iniciado: $vscreenInfo — põe apps lá com bash: am start --display ${r.optInt("displayId")} -n <pkg>/<activity>"))
+        transcript.add(
+            ChatLine(
+                "system",
+                "ecrã virtual iniciado: display $vscreenDisplayId · " +
+                    "${vscreenLargura}×${vscreenAltura} @${vscreenDensidade} dpi — põe apps lá com bash: " +
+                    "am start --display $vscreenDisplayId -n <pkg>/<activity>",
+            ),
+        )
     }
 
     fun vscreenStop() = run("ecrã virtual") {
         capsExecute("vscreen_stop", org.json.JSONObject())
         vscreenRunning = false
         vscreenBitmap = null
-        vscreenInfo = "parado"
+        // O `displayId` fica: é o último que existiu, e os comandos de exemplo do registo
+        // continuam a apontar para ele (o chip do cabeçalho diz que já não está a correr).
+        vscreenAoVivo = false
     }
 
     /**
@@ -399,11 +419,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun vscreenFrame() {
+        // A latência que a app mostra é a do caminho todo do fotograma: pedido → captura →
+        // PNG → base64 → volta → descodificação. É o tempo que o dono espera, não o do
+        // compositor — e é medido, não inventado.
+        val t0 = System.currentTimeMillis()
         val r = capsExecute("vscreen_frame", org.json.JSONObject().put("maxWidth", 540))
         val bytes = android.util.Base64.decode(r.optString("data"), android.util.Base64.NO_WRAP)
         vscreenBitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        vscreenLatenciaMs = System.currentTimeMillis() - t0
+        lerVscreen(r)
+        vscreenKb = (r.optLong("bytes", bytes.size.toLong()) / 1024).toInt()
         vscreenRunning = true
-        vscreenInfo = "display ${r.optInt("displayId")} · ${r.optInt("width")}×${r.optInt("height")} · ${r.optInt("bytes") / 1024} KB"
+    }
+
+    /** Copia para campos o que vem do daemon (`vscreen_start`, `vscreen_status`, `vscreen_frame`). */
+    private fun lerVscreen(r: org.json.JSONObject) {
+        if (r.has("displayId")) vscreenDisplayId = r.optInt("displayId")
+        // O `frame` traz as medidas do display em `displayWidth/Height` (o `width/height` dele é
+        // a imagem reduzida); o `start`/`status` traz as do display em `width/height`.
+        val w = if (r.has("displayWidth")) r.optInt("displayWidth") else r.optInt("width")
+        val h = if (r.has("displayHeight")) r.optInt("displayHeight") else r.optInt("height")
+        if (w > 0) vscreenLargura = w
+        if (h > 0) vscreenAltura = h
+        if (r.optInt("density") > 0) vscreenDensidade = r.optInt("density")
+        vscreenHz = Math.round(r.optDouble("refreshRate", 0.0)).toInt()
     }
 
     var backupAviso by mutableStateOf("")

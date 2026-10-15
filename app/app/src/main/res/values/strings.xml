@@ -185,8 +185,24 @@
     <string name="verificar">Check</string>
     <string name="verificar_estado">Check status</string>
     <string name="voltar">Back</string>
-    <string name="vscreen_texto">A second screen where the agent works without touching your screen. Put apps there with bash: am start --display &lt;id&gt; -n &lt;pkg&gt;/&lt;activity&gt;; tap with input -d &lt;id&gt;. It lives inside this app: close the app and the virtual screen goes away.</string>
+    <string name="vscreen_copiado">commands copied</string>
+    <string name="vscreen_copiar">Copy the commands</string>
+    <string name="vscreen_display_id">display_id=%1$s</string>
+    <string name="vscreen_em_pausa">paused</string>
+    <string name="vscreen_etiqueta">Native powers · virtual display</string>
+    <string name="vscreen_isolamento_chip">POSIX sandbox isolation</string>
+    <string name="vscreen_isolamento_nota">Zero visual overlap</string>
+    <string name="vscreen_isolamento_titulo">Screen isolation without intruders</string>
+    <string name="vscreen_latencia">latency: %1$d ms</string>
+    <string name="vscreen_parado">stopped</string>
+    <string name="vscreen_registo_nota">Events injected without touch focus on the main physical screen.</string>
+    <string name="vscreen_render">local render</string>
+    <string name="vscreen_rodape">display %1$s · %2$s · %3$d KB · RGBA_8888</string>
+    <string name="vscreen_sem_ecra">the virtual screen is not running — tap Start</string>
+    <string name="vscreen_sem_fotograma">no frame yet — put an app on this display with bash: am start --display %1$d -n &lt;pkg&gt;/&lt;activity&gt;</string>
+    <string name="vscreen_texto">A second screen where the agent works without touching what is in front of you. It lives inside this app: close the app and the virtual screen goes away.</string>
     <string name="vscreen_titulo">Virtual screen</string>
+    <string name="vscreen_titulo_longo">Isolated Virtual Screen</string>
     <string name="wizard_acesso_nota">It is the most sensitive permission in the app: with it the agent reads the screen and interacts. You can turn it off at any time.</string>
     <string name="wizard_acesso_texto">Without the accessibility service the agent neither sees nor touches the screen — it can only send notifications. Turn it on in Settings → Accessibility → Cachalote.</string>
     <string name="wizard_acesso_titulo">Give the agent eyes and fingers</string>

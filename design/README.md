@@ -90,12 +90,13 @@ versão monocromática (ícones temáticos) e o XML da cor de fundo — e o mani
 | Aprovação (diálogo) | ✅ desenhado |
 | Estado do sistema | ✅ desenhado |
 | Chave de API | ✅ desenhado |
-| Ecrã virtual | ✅ desenhado |
+| Ecrã virtual | ✅ desenhado · **implementado** (`app/vscreen-ativo.png`, `app/vscreen-registo.png`) |
 | Sessões (diálogo) | ✅ desenhado |
-| Primeiros passos (onboarding) | ✅ desenhado · **assistente implementado** (6 passos, ainda com o layout simples — o desenho aplica-se depois) |
+| Primeiros passos (onboarding) | ✅ desenhado · **assistente implementado** (6 passos) |
 | ~~Poderes~~ | substituído por *Ajustes* (a IA mudou: a conversa é a primeira aba e os ajustes são um menu) |
-| Resumo (doctor + consumo) | ✅ **implementado** (ainda com o layout simples) |
-| Implementação das disposições em Compose | por fazer (a seguir, ecrã a ecrã) |
+| Resumo (doctor + consumo) | ✅ **implementado** |
+| Painel de autorização | ✅ **implementado** (e coberto por testes de JVM) |
+| Implementação das disposições em Compose | ✅ **feita ecrã a ecrã** — falta o registo/ideias que o motor ainda não alimenta (a linha de telemetria do turno) |
 
 ⚠️ **Nota:** os ecrãs desenhados antes da reorganização mostram a barra antiga de quatro itens
 (Estado · Chave · Conversa · Poderes). O conteúdo continua a servir de referência; a **navegação** é

@@ -1,30 +1,51 @@
 package dev.ricardopimentel.cachalote
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -179,7 +200,14 @@ fun CapabilityToggles(
     }
 }
 
-/** Botões do ecrã virtual e o interruptor da pré-visualização ao vivo. */
+/**
+ * Botões do ecrã virtual e o interruptor da pré-visualização ao vivo.
+ *
+ * A forma é a do desenho (uma grelha de 2×2: Iniciar/Fotograma em cima, Parar/Ao vivo em baixo),
+ * com o principal cheio, o «Parar» na cor do erro e o «Ao vivo» dentro de um cartão com o
+ * interruptor — antes eram quatro controlos soltos numa linha, e não parecia um painel.
+ * Continua sem estado próprio, para os testes de JVM o poderem compor com dados inventados.
+ */
 @Composable
 fun VscreenControls(
     rodando: Boolean,
@@ -190,16 +218,176 @@ fun VscreenControls(
     onStop: () -> Unit,
     onAoVivo: (Boolean) -> Unit,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onStart, enabled = enabled, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.iniciar))
+            }
+            OutlinedButton(onClick = onRefresh, enabled = enabled, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.ver_fotograma))
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = onStop,
+                enabled = enabled,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+            ) {
+                Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.parar))
+            }
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 12.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.ao_vivo), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    // Só faz sentido ligar "ao vivo" com o ecrã virtual a correr.
+                    Switch(checked = aoVivo, onCheckedChange = onAoVivo, enabled = rodando)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * O **painel de autorização** do design: o agente pede para correr uma ferramenta fora das áreas
+ * permitidas e é aqui que o dono decide.
+ *
+ * Está separado do `ModalBottomSheet` (que fica no `MainActivity`) precisamente para se poder
+ * compor num teste de JVM com um pedido inventado: era a última peça do design sem verificação
+ * automática, porque o painel só aparecia com um turno real do modelo — e um turno real precisa de
+ * rede e de chave. Ver STATUS §67.
+ *
+ * `onDecidir(null)` é o «recusar o turno»; com um id, é a opção escolhida (a primeira vem
+ * selecionada, como no desenho).
+ */
+@Composable
+fun PainelDeAutorizacao(
+    requestId: Int,
+    titulo: String,
+    detalhe: String,
+    opcoes: List<Pair<String, String>>,
+    rodape: String,
+    onDecidir: (String?) -> Unit,
+) {
+    var escolhida by remember(requestId) { mutableStateOf(opcoes.firstOrNull()?.first) }
+    val foraDoSandbox = detalhe.contains("sandbox", ignoreCase = true) ||
+        titulo.contains("sandbox", ignoreCase = true)
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        OutlinedButton(onClick = onStart, enabled = enabled) { Text(stringResource(R.string.iniciar)) }
-        OutlinedButton(onClick = onRefresh, enabled = enabled) { Text(stringResource(R.string.ver_fotograma)) }
-        OutlinedButton(onClick = onStop, enabled = enabled) { Text(stringResource(R.string.parar)) }
-        Text(stringResource(R.string.ao_vivo), style = MaterialTheme.typography.bodySmall)
-        // Só faz sentido ligar "ao vivo" com o ecrã virtual a correr.
-        Switch(checked = aoVivo, onCheckedChange = onAoVivo, enabled = rodando)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Security,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                stringResource(R.string.dialogo_autorizacao),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { onDecidir(null) }) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.recusar_turno))
+            }
+        }
+
+        if (foraDoSandbox) {
+            Chip(stringResource(R.string.autorizacao_fora_sandbox), cor = MaterialTheme.colorScheme.error)
+        }
+
+        Etiqueta(stringResource(R.string.autorizacao_agente_quer))
+        Text(titulo, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
+
+        if (detalhe.isNotBlank()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Text(
+                    detalhe,
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .heightIn(max = 200.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(10.dp),
+                )
+            }
+        }
+
+        Text(
+            stringResource(R.string.autorizacao_explicacao),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        opcoes.forEach { (id, nome) ->
+            val sel = id == escolhida
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { escolhida = id },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (sel) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (sel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant,
+                ),
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        if (sel) "\u25C9" else "\u25CB",
+                        color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary,
+                    )
+                    Spacer(Modifier.size(10.dp))
+                    Text(
+                        nome,
+                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+
+        Button(
+            onClick = { onDecidir(escolhida) },
+            enabled = escolhida != null,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.autorizacao_confirmar)) }
+
+        TextButton(onClick = { onDecidir(null) }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.recusar_turno))
+        }
+
+        Text(
+            rodape,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.secondary,
+        )
     }
 }
 
