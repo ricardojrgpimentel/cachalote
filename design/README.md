@@ -12,6 +12,7 @@ design que os mantém coerentes. A implementação é em Compose; aqui fica a re
 | `sistema/diretrizes.md` | a orientação de estilo (personalidade, hierarquia, movimento) |
 | `ecras/<nome>.png` | o ecrã desenhado, em tamanho real |
 | `app/<nome>.png` | como a app está de facto (para comparar com o desenho) |
+| `revisao/<n>-<nome>.png` | provas da passagem visual de 2026-10-15 (instalação de zero) — ver [`REVISAO-VISUAL.md`](../REVISAO-VISUAL.md) |
 | `logo/folha-de-marca.{png,html}` | a folha de marca: ícone, teste de legibilidade, monocromático, wordmark e lockup |
 | `logo/icone-fonte.png` | o ícone isolado, 1024×1024 (a fonte de todos os tamanhos) |
 | `logo/marca.png` | a marca recortada, com transparência (para o ícone) |
