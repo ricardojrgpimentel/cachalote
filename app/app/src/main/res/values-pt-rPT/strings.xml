@@ -12,6 +12,7 @@
     <string name="a_reconectar">a reconectar…</string>
     <string name="acessibilidade">Acessibilidade</string>
     <string name="acessibilidade_caiu">a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)</string>
+    <string name="acessibilidade_detalhe">ver e tocar no ecrã</string>
     <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
     <string name="acesso">Acesso</string>
     <string name="ajustes_modulos">%1$d módulos configurados</string>
@@ -24,6 +25,7 @@
     <string name="app_nome">Cachalote</string>
     <string name="areas_bash">Áreas permitidas do bash</string>
     <string name="areas_bash_texto">Fora destas pastas o agente tem de pedir autorização no telefone. Uma por linha; o workspace da sessão é sempre permitido.</string>
+    <string name="areas_detalhe">onde o agente corre sem pedir autorização</string>
     <string name="atualizar">Atualizar</string>
     <string name="autorizacao_agente_quer">O agente quer correr:</string>
     <string name="autorizacao_confirmar">Autorizar</string>
@@ -33,6 +35,7 @@
     <string name="autorizar_no_shizuku">Autorizar no Shizuku</string>
     <string name="autorizar_todas">Autorizar todas</string>
     <string name="aviso_root">Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.</string>
+    <string name="backup_detalhe">exportar definições e ver o software de terceiros</string>
     <string name="backup_e_licencas">Backup e licenças</string>
     <string name="backup_exportar">Exportar definições</string>
     <string name="backup_importar">Importar definições</string>
@@ -41,6 +44,7 @@
     <string name="cabecalho_a_reconectar">a reconectar…</string>
     <string name="cabecalho_motor_desligado">motor DSH no telefone · desligado</string>
     <string name="cabecalho_motor_ligado">motor DSH no telefone · ligado</string>
+    <string name="capacidades_detalhe">o que o agente pode fazer no telefone</string>
     <string name="capacidades_explicacao">O agente pede; tu decides. Cada pedido fica registado em baixo.</string>
     <string name="capacidades_titulo">Capacidades autorizadas</string>
     <string name="chave_acesso">Acesso ao provedor</string>
@@ -113,6 +117,7 @@
     <string name="ligar_daemon">Ligar daemon</string>
     <string name="limpar">Limpar</string>
     <string name="mcp_aviso">⚠ O comando tem de ser um caminho ABSOLUTO e, se usar o Node do daemon, precisa do LD_LIBRARY_PATH no env (senão morre no linker).</string>
+    <string name="mcp_detalhe">ferramentas externas ligadas por JSON</string>
     <string name="mcp_exemplo">[{"name":"ping","command":"/data/adb/cachalote/runtime/bin/node","args":["/data/local/tmp/mcp-ping-server.mjs"],"env":[{"name":"LD_LIBRARY_PATH","value":"/data/adb/cachalote/runtime/lib"}]}]</string>
     <string name="mcp_texto">JSON no formato do ACP, enviado em cada sessão nova. Exemplo stdio:</string>
     <string name="mcp_titulo">Servidores MCP</string>
@@ -197,6 +202,7 @@
     <string name="voltar_conversas">Voltar às conversas</string>
     <string name="vscreen_copiado">comandos copiados</string>
     <string name="vscreen_copiar">Copiar os comandos</string>
+    <string name="vscreen_detalhe">um segundo ecrã onde o agente trabalha</string>
     <string name="vscreen_display_id">display_id=%1$s</string>
     <string name="vscreen_em_pausa">em pausa</string>
     <string name="vscreen_etiqueta">Poderes nativos · display virtual</string>

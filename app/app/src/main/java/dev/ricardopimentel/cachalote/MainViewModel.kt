@@ -34,7 +34,13 @@ data class ConfigOption(
 }
 
 /** Linha da lista de sessões persistidas no motor. */
-data class SessionRow(val id: String, val title: String, val updatedAt: String)
+data class SessionRow(
+    val id: String,
+    val title: String,
+    val updatedAt: String,
+    /** A última mensagem da conversa (prévia da lista). Vazia quando o daemon não a sabe dar. */
+    val previa: String = "",
+)
 
 data class ChatLine(
     val role: String,          // user | assistant | thought | tool | error | system
@@ -825,44 +831,52 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * A lista de conversas: as sessões do motor (`session/list`, que só traz id e cwd) cruzadas com
-     * os metadados que o daemon lê do disco (título e datas — ver `daemon/session-meta.cjs`).
+     * A lista de conversas. A base é o **disco** (o daemon lê os ficheiros das sessões), e não o
+     * `session/list` do motor: esse é instável — depois de um reinício chegou a listar 24 de 78
+     * sessões, e nunca traz título nem data (knowledge 135). Sem daemon (modo embutido) cai-se no
+     * que o motor souber, que é o melhor que há nesse modo.
      *
-     * A ordem é a do WhatsApp: a conversa mexida mais recentemente em cima. Quando não há metadados
-     * (modo embutido, ou daemon antigo), fica a do motor e a app não inventa datas.
+     * A ordem é a do WhatsApp: a conversa mexida mais recentemente em cima.
      */
     fun refreshSessions() = run("sessões") {
-        val res = controller.listSessions(controller.workspace)
-        val arr = res.optJSONArray("sessions") ?: JSONArray()
         val meta = runCatching { controller.sessionMeta() }.getOrNull()
-        val porId = HashMap<String, JSONObject>()
-        meta?.optJSONArray("sessions")?.let { m ->
-            for (i in 0 until m.length()) {
-                val o = m.optJSONObject(i) ?: continue
-                porId[o.optString("sessionId")] = o
-            }
-        }
+        val doDisco = meta?.optJSONArray("sessions")
         val rows = ArrayList<SessionRow>()
         val titulos = HashMap<String, String>()
-        for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            val id = o.optString("sessionId")
-            val m = porId[id]
-            val doMotor = m?.optString("title")?.takeIf { it.isNotBlank() }
-            val titulo = o.optString("title").takeIf { it.isNotBlank() }
-                ?: doMotor
-                ?: sessionTitles[id]
-                ?: id.take(8)
-            if (doMotor != null) titulos[id] = doMotor
-            rows.add(
-                SessionRow(
-                    id = id,
-                    title = titulo,
-                    updatedAt = m?.optString("updatedAt")?.takeIf { it.isNotBlank() }
-                        ?: o.optString("updatedAt"),
-                ),
-            )
+
+        if (doDisco != null && doDisco.length() > 0) {
+            for (i in 0 until doDisco.length()) {
+                val o = doDisco.optJSONObject(i) ?: continue
+                val id = o.optString("sessionId").takeIf { it.isNotBlank() } ?: continue
+                val doMotor = o.optString("title").takeIf { it.isNotBlank() }
+                if (doMotor != null) titulos[id] = doMotor
+                rows.add(
+                    SessionRow(
+                        id = id,
+                        title = doMotor ?: sessionTitles[id] ?: id.take(8),
+                        updatedAt = o.optString("updatedAt"),
+                        previa = o.optString("preview").orEmpty(),
+                    ),
+                )
+            }
+        } else {
+            val res = runCatching { controller.listSessions(controller.workspace) }.getOrNull()
+            val arr = res?.optJSONArray("sessions")
+            for (i in 0 until (arr?.length() ?: 0)) {
+                val o = arr!!.optJSONObject(i) ?: continue
+                val id = o.optString("sessionId")
+                rows.add(
+                    SessionRow(
+                        id = id,
+                        title = o.optString("title").takeIf { it.isNotBlank() }
+                            ?: sessionTitles[id]
+                            ?: id.take(8),
+                        updatedAt = o.optString("updatedAt"),
+                    ),
+                )
+            }
         }
+
         // O título do motor entra no mapa da app: é ele que o cabeçalho da conversa mostra, e
         // sobrevive ao arranque (o do motor é curto e legível; o derivado do prompt é maior).
         if (titulos.isNotEmpty()) sessionTitles = sessionTitles + titulos
@@ -871,11 +885,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Retoma uma sessão; o transcript local é substituído pelo da sessão escolhida. */
     fun resumeSession(id: String) = run("retomar") {
-        val res = controller.resumeSession(id, controller.workspace)
+        val jaEraEsta = id == sessionId
+        // «session is already active» **não é falha**: o motor tem um cliente ACP de cada vez e a
+        // app retoma a sessão dela ao ligar-se, por isso tocar na conversa que já está em uso
+        // caía aqui. Sem isto, abrir a conversa activa dava erro e não abria nada (visto no S10+
+        // em 2026-10-15). E, sendo a mesma, o transcript em memória já é o dela: não se apaga.
+        val res = try {
+            controller.resumeSession(id, controller.workspace)
+        } catch (t: Throwable) {
+            if (!isSessionAlreadyActive(t)) throw t
+            null
+        }
         sessionId = id
-        applyConfigOptions(res)
-        transcript.clear()
-        transcript.add(ChatLine("system", "sessão ${id.take(8)} retomada"))
+        res?.let { applyConfigOptions(it) }
+        if (!jaEraEsta) {
+            transcript.clear()
+            transcript.add(ChatLine("system", "sessão ${id.take(8)} retomada"))
+        }
         anotarAvisoMcp()
         conversaAberta = true
         saveState()

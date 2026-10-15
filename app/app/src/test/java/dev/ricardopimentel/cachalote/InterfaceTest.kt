@@ -1,5 +1,7 @@
 package dev.ricardopimentel.cachalote
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -110,6 +112,31 @@ class InterfaceTest {
         assertEquals("CO", iniciais("corre o comando echo"))
         assertEquals("ES", iniciais("  estado do motor  "))
         assertEquals("?", iniciais("   "))
+    }
+
+    @Test
+    fun a_linha_dos_ajustes_tem_titulo_detalhe_e_abre_a_seccao() {
+        var tocou = 0
+        compose.setContent {
+            LinhaDeAjuste(
+                titulo = "Motor",
+                detalhe = "estado, modos (root, Shizuku, embutido) e diagnóstico",
+                icone = Icons.Filled.Memory,
+            ) { tocou++ }
+        }
+        compose.onNodeWithText("Motor").assertIsDisplayed()
+        compose.onNodeWithText("estado, modos (root, Shizuku, embutido) e diagnóstico").assertIsDisplayed()
+        // A linha inteira é o alvo do toque (o texto, o ícone e o chevron levam à mesma secção).
+        compose.onNodeWithText("Motor").performClick()
+        assertEquals(1, tocou)
+    }
+
+    @Test
+    fun a_linha_dos_ajustes_sem_detalhe_mostra_so_o_titulo() {
+        compose.setContent { LinhaDeAjuste(titulo = "Acessibilidade", onClick = {}) }
+        compose.onNodeWithText("Acessibilidade").assertIsDisplayed()
+        // Sem detalhe não fica uma linha vazia nem um separador órfão.
+        compose.onNodeWithText("Acessibilidade").assertIsDisplayed()
     }
 
     @Test

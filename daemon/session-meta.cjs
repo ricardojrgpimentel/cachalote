@@ -15,6 +15,7 @@
 //   · `session/title`            → o título que **o motor** gerou (é o melhor dos dois);
 //   · `user/message`             → o primeiro prompt, quando ainda não há título;
 //   · o `time` do último registo → quando a conversa mexeu pela última vez (ordenação);
+//   · a **última** mensagem (do dono ou do agente) → a prévia da linha, como no WhatsApp;
 //   · o cabeçalho `session`      → `createdAt` e `cwd`.
 //
 // Quem chama: `cachalote.sessions.meta` no bridge.cjs, que é o que a app pede ao desenhar a lista.
@@ -121,6 +122,7 @@ function lerSessao(dir, id, opts = {}) {
   const dados = {
     sessionId: id,
     title: "",
+    preview: "",
     cwd: "",
     createdAt: "",
     updatedAt: new Date(stat.mtimeMs).toISOString(),
@@ -136,6 +138,7 @@ function lerSessao(dir, id, opts = {}) {
   // se pode ficar com o primeiro que aparece: guardam-se os dois e o do motor ganha no fim.
   let tituloDoMotor = "";
   let tituloDoPedido = "";
+  let ultimaMensagem = "";
   for (const linha of texto.split("\n")) {
     if (!linha.trim()) continue;
     let registo;
@@ -163,9 +166,22 @@ function lerSessao(dir, id, opts = {}) {
       const inseridos = Array.isArray(data.inserted) ? data.inserted : [];
       const t = primeiroTexto(data.content) || inseridos.map((i) => primeiroTexto(i && i.content)).find(Boolean) || "";
       if (t) tituloDoPedido = t;
+      if (t) ultimaMensagem = t;
+    }
+    if (registo.type === "assistant/attempt") {
+      // O texto do agente vem em pedaços (`stream[].chunk.type === "text"`), tal como chegou ao
+      // cliente pelo ACP. Uma tentativa sem texto (transporte falhado) não apaga a anterior.
+      const pedacos = [];
+      for (const s of (registo.data && registo.data.stream) || []) {
+        const c = s && s.chunk;
+        if (c && c.type === "text" && typeof c.text === "string") pedacos.push(c.text);
+      }
+      const t = pedacos.join("").replace(/\s+/g, " ").trim();
+      if (t) ultimaMensagem = t;
     }
   }
   dados.title = tituloDoMotor || tituloDoPedido;
+  dados.preview = ultimaMensagem.replace(/\s+/g, " ").trim().slice(0, 200);
   return dados;
 }
 

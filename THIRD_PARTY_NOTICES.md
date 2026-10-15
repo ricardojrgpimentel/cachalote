@@ -73,6 +73,24 @@ LGPL-3.0, ou se reimplementa. Enquanto isso, **nada de LGPL entra neste reposit�
 
 ---
 
+## 8. Fontes do design — SIL Open Font License 1.1 (OFL)
+
+O tema da app é gerado do sistema de design (`design/sistema/tema.json`) e as três famílias que o
+desenho usa estão **empacotadas** na app, em `app/app/src/main/res/font/` — todas variáveis (um
+ficheiro por família, com o eixo de peso `wght`) e todas OFL-1.1, que permite o uso e a
+redistribuição desde que a licença e o copyright acompanhem os ficheiros (é o que os
+`assets/licenses.json` fazem, dentro da app, no ecrã *Ajustes → Backup e licenças*).
+
+| Família | Onde se usa | Copyright | Fonte |
+|---|---|---|---|
+| Space Grotesk | títulos (`headline*`) | © 2020 The Space Grotesk Project Authors | <https://github.com/floriankarsten/space-grotesk> |
+| Geist | texto (`body*`) | © 2024 The Geist Project Authors | <https://github.com/vercel/geist-font> |
+| JetBrains Mono | strings técnicas (`label*`, `Mono`) | © 2020 The JetBrains Mono Project Authors | <https://github.com/JetBrains/JetBrainsMono> |
+
+Os ficheiros vieram do repositório `google/fonts` (a versão publicada no Google Fonts) e o texto
+integral da OFL está em `assets/licenses.json`. As licenças dos projectos DSH, woaiys3 e outros
+mantêm-se nas secções acima.
+
 ## Licença deste repositório
 
 MIT — ver [`LICENSE`](LICENSE). As notas acima aplicam-se aos componentes de terceiros

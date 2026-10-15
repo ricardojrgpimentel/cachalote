@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
@@ -57,11 +58,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -83,7 +85,7 @@ fun ConsumoDeContexto(uso: Uso?) {
     Text(
         uso.texto(),
         style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace,
+        fontFamily = Mono,
         color = MaterialTheme.colorScheme.secondary,
     )
 }
@@ -282,7 +284,7 @@ fun PainelDeAutorizacao(
         }
 
         Etiqueta(stringResource(R.string.autorizacao_agente_quer))
-        Text(titulo, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium)
+        Text(titulo, fontFamily = Mono, style = MaterialTheme.typography.bodyMedium)
 
         if (detalhe.isNotBlank()) {
             Surface(
@@ -293,7 +295,7 @@ fun PainelDeAutorizacao(
             ) {
                 Text(
                     detalhe,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier
                         .heightIn(max = 200.dp)
@@ -353,7 +355,7 @@ fun PainelDeAutorizacao(
         Text(
             rodape,
             style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = Mono,
             color = MaterialTheme.colorScheme.secondary,
         )
     }
@@ -426,7 +428,7 @@ fun ListaDeConversas(
                     if (conversas.size == 1) stringResource(R.string.conversa_contagem_uma)
                     else stringResource(R.string.conversa_contagem, conversas.size),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 4.dp),
                 )
@@ -481,7 +483,7 @@ private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit) {
             Text(
                 iniciais(c.titulo),
                 style = MaterialTheme.typography.labelLarge,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 color = if (c.activa) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -510,7 +512,7 @@ private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit) {
             Text(
                 c.quando,
                 style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 color = MaterialTheme.colorScheme.secondary,
             )
             when {
@@ -528,6 +530,79 @@ private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit) {
 internal fun iniciais(titulo: String): String {
     val primeira = titulo.trim().split(Regex("\\s+")).firstOrNull { it.isNotBlank() } ?: return "?"
     return primeira.take(2).uppercase()
+}
+
+/**
+ * Uma linha do menu dos Ajustes, como as das **Definições do Android**: 72dp de altura, o ícone
+ * dentro de um círculo tonal de 40dp, o título com a linha de apoio por baixo, um chevron fino à
+ * direita e o toque em toda a linha (com ripple).
+ *
+ * Antes era um `TextButton` com um ícone solto e pouco padding: as linhas ficavam finas e
+ * encostadas umas às outras, e não se pareciam com nada do sistema — foi o autor que o notou
+ * («o design não é igual aos menus do Android, são muito finos»).
+ */
+@Composable
+fun LinhaDeAjuste(
+    titulo: String,
+    detalhe: String? = null,
+    icone: ImageVector? = null,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 72.dp)
+            .padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icone != null) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    icone,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.size(16.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(titulo, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            if (!detalhe.isNullOrBlank()) {
+                Spacer(Modifier.size(2.dp))
+                Text(
+                    detalhe,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Spacer(Modifier.size(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+/** A separação entre linhas do menu, recuada até onde começa o texto (não passa sob o ícone). */
+@Composable
+fun DivisoriaDeAjuste(recuo: Dp = 72.dp) {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = recuo),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
 }
 
 /** Corpo do diálogo das licenças: a lista ou o texto integral da escolhida. */
@@ -566,7 +641,7 @@ fun LicensesBody(
                 Text(
                     aberta.texto,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                 )
             }
         }
@@ -638,7 +713,7 @@ fun LinhaValor(rotulo: String, valor: String, cor: Color? = null) {
         Text(
             valor,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = Mono,
             color = cor ?: Color.Unspecified,
         )
     }
@@ -664,7 +739,7 @@ fun LinhaVerificacao(texto: String, estado: String, valor: String = "") {
             Text(
                 valor,
                 style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 color = MaterialTheme.colorScheme.secondary,
             )
         }

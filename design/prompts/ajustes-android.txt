@@ -1,0 +1,44 @@
+Cachalote is an Android app (Material 3, dark-first, portrait phone) that runs an AI coding agent
+locally on the user's phone. Design the SETTINGS SCREEN. The important part: the list rows must
+look like the **Android system Settings app** (the "Definições" app on a Pixel) — tall, comfortable
+rows with a leading icon in a tonal circle, a title with a supporting line underneath, a thin
+chevron and a divider. They must NOT look like thin text lines.
+
+Top: the title "Ajustes" with a compact line underneath, "8 módulos configurados". The app's own
+header stays above it (brand mark, "motor DSH no telefone · ligado" with a green dot, and the ROOT
+chip).
+
+The list group is a rounded surface (16dp corners, 1dp outline) holding eight rows. Every row:
+- is 72dp tall and spans the full width;
+- starts with the section glyph, 22dp, centred inside a 40dp circle with a tonal container
+  (a slightly lighter surface than the group, no outline);
+- then a title in 16sp semibold, and directly underneath a supporting line in 14sp, muted;
+- ends with a thin 24dp chevron at the far right, not a big text arrow;
+- has a 1dp divider after it, inset so that it starts where the row's text starts (it never passes
+  under the circle);
+- the whole row (not just the text) is the touch target and ripples when pressed.
+
+The eight rows, with their supporting lines:
+1. "Motor" — "estado, modos (root, Shizuku, embutido) e diagnóstico"
+2. "Chave do provedor" — "a chave do provedor, guardada no daemon"
+3. "Capacidades autorizadas" — "o que o agente pode fazer no telefone"
+4. "Acessibilidade" — "ver e tocar no ecrã"
+5. "Áreas permitidas do bash" — "onde o agente corre sem pedir autorização"
+6. "Servidores MCP" — "ferramentas externas ligadas por JSON"
+7. "Ecrã virtual" — "um segundo ecrã onde o agente trabalha"
+8. "Backup e licenças" — "exportar definições e ver o software de terceiros"
+
+Below the group, with a normal gap, one more full-height row in its own rounded surface with a thin
+accent outline: "Repetir a configuração inicial" with the supporting line "Voltar a correr o
+assistente de boas-vindas" and the same tonal circle with a restart glyph.
+
+Below that, a warning card with a thin red outline: a small triangle glyph, the micro-label
+"PERIGO", and three lines of text: "Aviso: o motor corre como root e o Android não impõe o sandbox
+do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica
+registado."
+
+Bottom navigation with three items: Conversa, Resumo, Ajustes (active).
+
+Style: calm, technical, trustworthy; deep blue-grey dark surfaces with a teal/cyan accent; strong
+typographic hierarchy; generous 48dp+ touch targets; no gradients; the rows must feel like the
+Android Settings app, only in this app's colours. All interface labels in European Portuguese.

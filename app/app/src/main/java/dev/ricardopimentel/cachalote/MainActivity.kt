@@ -117,7 +117,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -345,8 +344,9 @@ private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
 
 /**
  * O adaptador entre o modelo e a lista de conversas: resolve cada sessão do motor no que a linha
- * mostra. A pré-visualização só existe para a sessão aberta (é a única cujo texto a app tem — as
- * outras vivem no motor); as restantes mostram o identificador curto, que é verdadeiro.
+ * mostra. A prévia vem do daemon (a última mensagem lida do ficheiro da sessão) e, para a conversa
+ * aberta, do transcript, que é mais fresco. Sem metadados nenhuns (modo embutido), a linha mostra o
+ * identificador curto em vez de um resumo inventado.
  */
 @Composable
 private fun ListaDeSessoes(vm: MainViewModel) {
@@ -357,10 +357,13 @@ private fun ListaDeSessoes(vm: MainViewModel) {
         ItemConversa(
             id = s.id,
             titulo = s.title,
-            previa = if (activa && ultima != null) {
-                ultima.text.replace(Regex("\\s+"), " ").trim().take(90)
-            } else {
-                previaDesconhecida.format(s.id.take(8))
+            previa = when {
+                // A conversa aberta tem o texto à mão (e é o mais fresco).
+                activa && ultima != null -> ultima.text.replace(Regex("\\s+"), " ").trim().take(90)
+                // As outras: a última mensagem que o daemon leu do ficheiro da sessão.
+                s.previa.isNotBlank() -> s.previa.take(90)
+                // Sem metadados (modo embutido) não se inventa uma prévia.
+                else -> previaDesconhecida.format(s.id.take(8))
             },
             quando = quandoCurto(s.updatedAt),
             activa = activa,
@@ -384,6 +387,25 @@ private fun quandoCurto(iso: String): String = runCatching {
     "%02d/%02d %02d:%02d".format(t.dayOfMonth, t.monthValue, t.hour, t.minute)
 }.getOrElse { iso.replace("T", " ").take(16) }
 
+/** Uma entrada do menu dos Ajustes: rótulos (recursos), ícone e a secção que abre. */
+private class EntradaDeAjuste(
+    val titulo: Int,
+    val detalhe: Int?,
+    val icone: androidx.compose.ui.graphics.vector.ImageVector,
+    val destino: String,
+)
+
+private val ENTRADAS_DE_AJUSTE = listOf(
+    EntradaDeAjuste(R.string.motor, R.string.motor_detalhe, Icons.Filled.Memory, "motor"),
+    EntradaDeAjuste(R.string.chave_provedor, R.string.chave_detalhe, Icons.Filled.Key, "provedor"),
+    EntradaDeAjuste(R.string.capacidades_titulo, R.string.capacidades_detalhe, Icons.Filled.Tune, "capacidades"),
+    EntradaDeAjuste(R.string.acessibilidade, R.string.acessibilidade_detalhe, Icons.Filled.Accessibility, "acessibilidade"),
+    EntradaDeAjuste(R.string.areas_bash, R.string.areas_detalhe, Icons.Filled.Terminal, "areas"),
+    EntradaDeAjuste(R.string.mcp_titulo, R.string.mcp_detalhe, Icons.Filled.Hub, "mcp"),
+    EntradaDeAjuste(R.string.vscreen_titulo, R.string.vscreen_detalhe, Icons.Filled.PhoneAndroid, "vscreen"),
+    EntradaDeAjuste(R.string.backup_e_licencas, R.string.backup_detalhe, Icons.Filled.Backup, "backup"),
+)
+
 /**
  * O que o agente pode fazer no telefone: interruptores por capacidade e o registo do
  * que ele já pediu. É a barreira de segurança do projecto (ver D10 no plano) — no
@@ -399,46 +421,55 @@ private fun AjustesScreen(vm: MainViewModel) {
         androidx.activity.compose.BackHandler { secao = "menu" }
     }
 
-    // O menu é uma lista simples.
+    // O menu é uma lista, com a forma do desenho: título de página, um grupo de linhas altas
+    // (72dp, ícone em círculo tonal, título + detalhe, chevron e separador recuado) — como as
+    // Definições do Android, e não as linhas finas que aqui estavam.
     if (secao == "menu") {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Column {
+                Text(
+                    stringResource(R.string.ajustes_titulo),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    stringResource(R.string.ajustes_modulos, 8),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Etiqueta(stringResource(R.string.ajustes_titulo), Modifier.padding(start = 8.dp, top = 8.dp))
-                    Text(
-                        stringResource(R.string.ajustes_modulos, 8),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-                    )
-                    LinhaDeMenu(stringResource(R.string.motor), stringResource(R.string.motor_detalhe), Icons.Filled.Memory) { secao = "motor" }
-                    LinhaDeMenu(stringResource(R.string.chave_provedor), stringResource(R.string.chave_detalhe), Icons.Filled.Key) { secao = "provedor" }
-                    LinhaDeMenu(stringResource(R.string.capacidades_titulo), null, Icons.Filled.Tune) { secao = "capacidades" }
-                    LinhaDeMenu(stringResource(R.string.acessibilidade), null, Icons.Filled.Accessibility) { secao = "acessibilidade" }
-                    LinhaDeMenu(stringResource(R.string.areas_bash), null, Icons.Filled.Terminal) { secao = "areas" }
-                    LinhaDeMenu(stringResource(R.string.mcp_titulo), null, Icons.Filled.Hub) { secao = "mcp" }
-                    LinhaDeMenu(stringResource(R.string.vscreen_titulo), null, Icons.Filled.PhoneAndroid) { secao = "vscreen" }
-                    LinhaDeMenu(stringResource(R.string.backup_e_licencas), null, Icons.Filled.Backup) { secao = "backup" }
+                Column {
+                    ENTRADAS_DE_AJUSTE.forEachIndexed { i, e ->
+                        LinhaDeAjuste(
+                            titulo = stringResource(e.titulo),
+                            detalhe = e.detalhe?.let { stringResource(it) },
+                            icone = e.icone,
+                        ) { secao = e.destino }
+                        // Sem separador depois da última: o cartão já fecha a lista.
+                        if (i < ENTRADAS_DE_AJUSTE.lastIndex) DivisoriaDeAjuste()
+                    }
                 }
             }
 
-            // Repetir o assistente fica fora da lista, destacado (como no design).
+            // Repetir o assistente fica fora do grupo, destacado (como no design).
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primaryContainer),
             ) {
-                LinhaDeMenu(
-                    stringResource(R.string.wizard_repetir),
-                    stringResource(R.string.ajustes_repetir_detalhe),
-                    Icons.Filled.RestartAlt,
+                LinhaDeAjuste(
+                    titulo = stringResource(R.string.wizard_repetir),
+                    detalhe = stringResource(R.string.ajustes_repetir_detalhe),
+                    icone = Icons.Filled.RestartAlt,
                 ) { vm.repetirWizard() }
             }
 
@@ -572,7 +603,7 @@ private fun CartaoTesteExecucao(vm: MainViewModel) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
-            Text(vm.embedTest, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+            Text(vm.embedTest, fontFamily = Mono, style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = { vm.testEmbeddedNode() }, enabled = !vm.busy) { Text(stringResource(R.string.testar_execucao)) }
         }
     }
@@ -645,7 +676,7 @@ private fun CartaoRegisto(vm: MainViewModel) {
                     Text(
                         line,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = Mono,
                         modifier = Modifier.padding(vertical = 1.dp),
                     )
                 }
@@ -793,7 +824,7 @@ private fun CartaoVscreen(vm: MainViewModel) {
                     Text(
                         if (vm.vscreenLargura > 0) "${vm.vscreenLargura}\u00D7${vm.vscreenAltura} @ ${vm.vscreenHz} Hz" else "\u2014",
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = Mono,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f),
                     )
@@ -845,7 +876,7 @@ private fun CartaoVscreen(vm: MainViewModel) {
                         vm.vscreenKb,
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -854,7 +885,7 @@ private fun CartaoVscreen(vm: MainViewModel) {
                     Text(
                         stringResource(R.string.vscreen_latencia, vm.vscreenLatenciaMs),
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = Mono,
                         color = MaterialTheme.colorScheme.secondary,
                     )
                 }
@@ -934,7 +965,7 @@ private fun CartaoVscreen(vm: MainViewModel) {
                     Text(
                         "$ cachalote-agent --display-target=$idTexto",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = Mono,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f),
                     )
@@ -960,14 +991,14 @@ private fun CartaoVscreen(vm: MainViewModel) {
                             Text(
                                 "${i + 1}",
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = Mono,
                                 color = MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.width(18.dp),
                             )
                             Text(
                                 cmd,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = Mono,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -1178,7 +1209,7 @@ private fun StatusScreen(vm: MainViewModel) {
                     }
                 }
                 if (vm.shizukuState.isNotBlank()) {
-                    Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                    Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
                 }
                 if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
                     // Se o arranque falhou por falta de permissão, pedimo-la sem o utilizador ter
@@ -1200,7 +1231,7 @@ private fun StatusScreen(vm: MainViewModel) {
                     }
                 }
                 if (vm.embeddedInfo.isNotBlank()) {
-                    Text(vm.embeddedInfo, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                    Text(vm.embeddedInfo, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
                 }
             }
         }
@@ -1209,7 +1240,7 @@ private fun StatusScreen(vm: MainViewModel) {
                 Text(if (vm.embeddedMode) "Motor" else "Daemon", fontWeight = FontWeight.SemiBold)
                 Text(
                     vm.daemonInfo,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -1333,7 +1364,7 @@ private fun CartaoFerramenta(line: ChatLine) {
             Text(
                 line.text,
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 modifier = Modifier.weight(1f),
             )
             Chip(texto, cor)
@@ -1396,7 +1427,7 @@ private fun KeyScreen(vm: MainViewModel) {
                         if (vm.keyPresent) stringResource(R.string.chave_presente, vm.keyLength, vm.keyUpdatedAt)
                         else stringResource(R.string.chave_ausente),
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = Mono,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f),
                     )
@@ -1524,7 +1555,7 @@ private fun ConversaScreen(vm: MainViewModel) {
                     "thought" -> Text(
                         line.text,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = Mono,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     )
@@ -1551,7 +1582,7 @@ private fun ConversaScreen(vm: MainViewModel) {
                 Text(
                     stringResource(R.string.imagem_anexo, img.name, img.kb),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { vm.clearImage() }) { Text(stringResource(R.string.remover)) }
@@ -1611,7 +1642,7 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
             Text(
                 tecnica,
                 style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = Mono,
                 color = MaterialTheme.colorScheme.secondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -1660,7 +1691,7 @@ private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
         Text(
             partes.joinToString("  ·  "),
             style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = Mono,
             color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.weight(1f),
         )
@@ -1793,34 +1824,4 @@ private fun LicensesDialog(vm: MainViewModel) {
             }
         },
     )
-}
-
-/** Uma linha do menu de ajustes: ícone, nome da secção, detalhe opcional e um chevron. */
-@Composable
-private fun LinhaDeMenu(
-    titulo: String,
-    detalhe: String? = null,
-    icone: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    onClick: () -> Unit,
-) {
-    TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            if (icone != null) {
-                Icon(
-                    icone,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(12.dp))
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(titulo, fontWeight = FontWeight.SemiBold)
-                if (detalhe != null) {
-                    Text(detalhe, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                }
-            }
-            Text("\u203A", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.secondary)
-        }
-    }
 }

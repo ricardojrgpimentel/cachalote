@@ -45,9 +45,13 @@ O tema da app é **gerado** do sistema de design, para não divergirem a cada it
 ```
 
 Isso produz o `darkColorScheme` (as cores nomeadas do design são nomes Material 3, o mapeamento é
-1:1), a escala tipográfica e a escala de espaçamento (`Espaco`). As fontes do design (Space Grotesk,
-Geist, JetBrains Mono) ainda não estão empacotadas: por agora usa-se a escala com as famílias do
-sistema — empacotar as fontes é um passo à parte (são OFL, dá para as trazer).
+1:1), a escala tipográfica, as **famílias de fontes** e a escala de espaçamento (`Espaco`).
+
+As três fontes do design — **Space Grotesk** (títulos), **Geist** (texto) e **JetBrains Mono**
+(técnico) — estão empacotadas em `app/app/src/main/res/font/`, em versão **variável** (um ficheiro
+por família, com o eixo de peso; o `FontVariation` no `Tema.kt` é o que dá o peso pedido). São
+OFL-1.1: o texto integral da licença está em `assets/licenses.json` (ecrã *Ajustes → Backup e
+licenças*) e a atribuição em [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) §8.
 
 ## Logo e ícone
 
@@ -86,21 +90,28 @@ versão monocromática (ícones temáticos) e o XML da cor de fundo — e o mani
 | Ecrã | Estado |
 |---|---|
 | Logo, ícone e folha de marca | ✅ feitos · **no telefone** (`app/icone-no-lancador.png`, `app/marca-no-cabecalho.png`) |
-| Conversa (ecrã antigo, substituído pela lista + sessão aberta) | ✅ desenhado · **tema aplicado** |
+| ~~Conversa (4 abas)~~ | ⚠️ **substituído** pela lista + sessão aberta — fica como história, não como referência |
 | Ajustes (menu de secções + secção aberta) | ✅ desenhado — `ecras/ajustes.png` (já com a barra de **dois** itens) |
+| Ajustes: **menu ao estilo do Android** (linhas de 72dp, ícone em círculo tonal, separadores) | ✅ desenhado · **implementado** — `ecras/ajustes-android.png` · `app/ajustes-android.png` |
 | Aprovação (diálogo) | ✅ desenhado |
 | Estado do sistema | ✅ desenhado |
 | Chave de API | ✅ desenhado |
 | Ecrã virtual | ✅ desenhado · **implementado** (`app/vscreen-ativo.png`, `app/vscreen-registo.png`) |
 | Conversa: **lista de sessões** (à WhatsApp, com FAB «Nova») | ✅ desenhado · **implementado** — `ecras/conversa-lista.png` · `app/conversa-lista.png` |
 | Conversa: **sessão aberta** (ecrã inteiro, **sem menu no fundo**) | ✅ desenhado · **implementado** — `ecras/conversa-sessao.png` · `app/conversa-sessao.png` |
-| Sessões (diálogo) | ✅ desenhado |
-| Primeiros passos (onboarding) | ✅ desenhado · **assistente implementado** (6 passos) |
+| ~~Sessões (diálogo)~~ | ⚠️ **substituído**: o diálogo deixou de existir (a lista é o ecrã, §68) |
+| Primeiros passos (onboarding) | ⚠️ **substituído** por `assistente-passo1/2` · **implementado** (6 passos) |
 | ~~Poderes~~ | substituído por *Ajustes* (a IA mudou: a conversa é a primeira aba e os ajustes são um menu) |
 | Resumo (doctor + consumo) | ✅ **implementado** |
 | Painel de autorização | ✅ **implementado** (e coberto por testes de JVM) |
-| Implementação das disposições em Compose | ✅ **feita ecrã a ecrã** — falta o registo/ideias que o motor ainda não alimenta (a linha de telemetria do turno) |
+| Escolha de modelo/esforço (diálogo) | ⚠️ **sem desenho** — ainda é um `AlertDialog` de Material puro |
+| Licenças (diálogo) | ⚠️ **sem desenho** — idem |
+| Implementação das disposições em Compose | ✅ **feita ecrã a ecrã**, com as fontes do design empacotadas — falta só o que o motor não alimenta (a linha de telemetria do turno, §64) |
 
 ⚠️ **Nota:** os ecrãs desenhados antes da reorganização mostram a barra antiga de quatro itens
 (Estado · Chave · Conversa · Poderes). O conteúdo continua a servir de referência; a **navegação** é
 a que está no código (Conversa + Ajustes) e o ecrã *Ajustes* já foi redesenhado com ela.
+
+**Os riscados** (`conversa` a quatro abas, `sessoes`, `onboarding`) descrevem ecrãs que **já não
+existem**: servem de história do desenho, não de referência para implementar. Quem for comparar ecrã
+a ecrã deve usar os que têm par em `app/`.

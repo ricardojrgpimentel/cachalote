@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.json.JSONObject
@@ -85,7 +84,7 @@ private fun CartaoConsumo(vm: MainViewModel) {
                     if (uso.limite > 0) "${Uso.milhares(uso.usado)} / ${Uso.milhares(uso.limite)}"
                     else Uso.milhares(uso.usado),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.weight(1f),
@@ -149,7 +148,7 @@ private fun CartaoDiagnostico(vm: MainViewModel) {
                 Text(
                     stringResource(R.string.resumo_resultado, problemas, avisos, d.optString("base")),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 val secoes = d.optJSONArray("secoes")

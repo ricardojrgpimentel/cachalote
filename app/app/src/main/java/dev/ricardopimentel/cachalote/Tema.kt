@@ -7,7 +7,10 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -53,18 +56,42 @@ val cachaloteColors = darkColorScheme(
 )
 
 // Escala tipográfica do design. `mono` para as strings técnicas (ids, comandos, JSON).
-val Mono = FontFamily.Monospace
+// Space Grotesk (OFL): variável, eixo wght 100–900.
+@OptIn(ExperimentalTextApi::class)
+val SpaceGrotesk = FontFamily(
+    Font(R.font.space_grotesk, weight = FontWeight.W400, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.space_grotesk, weight = FontWeight.W500, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.space_grotesk, weight = FontWeight.W600, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.space_grotesk, weight = FontWeight.W700, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+)
+// Geist (OFL): variável, eixo wght 100–900.
+@OptIn(ExperimentalTextApi::class)
+val Geist = FontFamily(
+    Font(R.font.geist, weight = FontWeight.W400, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.geist, weight = FontWeight.W500, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.geist, weight = FontWeight.W600, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.geist, weight = FontWeight.W700, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+)
+// JetBrains Mono (OFL): variável, eixo wght 100–900.
+@OptIn(ExperimentalTextApi::class)
+val JetBrainsMono = FontFamily(
+    Font(R.font.jetbrains_mono, weight = FontWeight.W400, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.jetbrains_mono, weight = FontWeight.W500, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.jetbrains_mono, weight = FontWeight.W600, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.jetbrains_mono, weight = FontWeight.W700, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+)
+val Mono = JetBrainsMono
 
 val cachaloteTypography = Typography(
-    headlineLarge = TextStyle(fontSize = 30.sp, fontWeight = FontWeight(600), lineHeight = 38.sp, letterSpacing = -0.02.em),
-    headlineMedium = TextStyle(fontSize = 24.sp, fontWeight = FontWeight(500), lineHeight = 32.sp, letterSpacing = -0.015.em),
-    headlineSmall = TextStyle(fontSize = 20.sp, fontWeight = FontWeight(500), lineHeight = 26.sp, letterSpacing = -0.01.em),
-    bodyLarge = TextStyle(fontSize = 16.sp, fontWeight = FontWeight(400), lineHeight = 24.sp, letterSpacing = 0.em),
-    bodyMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight(400), lineHeight = 20.sp, letterSpacing = 0.01.em),
-    bodySmall = TextStyle(fontSize = 12.sp, fontWeight = FontWeight(400), lineHeight = 16.sp, letterSpacing = 0.02.em),
-    labelLarge = TextStyle(fontSize = 13.sp, fontWeight = FontWeight(500), lineHeight = 18.sp, letterSpacing = -0.01.em),
-    labelMedium = TextStyle(fontSize = 11.sp, fontWeight = FontWeight(500), lineHeight = 16.sp, letterSpacing = 0.em),
-    labelSmall = TextStyle(fontSize = 10.sp, fontWeight = FontWeight(400), lineHeight = 14.sp, letterSpacing = 0.02.em),
+    headlineLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 30.sp, fontWeight = FontWeight(600), lineHeight = 38.sp, letterSpacing = -0.02.em),
+    headlineMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 24.sp, fontWeight = FontWeight(500), lineHeight = 32.sp, letterSpacing = -0.015.em),
+    headlineSmall = TextStyle(fontFamily = SpaceGrotesk, fontSize = 20.sp, fontWeight = FontWeight(500), lineHeight = 26.sp, letterSpacing = -0.01.em),
+    bodyLarge = TextStyle(fontFamily = Geist, fontSize = 16.sp, fontWeight = FontWeight(400), lineHeight = 24.sp, letterSpacing = 0.em),
+    bodyMedium = TextStyle(fontFamily = Geist, fontSize = 14.sp, fontWeight = FontWeight(400), lineHeight = 20.sp, letterSpacing = 0.01.em),
+    bodySmall = TextStyle(fontFamily = Geist, fontSize = 12.sp, fontWeight = FontWeight(400), lineHeight = 16.sp, letterSpacing = 0.02.em),
+    labelLarge = TextStyle(fontFamily = JetBrainsMono, fontSize = 13.sp, fontWeight = FontWeight(500), lineHeight = 18.sp, letterSpacing = -0.01.em),
+    labelMedium = TextStyle(fontFamily = JetBrainsMono, fontSize = 11.sp, fontWeight = FontWeight(500), lineHeight = 16.sp, letterSpacing = 0.em),
+    labelSmall = TextStyle(fontFamily = JetBrainsMono, fontSize = 10.sp, fontWeight = FontWeight(400), lineHeight = 14.sp, letterSpacing = 0.02.em),
 )
 
 // Escala de espaçamento do design (rem → dp, a 1rem = 16dp).

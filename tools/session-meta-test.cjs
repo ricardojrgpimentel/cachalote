@@ -58,11 +58,17 @@ const titulo = frame({
   time: 1791977605055,
   data: { title: "escrever o ficheiro", source: { kind: "fallback" } },
 });
+const resposta = frame({
+  type: "assistant/attempt",
+  seq: 16,
+  time: 1791977609000,
+  data: { turn: 1, step: 1, stream: [{ type: "chunk", chunk: { type: "text", text: "o ficheiro ficou escrito" } }] },
+});
 const fim = frame({ type: "turn/end", seq: 20, time: 1791983393816, data: {} });
 const arquivo = path.join(dir, "session.v4.jsonl.zstd");
 
 // 1) ficheiro completo
-fs.writeFileSync(arquivo, Buffer.concat([cabecalho, pedido, titulo, fim]));
+fs.writeFileSync(arquivo, Buffer.concat([cabecalho, pedido, titulo, resposta, fim]));
 const meta = lerSessao(dir, path.basename(dir));
 console.log("== sessão completa ==");
 ok("título do motor", meta.title === "escrever o ficheiro", JSON.stringify(meta.title));
@@ -70,22 +76,24 @@ ok("criada em", meta.createdAt === new Date(1791977431778).toISOString(), meta.c
 ok("mexida em (último registo)", meta.updatedAt === new Date(1791983393816).toISOString(), meta.updatedAt);
 ok("cwd", meta.cwd === "/data/adb/cachalote/home/ws", meta.cwd);
 ok("id", meta.sessionId === "aaaa1111-2222-3333-4444-555555555555");
+ok("prévia: a última mensagem é do agente", meta.preview === "o ficheiro ficou escrito", meta.preview);
 
 // 2) frame a meio no fim (motor morto a escrever): lê o que está completo e ignora o resto
 const meio = Buffer.from(cabecalho.subarray(0, 9));
-fs.writeFileSync(arquivo, Buffer.concat([cabecalho, pedido, titulo, fim, meio]));
+fs.writeFileSync(arquivo, Buffer.concat([cabecalho, pedido, titulo, resposta, fim, meio]));
 const metaTruncado = lerSessao(dir, path.basename(dir));
 console.log("== frame truncado no fim ==");
 const frames = scanZstdFrames(fs.readFileSync(arquivo));
-ok("o frame a meio não conta", frames.length === 4, "frames=" + frames.length);
+ok("o frame a meio não conta", frames.length === 5, "frames=" + frames.length);
 ok("continua a dar o título", metaTruncado.title === "escrever o ficheiro", metaTruncado.title);
 ok("continua a dar o último registo bom", metaTruncado.updatedAt === new Date(1791983393816).toISOString());
 
-// 3) sem `session/title`: o título é o primeiro prompt
+// 3) sem `session/title`: o título é o primeiro prompt; e sem resposta do agente a prévia é o pedido
 fs.writeFileSync(arquivo, Buffer.concat([cabecalho, pedido, fim]));
 const semTitulo = lerSessao(dir, path.basename(dir));
 console.log("== sem session/title ==");
 ok("título do primeiro prompt", semTitulo.title === "usa o bash para escrever o ficheiro", semTitulo.title);
+ok("prévia: o pedido do dono", semTitulo.preview === "usa o bash para escrever o ficheiro", semTitulo.preview);
 
 // 4) lista ordenada do mais recente para o mais antigo + pasta de outra sessão
 const dir2 = path.join(slug, "bbbb2222-3333-3333-4444-555555555555");

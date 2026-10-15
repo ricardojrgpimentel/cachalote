@@ -43,6 +43,10 @@ class RecursosTest {
         assertTrue("falta o Node", nomes.any { it.contains("Node") })
         assertTrue("falta o Apache-2.0 (AndroidX)", nomes.any { it.contains("AndroidX") })
         assertTrue("falta o SQLite", nomes.any { it.contains("SQLite") })
+        // As fontes do design são OFL: têm de estar creditadas como tudo o resto.
+        assertTrue("falta o Space Grotesk", nomes.any { it.contains("Space Grotesk") })
+        assertTrue("falta o JetBrains Mono", nomes.any { it.contains("JetBrains Mono") })
+        assertTrue("falta o Geist", nomes.any { it.contains("Geist") })
     }
 
     @Test

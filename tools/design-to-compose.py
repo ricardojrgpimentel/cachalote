@@ -72,7 +72,10 @@ def main() -> int:
         "import androidx.compose.material3.darkColorScheme",
         "import androidx.compose.ui.graphics.Color",
         "import androidx.compose.ui.text.TextStyle",
+        "import androidx.compose.ui.text.font.Font",
         "import androidx.compose.ui.text.font.FontFamily",
+        "import androidx.compose.ui.text.font.FontVariation",
+        "import androidx.compose.ui.text.ExperimentalTextApi",
         "import androidx.compose.ui.text.font.FontWeight",
         "import androidx.compose.ui.unit.dp",
         "import androidx.compose.ui.unit.em",
@@ -85,11 +88,30 @@ def main() -> int:
         linhas.append(f"    {k} = {hex_arg(usadas[k])},")
     linhas += [")", ""]
 
-    # Tipografia: as fontes do design (Space Grotesk/Geist/JetBrains Mono) ainda não estão
-    # empacotadas na app; por agora mapeia-se a escala e usam-se as famílias do sistema.
+    # Tipografia: as famílias vêm do design (Space Grotesk, Geist, JetBrains Mono — OFL, em
+    # `res/font/`). São **fontes variáveis**: um ficheiro por família, com o eixo de peso, e o
+    # `FontVariation` é o que dá o peso pedido (sem ele o Android desenhava sempre o 400, mesmo
+    # num título de 600). As fontes de sistema ficam como último recurso.
+    FAMILIAS = {
+        "Space Grotesk": ("SpaceGrotesk", "space_grotesk"),
+        "Geist": ("Geist", "geist"),
+        "JetBrains Mono": ("JetBrainsMono", "jetbrains_mono"),
+    }
     linhas += [
         "// Escala tipográfica do design. `mono` para as strings técnicas (ids, comandos, JSON).",
-        "val Mono = FontFamily.Monospace",
+    ]
+    for nome, (val, res) in FAMILIAS.items():
+        linhas.append(f"// {nome} (OFL): variável, eixo wght 100–900.")
+        linhas.append("@OptIn(ExperimentalTextApi::class)")
+        linhas.append(f"val {val} = FontFamily(")
+        for w in (400, 500, 600, 700):
+            linhas.append(
+                f"    Font(R.font.{res}, weight = FontWeight.W{w}, "
+                f"variationSettings = FontVariation.Settings(FontVariation.weight({w}))),"
+            )
+        linhas.append(")")
+    linhas += [
+        "val Mono = JetBrainsMono",
         "",
         "val cachaloteTypography = Typography(",
     ]
@@ -105,9 +127,11 @@ def main() -> int:
             espaco_em = float(espaco)
         except ValueError:
             espaco_em = 0.0
+        val, _res = FAMILIAS.get(str(v.get("fontFamily", "")), ("Geist", "geist"))
         linhas.append(
-            f"    {destino} = TextStyle(fontSize = {tamanho:g}.sp, fontWeight = FontWeight({peso}), "
-            f"lineHeight = {altura:g}.sp, letterSpacing = {espaco_em:g}.em),"
+            f"    {destino} = TextStyle(fontFamily = {val}, fontSize = {tamanho:g}.sp, "
+            f"fontWeight = FontWeight({peso}), lineHeight = {altura:g}.sp, "
+            f"letterSpacing = {espaco_em:g}.em),"
         )
     linhas += [")", ""]
 

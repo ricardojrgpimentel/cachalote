@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-PT"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cachalote - Ajustes</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Space Grotesk, Geist, JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#2d353f",
+            "on-secondary-fixed": "#001f25",
+            "on-background": "#dbe3f0",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-primary-fixed-variant": "#00513f",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-bright": "#323a44",
+            "inverse-primary": "#006b55",
+            "surface-container-lowest": "#070f17",
+            "on-secondary-container": "#003640",
+            "surface-container-low": "#141c25",
+            "secondary": "#58d6f1",
+            "on-primary": "#00382b",
+            "surface-tint": "#15e0b4",
+            "primary-fixed-dim": "#15e0b4",
+            "on-tertiary": "#003824",
+            "on-error": "#690005",
+            "on-tertiary-fixed-variant": "#005236",
+            "error": "#ffb4ab",
+            "secondary-fixed-dim": "#58d6f1",
+            "surface-variant": "#2d353f",
+            "on-error-container": "#ffdad6",
+            "surface": "#0c141d",
+            "on-surface": "#dbe3f0",
+            "on-secondary": "#00363f",
+            "background": "#0c141d",
+            "on-tertiary-container": "#006947",
+            "outline-variant": "#3b4a44",
+            "surface-dim": "#0c141d",
+            "primary-fixed": "#4dfdcf",
+            "inverse-surface": "#dbe3f0",
+            "on-surface-variant": "#bacac2",
+            "on-secondary-fixed-variant": "#004e5b",
+            "tertiary": "#c0ffdc",
+            "secondary-fixed": "#a7edff",
+            "on-tertiary-fixed": "#002113",
+            "outline": "#84948d",
+            "inverse-on-surface": "#29313b",
+            "error-container": "#93000a",
+            "primary-container": "#38efc2",
+            "secondary-container": "#00a7c0",
+            "surface-container": "#182029",
+            "on-primary-fixed": "#002118",
+            "tertiary-container": "#5fedb0",
+            "primary": "#beffe7",
+            "on-primary-container": "#006952",
+            "surface-container-high": "#232b34"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "space-md": "1rem",
+            "space-xs": "0.25rem",
+            "margin": "1rem",
+            "gutter": "0.75rem",
+            "space-lg": "1.5rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Space Grotesk"],
+            "headline-lg": ["Space Grotesk"],
+            "headline-sm": ["Space Grotesk"],
+            "body-sm": ["Geist"],
+            "label-lg": ["JetBrains Mono"],
+            "body-md": ["Geist"],
+            "body-lg": ["Geist"],
+            "label-md": ["JetBrains Mono"],
+            "label-sm": ["JetBrains Mono"]
+          },
+          "fontSize": {
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "500" }],
+            "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "headline-sm": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "400" }],
+            "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    /* Smooth ripple-like tap state */
+    .tap-highlight {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased min-h-screen selection:bg-primary-container selection:text-on-primary-container pb-28">
+<!-- TOP APP BAR (Shared Components JSON Anchor) -->
+<header class="flex justify-between items-center w-full px-4 h-14 bg-surface dark:bg-surface sticky top-0 z-40 border-b border-outline-variant/30">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-primary-container shadow-sm">
+<svg class="w-5 h-5 text-primary-container" fill="currentColor" viewbox="0 0 24 24">
+<path d="M4 6.5h16v2H4z" fill-opacity="0.9"></path>
+<path d="M5 14.5c0-2.2 2.8-4 7-4 2.8 0 4.8.8 6 2l3-1.5c-.3 1.8-.7 3.5-3 3.5-1.5 0-3.5 1-6 1-4.2 0-7-1.8-7-4z"></path>
+</svg>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-headline-sm font-headline-sm font-bold tracking-tight text-primary-container dark:text-primary-container">CACHALOTE</span>
+<span class="font-label-sm text-label-sm px-1.5 py-0.5 rounded bg-surface-container-high text-primary-container border border-outline-variant/40">ON-DEVICE</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<!-- Status Chip -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant/30">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary-container"></span>
+</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">motor DSH ligado</span>
+</div>
+<!-- ROOT Privilege Badge -->
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full border border-primary-container/40 text-primary-container bg-surface-container-high font-semibold">ROOT</span>
+</div>
+</header>
+<!-- MAIN VIEWPORT CANVAS -->
+<main class="w-full max-w-xl mx-auto px-4 pt-6 space-y-6">
+<!-- PAGE TITLE SECTION (Pixel Settings Inspired) -->
+<section class="space-y-1">
+<h1 class="text-headline-lg font-headline-lg text-on-surface tracking-tight font-semibold">Ajustes</h1>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal">8 módulos configurados no ambiente local</p>
+</section>
+<!-- MAIN GROUP CONTAINER (Pixel Settings Card) -->
+<div class="bg-surface-container-low rounded-2xl border border-outline-variant/30 overflow-hidden shadow-sm">
+<!-- ROW 1: Motor -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">memory</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Motor</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">estado, modos (root, Shizuku, embutido) e diagnóstico</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 2: Chave do provedor -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">vpn_key</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Chave do provedor</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">a chave do provedor, guardada no daemon</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 3: Capacidades autorizadas -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">security</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Capacidades autorizadas</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">o que o agente pode fazer no telefone</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 4: Acessibilidade -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">accessibility_new</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Acessibilidade</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">ver e tocar no ecrã</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 5: Áreas permitidas do bash -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">terminal</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Áreas permitidas do bash</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">onde o agente corre sem pedir autorização</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 6: Servidores MCP -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">hub</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Servidores MCP</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">ferramentas externas ligadas por JSON</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 7: Ecrã virtual -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">screenshot_monitor</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Ecrã virtual</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">um segundo ecrã onde o agente trabalha</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+<!-- Inset Divider -->
+<div class="ml-[56px] border-b border-outline-variant/20"></div>
+</div>
+<!-- ROW 8: Backup e licenças (No divider after last row) -->
+<div class="group relative">
+<div class="tap-highlight flex items-center h-[72px] px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[22px]">inventory_2</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Backup e licenças</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">exportar definições e ver o software de terceiros</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-outline/60 shrink-0 ml-2 group-hover:text-primary-container transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- STANDALONE ACTION ROW CARD -->
+<div class="tap-highlight bg-surface-container-low rounded-2xl border border-primary-container/40 h-[72px] flex items-center px-4 cursor-pointer hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-all shadow-[0_4px_20px_rgba(56,239,194,0.06)] group" role="button" tabindex="0">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center shrink-0 text-primary-container group-hover:rotate-180 transition-transform duration-500">
+<span class="material-symbols-outlined text-[22px]">restart_alt</span>
+</div>
+<div class="flex-1 min-w-0 flex flex-col justify-center ml-4">
+<h2 class="text-body-lg font-body-lg font-semibold text-on-surface tracking-tight leading-tight truncate">Repetir a configuração inicial</h2>
+<p class="text-body-md font-body-md text-on-surface-variant font-normal leading-tight mt-0.5 truncate">Voltar a correr o assistente de boas-vindas</p>
+</div>
+<span class="material-symbols-outlined text-[24px] text-primary-container shrink-0 ml-2 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+<!-- STANDALONE SECURITY WARNING CARD -->
+<div class="rounded-2xl border border-error/50 bg-error-container/10 p-4 space-y-2 relative overflow-hidden backdrop-blur-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-[20px] fill">warning</span>
+<span class="font-label-md text-label-md font-bold tracking-wider text-error uppercase">PERIGO</span>
+</div>
+<p class="font-body-md text-[13px] leading-relaxed text-on-surface-variant">
+        Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.
+      </p>
+</div>
+<!-- TELEMETRY FOOTER FOOTPRINT -->
+<div class="flex justify-between items-center px-2 py-1 text-on-surface-variant/50 font-label-sm text-label-sm">
+<span>DSH DAEMON v2.4.1-local</span>
+<span>PID: 1042 · SELINUX: PERMISSIVE</span>
+</div>
+</main>
+<!-- BOTTOM NAVIGATION BAR (Shared Components JSON Anchor) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-16 bg-surface-container-low dark:bg-surface-container-low border-t border-outline-variant/20 shadow-lg">
+<!-- Tab 1: Conversa (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1.5 hover:text-on-surface transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]">terminal</span>
+<span class="text-label-sm font-label-sm mt-0.5">Conversa</span>
+</a>
+<!-- Tab 2: Resumo (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1.5 hover:text-on-surface transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]">analytics</span>
+<span class="text-label-sm font-label-sm mt-0.5">Resumo</span>
+</a>
+<!-- Tab 3: Ajustes (Active per Context & JSON) -->
+<a class="flex flex-col items-center justify-center text-primary-container dark:text-primary-container bg-surface-variant/50 rounded-lg px-3 py-1.5 transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined text-[22px] fill">tune</span>
+<span class="text-label-sm font-label-sm mt-0.5 font-medium">Ajustes</span>
+</a>
+</nav>
+<script>
+    // Lightweight touch and interactive click behavior for rows
+    document.querySelectorAll('[role="button"]').forEach(button => {
+      button.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          button.click();
+        }
+      });
+    });
+  </script>
+</body></html>

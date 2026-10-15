@@ -2,7 +2,14 @@
 
 > ## Estado (S10+ ligado por USB)
 >
-> **§68 é o trabalho desta ronda**: a conversa passou a funcionar **como no WhatsApp** — a aba
+> **§69 é o trabalho desta ronda**: as **fontes do design** (Space Grotesk, Geist, JetBrains Mono)
+> passaram a estar empacotadas, o **menu dos Ajustes** foi refeito como as Definições do Android
+> (linhas de 72dp, ícone em círculo tonal, chevron e separadores recuados) e a lista de conversas
+> ganhou **prévias reais**. Pelo caminho caíram dois bugs que a lista nova desenterrou: o
+> `session/list` do motor não é a verdade (listou 24 de 78 sessões) e abrir a conversa já activa
+> dava erro. Verificado no S10+ com 52 testes de JVM e 0 crashes.
+>
+> **§68** fez a conversa: a conversa passou a funcionar **como no WhatsApp** — a aba
 > Conversa é a lista de sessões (com o botão «Nova») e, ao entrar numa, o chat ocupa o ecrã inteiro
 > **sem menu no fundo**. O desenho foi pedido ao Stitch (dois ecrãs novos em `design/ecras/`), e a
 > lista só é útil porque o daemon passou a ler os títulos e as datas que o motor grava em disco
@@ -2221,3 +2228,87 @@ responderam — esta sessão corre sem eles»). É o que se vê na captura da co
 | Metadados no modo embutido | Sem daemon não há quem leia os ficheiros (o Kotlin não tem zstd). A lista fica com os títulos que a app conhece |
 | Filtros da lista | Ficaram de fora de propósito (ver 68.1); se o motor vier a expor sessões «arquivadas», passam a fazer sentido |
 | Testes de dispositivo com turno | Continuam à espera de rede (§59) |
+
+---
+
+## 69. Os últimos buracos do design: as fontes, o menu como o Android e as prévias
+
+Três coisas que faltavam, mais o que o autor notou ao ver a app: *«no menu Ajustes o design não é
+igual aos menus do Android, são muito finos»*. Tinha razão — eram `TextButton` com um ícone solto.
+
+### 69.1 As fontes do design (a maior diferença que sobrava)
+
+As escalas e os pesos eram os do desenho desde o §61, mas as **letras** eram as do sistema. Agora as
+três famílias estão empacotadas em
+[`app/app/src/main/res/font/`](app/app/src/main/res/font), em versão **variável** (um ficheiro por
+família, com o eixo de peso — 493 KB no total, em vez de ~2 MB de instâncias estáticas):
+
+| Família | Onde se usa | Ficheiro |
+|---|---|---|
+| **Space Grotesk** | títulos (`headline*`) | `space_grotesk.ttf` |
+| **Geist** | texto (`body*`) | `geist.ttf` |
+| **JetBrains Mono** | strings técnicas (`label*` e o `Mono`) | `jetbrains_mono.ttf` |
+
+O `FontVariation` no [`Tema.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/Tema.kt) (gerado
+por [`tools/design-to-compose.py`](tools/design-to-compose.py), que agora também escreve as
+famílias) é o que dá o peso pedido: sem ele o Android desenhava sempre o 400, mesmo num título de
+600. As 30 ocorrências de `FontFamily.Monospace` passaram a `Mono`.
+
+**Licenças (OFL-1.1):** três entradas novas no ecrã *Ajustes → Backup e licenças* (com o texto
+integral, dentro de `assets/licenses.json`), a secção §8 do
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) e três asserções novas no teste instrumentado das
+licenças.
+
+### 69.2 O menu dos Ajustes, como as Definições do Android
+
+Desenho novo pedido ao Stitch ([`design/ecras/ajustes-android.png`](design/ecras/ajustes-android.png),
+com o pedido em [`design/prompts/ajustes-android.txt`](design/prompts/ajustes-android.txt)) e
+implementado:
+
+| Antes | Agora |
+|---|---|
+| `TextButton` com ícone solto, ~48dp, tudo encostado | linha de **72dp**, com toque em toda a linha (ripple) |
+| ícone de 20dp tingido | ícone de 22dp dentro de um **círculo tonal de 40dp** |
+| título + detalhe só em duas secções | **todas** as linhas com a linha de apoio (6 strings novas) |
+| um `›` grande em texto | **chevron** de 24dp |
+| sem separadores | **separador de 1dp recuado** até onde começa o texto |
+| a etiqueta «AJUSTES» dentro do cartão | **título de página** («Ajustes» em Space Grotesk) + subtítulo |
+
+A peça saiu para o [`UiParts.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/UiParts.kt)
+(`LinhaDeAjuste` + `DivisoriaDeAjuste`, sem estado) e tem **2 testes de JVM** novos.
+
+### 69.3 As prévias das conversas (deixaram de ser um marcador)
+
+A lista mostrava `sessão c3744d0d` na segunda linha das conversas que não estavam abertas. Agora o
+daemon devolve também a **última mensagem** (do dono ou do agente), lida do mesmo ficheiro de sessão
+— e a linha mostra, por exemplo, `usa o bash para escrever o ficheiro /sdcard/Documentos/…`. Os
+testes do `session-meta` cobrem os dois casos (com e sem resposta do agente).
+
+### 69.4 Dois bugs que a lista nova desenterrou
+
+| Bug | O que era | Correção |
+|---|---|---|
+| O `session/list` do motor não é a verdade | depois de um reinício listou **24 de 78** sessões, e a lista da app perdia conversas que existiam (a `teste-recuperacao`, a `usa o bash…`) | a base da lista passou a ser o **disco** (o daemon lê os ficheiros); o `session/list` fica só para o modo embutido, onde não há daemon |
+| Tocar na conversa já activa dava erro | `retomar: Invalid params: session is already active: …` — o motor tem **um** cliente ACP de cada vez e a app retoma a sessão ao ligar-se, por isso a conversa em uso falhava ao ser aberta | «already active» passou a ser sucesso (como já era no laço de reconexão, §23.1), e o transcript não se apaga quando é a mesma sessão |
+
+### 69.5 Verificação no S10+ (2026-10-15)
+
+| Verificação | Resultado |
+|---|---|
+| O menu | [`design/app/ajustes-android.png`](design/app/ajustes-android.png) — linhas de 72dp, círculos tonais, chevrons, separadores recuados, título em Space Grotesk |
+| A lista | [`design/app/conversa-lista.png`](design/app/conversa-lista.png) — **78 conversas** (todas as que existem em disco), com títulos, **prévias reais**, horas e a ACTIVA |
+| A conversa aberta | [`design/app/conversa-sessao.png`](design/app/conversa-sessao.png) — com as fontes novas |
+| Tocar na conversa activa | abre (era o bug 69.4) |
+| Resumo, Ajustes, conversa | abrem; `logcat -b crash` **vazio** |
+| Testes de JVM | **52** (eram 50) |
+| `tools/session-meta-test.cjs` | tudo bem (título, prévia, frames truncados, ordem) |
+| i18n | **260 chaves** iguais nos dois idiomas |
+
+### 69.6 O que continua por fazer
+
+| Item | Nota |
+|---|---|
+| **Histórico das conversas antigas** | ao abrir uma sessão antiga o transcript só diz «sessão X retomada»: o ACP não tem `session/load` e a app não lê o histórico. Agora que o daemon **já lê os ficheiros das sessões** (69.3), o caminho está aberto: é o passo seguinte mais óbvio |
+| Linha de telemetria do turno | continua à espera do motor (§64) |
+| Escolha de modelo/esforço e Licenças (diálogos) | são os dois únicos ecrãs **sem desenho** — ainda são `AlertDialog` de Material puro |
+| Filtros da lista | ficaram de fora de propósito (§68.1) |

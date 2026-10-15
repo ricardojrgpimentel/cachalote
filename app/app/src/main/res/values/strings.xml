@@ -12,6 +12,7 @@
     <string name="a_reconectar">reconnecting…</string>
     <string name="acessibilidade">Accessibility</string>
     <string name="acessibilidade_caiu">accessibility turned off: the agent lost its eyes and fingers on the screen (Settings → Accessibility → Cachalote)</string>
+    <string name="acessibilidade_detalhe">see and touch the screen</string>
     <string name="acessibilidade_voltou">accessibility is back on</string>
     <string name="acesso">Access</string>
     <string name="ajustes_modulos">%1$d modules configured</string>
@@ -24,6 +25,7 @@
     <string name="app_nome">Cachalote</string>
     <string name="areas_bash">Allowed bash areas</string>
     <string name="areas_bash_texto">Outside these folders the agent must ask for permission on the phone. One per line; the session workspace is always allowed.</string>
+    <string name="areas_detalhe">where the agent runs without asking</string>
     <string name="atualizar">Refresh</string>
     <string name="autorizacao_agente_quer">The agent wants to run:</string>
     <string name="autorizacao_confirmar">Authorise</string>
@@ -33,6 +35,7 @@
     <string name="autorizar_no_shizuku">Authorise in Shizuku</string>
     <string name="autorizar_todas">Allow all</string>
     <string name="aviso_root">Warning: the engine runs as root and Android does not enforce the DSH sandbox. What stops a command outside the workspace is the authorisation you approve here — and everything is logged.</string>
+    <string name="backup_detalhe">export settings and see third-party software</string>
     <string name="backup_e_licencas">Backup and licences</string>
     <string name="backup_exportar">Export settings</string>
     <string name="backup_importar">Import settings</string>
@@ -41,6 +44,7 @@
     <string name="cabecalho_a_reconectar">reconnecting…</string>
     <string name="cabecalho_motor_desligado">DSH engine on the phone · disconnected</string>
     <string name="cabecalho_motor_ligado">DSH engine on the phone · connected</string>
+    <string name="capacidades_detalhe">what the agent can do on the phone</string>
     <string name="capacidades_explicacao">The agent asks; you decide. Every request is logged below.</string>
     <string name="capacidades_titulo">Allowed capabilities</string>
     <string name="chave_acesso">Provider access</string>
@@ -113,6 +117,7 @@
     <string name="ligar_daemon">Start daemon</string>
     <string name="limpar">Clear</string>
     <string name="mcp_aviso">⚠ The command must be an ABSOLUTE path and, if it uses the daemon\'s Node, it needs LD_LIBRARY_PATH in its env (otherwise it dies in the linker).</string>
+    <string name="mcp_detalhe">external tools wired up by JSON</string>
     <string name="mcp_exemplo">[{"name":"ping","command":"/absolute/path/to/node","args":["/absolute/path/to/server.mjs"],"env":[{"name":"LD_LIBRARY_PATH","value":"/absolute/path/to/lib"}]}]</string>
     <string name="mcp_texto">JSON in the ACP format, sent with every new session. stdio example:</string>
     <string name="mcp_titulo">MCP servers</string>
@@ -197,6 +202,7 @@
     <string name="voltar_conversas">Back to the conversations</string>
     <string name="vscreen_copiado">commands copied</string>
     <string name="vscreen_copiar">Copy the commands</string>
+    <string name="vscreen_detalhe">a second screen where the agent works</string>
     <string name="vscreen_display_id">display_id=%1$s</string>
     <string name="vscreen_em_pausa">paused</string>
     <string name="vscreen_etiqueta">Native powers · virtual display</string>

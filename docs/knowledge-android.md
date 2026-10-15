@@ -1785,3 +1785,34 @@ todos invisíveis no dia-a-dia do modo root:
 - **Limite honesto:** no **modo embutido** não há daemon, portanto não há metadados: a lista fica
   com o que a app já sabia (título derivado do prompt, ou o id curto) e **sem datas inventadas**.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-15, ao aplicar o desenho da lista de conversas).
+
+### 136. A lista de conversas: o `session/list` do motor **não é a verdade**
+
+- **Sintoma:** a lista de conversas mostrava 74 conversas quando havia **78** em disco — e as que
+  faltavam eram precisamente as que tinham sido usadas há pouco (a `teste-recuperacao`, a
+  `usa o bash para escrever`). Noutro momento, com o motor recém-reiniciado, listou **24 de 78**.
+- **Causa:** o `session/list` do ACP devolve o que o motor tem *em memória*, não o que existe em
+  disco: reiniciar o motor encolhe a lista, e ela volta a crescer à medida que as sessões são
+  retomadas. (E, como se viu em §21.2, com a app ligada nem responde a um cliente externo: o motor
+  tem um lugar de cliente ACP de cada vez.)
+- **Consequência:** usar o motor como fonte da lista **esconde conversas** — inaceitável numa lista
+  de conversas.
+- **Correção:** a base da lista passou a ser o **disco** (o daemon lê os ficheiros das sessões —
+  knowledge 135); o `session/list` ficou só como recurso para o modo embutido, onde não há daemon.
+  Retomar uma sessão que o motor não lista funciona à mesma (o `session/resume` lê a persistência).
+- **Origem:** **[LOCAL]** (S10+, 2026-10-15, ao pôr prévias reais na lista).
+
+### 137. «session is already active» ao abrir a conversa que já está aberta
+
+- **Sintoma:** tocar na linha da conversa **em uso** falhava com
+  `retomar: Invalid params: session is already active: 269676d6-…` e não abria nada — a conversa que
+  o dono mais provavelmente quer abrir era a única que não abria.
+- **Causa:** o motor tem **um** cliente ACP de cada vez e a app retoma a sessão dela ao ligar-se;
+  quando o utilizador toca nessa mesma linha, o `session/resume` responde `already active` — que não
+  é falha nenhuma. O §23.1 já tratava isto **no laço de reconexão**, mas o caminho do toque na lista
+  não: a excepção subia e virava faixa de erro.
+- **Correção:** no `resumeSession` do modelo, `already active` é sucesso (e, sendo a mesma sessão, o
+  transcript em memória **não** se apaga — é o dela).
+- **Lição:** a mesma condição de erro tratada num caminho e não noutro é o padrão de bug mais fácil
+  de repetir neste código (aconteceu com o MCP em baixo, §68.4, e com o `unknown session`, §66).
+- **Origem:** **[LOCAL]** (S10+, 2026-10-15).
