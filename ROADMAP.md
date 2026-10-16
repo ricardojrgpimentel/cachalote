@@ -8,7 +8,7 @@ fecha com a verificação feita no aparelho.
 
 Legenda: ⬜ por fazer · 🔄 a decorrer · ✅ feito e verificado · ⏸️ adiado (com motivo)
 
-**Estado: 17 dos 20 pontos originais fechados e verificados no S10+** (mais três aparecidos depois, no Bloco D). Por fechar: `C1` (implementado, à espera de
+**Estado: 17 dos 20 pontos originais fechados e verificados no S10+, e os três do Bloco D também.** Por fechar: `C1` (à espera de uma instalação embutida de raiz) e `C7` (decisões de desenho, adiadas de propósito). Por fechar: `C1` (implementado, à espera de
 uma instalação embutida de raiz para se repetir a prova), `C7` (decisões de desenho, adiadas de
 propósito) e a verificação final do §"Verificação final".
 
@@ -160,7 +160,7 @@ configurados», texto a 10 sp, rodapé com palavra órfã, duplicação no passo
 
 ## Bloco D — aparecidos depois (2026-10-16)
 
-### D1 · Modo embutido pode ficar preso em silêncio 🔄
+### D1 · Modo embutido pode ficar preso em silêncio ✅
 A app ficou em modo embutido com o cabeçalho em «desligado», um `libnode` novo a cada poucos
 segundos e **nada no ecrã** a dizer porquê. Havia um motor embutido do dia anterior ainda vivo (e
 dois bridges do daemon). Ao voltar a testar, ligou à primeira — é um **estado preso**, não uma falha
@@ -171,21 +171,26 @@ escrito no fim do processo, ou seja, nunca enquanto ele estivesse vivo — que �
 laço de reconexão deixou de engolir a causa: ao fim de três tentativas seguidas mostra «o motor (…)
 não está a responder: …» na faixa, e limpa quando a ligação volta.
 
-**Por fazer:** encontrar a causa do estado preso (o aviso novo torna-o diagnosticável).
+**Causa encontrada (2026-10-16):** o motor embutido ficava **órfão** — a app era morta pelo
+sistema, o `libnode` continuava a correr com o uid da app a segurar o `$DSH_HOME`, e a app nova não
+tinha como lhe falar: arrancava outro a cada poucos segundos sem ligar a nenhum. O `start` passou a
+procurar e terminar os motores embutidos órfãos antes de arrancar, confirmando pelo
+`/proc/<pid>/status` que o uid é mesmo o nosso.
 
-### D2 · Os processos do daemon acumulam-se ⬜
+### D2 · Os processos do daemon acumulam-se ✅
 No telefone ficaram **dois `bridge.cjs`** a correr ao mesmo tempo (e os motores de cada um). O
 `cachalote start` arranca outro sem ver que já lá está um, e o `watchdog` levanta o seu. Não é desta
 passagem, mas é a razão pela qual os processos se acumulam entre reinícios — e foi o que tornou o
 §D1 confuso de diagnosticar.
 
-### D3 · O markdown do agente aparece em bruto ⬜
+### D3 · O markdown do agente aparece em bruto ✅
 O agente responde com markdown e ele sai literal: `## Resultado`, `**negrito**`, `| a | b |` e
 `|---|---|`. Numa resposta longa lê-se mal. O design diz que as mensagens do agente são «plain text,
 no bubble», portanto isto nunca foi tratado — mas o modelo escreve markdown.
 
-**Opções:** renderizar um subconjunto (títulos, negrito, listas, código, tabelas), ou dizer ao
-agente para não formatar. É uma decisão de produto.
+**Feito:** um analisador próprio (`Markdown.kt`, sem dependências) e um renderizador — títulos,
+ênfase, código inline e em bloco, listas, citações e **tabelas**. Só o agente passa por aqui; o texto
+do dono e os erros ficam como estão. Seis testes de JVM.
 
 ---
 
