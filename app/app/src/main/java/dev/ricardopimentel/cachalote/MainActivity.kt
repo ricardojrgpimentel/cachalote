@@ -988,6 +988,8 @@ private fun CartaoVscreen(vm: MainViewModel) {
                     }
                 }
 
+                // Frase de ajuda (prosa), não telemetria: fonte de texto. O resto desta linha
+                // técnica — resolução, KB, latência — fica em mono, que é o que o design manda.
                 Text(
                     stringResource(
                         R.string.vscreen_rodape,
@@ -995,8 +997,7 @@ private fun CartaoVscreen(vm: MainViewModel) {
                         if (vm.vscreenLargura > 0) "${vm.vscreenLargura}\u00D7${vm.vscreenAltura}" else "\u2014",
                         vm.vscreenKb,
                     ),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = Mono,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1421,6 +1422,19 @@ private fun StatusScreen(vm: MainViewModel) {
                 }
                 if (tecnicos) {
                     Text(
+                        stringResource(
+                            R.string.diagnostico,
+                            android.os.Process.myPid(),
+                            vm.accessibilityOn.toString(),
+                            vm.a11yTicks,
+                            CachaloteAccessibilityService.isEnabled().toString(),
+                        ),
+                        fontFamily = Mono,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Text(
                         vm.daemonInfo,
                         fontFamily = Mono,
                         style = MaterialTheme.typography.bodySmall,
@@ -1433,11 +1447,10 @@ private fun StatusScreen(vm: MainViewModel) {
                 Text(stringResource(R.string.acesso), fontWeight = FontWeight.SemiBold)
                 Text(stringResource(R.string.root_rotulo, when (vm.rootOk) { true -> stringResource(R.string.root_concedido); false -> stringResource(R.string.root_negado); null -> stringResource(R.string.root_desconhecido) }))
                 Text(stringResource(R.string.token_rotulo, vm.tokenState))
-                Text(
-                    stringResource(R.string.diagnostico, android.os.Process.myPid(), vm.accessibilityOn.toString(), vm.a11yTicks, CachaloteAccessibilityService.isEnabled().toString()),
-                    style = MaterialTheme.typography.bodySmall,
-                )
                 Text(stringResource(R.string.motor_rotulo, vm.agentInfo.ifBlank { stringResource(R.string.handshake_pendente) }))
+                // A linha de diagnóstico («pid 19385 · a11y false · ticks 3 · direto true») saiu
+                // daqui: é jargão interno no meio das definições. Fica com o JSON, em «Detalhes
+                // técnicos» — ver o cartão abaixo.
             }
         }
         FlowRow(

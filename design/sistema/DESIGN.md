@@ -93,15 +93,15 @@ typography:
     letterSpacing: -0.01em
   label-md:
     fontFamily: JetBrains Mono
-    fontSize: 11px
+    fontSize: 12px
     fontWeight: '500'
-    lineHeight: 16px
+    lineHeight: 17px
     letterSpacing: 0em
   label-sm:
     fontFamily: JetBrains Mono
-    fontSize: 10px
+    fontSize: 11px
     fontWeight: '400'
-    lineHeight: 14px
+    lineHeight: 15px
     letterSpacing: 0.02em
 rounded:
   sm: 0.25rem
@@ -150,6 +150,10 @@ The typographic hierarchy distinguishes operational text from functional telemet
 - **Display & Headings:** Set in *Space Grotesk*. Provides geometric precision and modern architectural authority without overwhelming small mobile viewports.
 - **Narrative & System Copy:** Set in *Geist*. Built for supreme screen clarity, neutral rendering, and comfortable multi-line reasoning traces.
 - **Code, Telemetry, and Metrology:** Set strictly in *JetBrains Mono*. All token meters (`tk/s`), hardware utilization metrics (`RAM 4.2/8.0 GB`), AST tool payloads, and raw shell captures must use this family to ensure absolute tabular alignment and instant terminal parsing.
+- **Prose never goes in mono.** The label scale is for labels, chips, overlines and
+  technical strings; a full sentence belongs to the body font (Geist). A 10px/11px
+  monospaced sentence is hard to read, and the rule above already says what mono is for.
+  The scale keeps its steps: 11 · 12 · 13 px.
 
 All code viewports must disable artificial font smoothing anomalies and enforce proportional line heights to guarantee strict baseline vertical rhythm across dense diff inspections.
 

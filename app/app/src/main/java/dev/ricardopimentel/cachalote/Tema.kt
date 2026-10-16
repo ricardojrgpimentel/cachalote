@@ -28,7 +28,7 @@ val cachaloteColors = darkColorScheme(
     onError = Color(0xFF690005),
     onErrorContainer = Color(0xFFFFDAD6),
     onPrimary = Color(0xFF00382B),
-    onPrimaryContainer = Color(0xFF006952),
+    onPrimaryContainer = Color(0xFF004E3A),
     onSecondary = Color(0xFF00363F),
     onSecondaryContainer = Color(0xFF003640),
     onSurface = Color(0xFFDBE3F0),
@@ -90,8 +90,8 @@ val cachaloteTypography = Typography(
     bodyMedium = TextStyle(fontFamily = Geist, fontSize = 14.sp, fontWeight = FontWeight(400), lineHeight = 20.sp, letterSpacing = 0.01.em),
     bodySmall = TextStyle(fontFamily = Geist, fontSize = 12.sp, fontWeight = FontWeight(400), lineHeight = 16.sp, letterSpacing = 0.02.em),
     labelLarge = TextStyle(fontFamily = JetBrainsMono, fontSize = 13.sp, fontWeight = FontWeight(500), lineHeight = 18.sp, letterSpacing = -0.01.em),
-    labelMedium = TextStyle(fontFamily = JetBrainsMono, fontSize = 11.sp, fontWeight = FontWeight(500), lineHeight = 16.sp, letterSpacing = 0.em),
-    labelSmall = TextStyle(fontFamily = JetBrainsMono, fontSize = 10.sp, fontWeight = FontWeight(400), lineHeight = 14.sp, letterSpacing = 0.02.em),
+    labelMedium = TextStyle(fontFamily = JetBrainsMono, fontSize = 12.sp, fontWeight = FontWeight(500), lineHeight = 17.sp, letterSpacing = 0.em),
+    labelSmall = TextStyle(fontFamily = JetBrainsMono, fontSize = 11.sp, fontWeight = FontWeight(400), lineHeight = 15.sp, letterSpacing = 0.02.em),
 )
 
 // Escala de espaçamento do design (rem → dp, a 1rem = 16dp).

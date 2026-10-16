@@ -99,9 +99,11 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
         }
 
         Spacer(Modifier.height(10.dp))
+        // Prosa, não etiqueta: vai na fonte de texto. O mono é para código e telemetria
+        // (é o que o DESIGN.md diz), e uma frase inteira a 10px em mono lê-se mal.
         Text(
             stringResource(R.string.wizard_rodape),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
         )
         Spacer(Modifier.height(10.dp))
