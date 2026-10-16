@@ -21,6 +21,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.alpha
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -387,6 +395,7 @@ private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
  */
 @Composable
 private fun ListaDeSessoes(vm: MainViewModel) {
+    var aApagar by remember { mutableStateOf<String?>(null) }
     val previaDesconhecida = stringResource(R.string.sessao_curta)
     val ultima = vm.transcript.lastOrNull { it.role != "system" }
     val items = vm.sessions.map { s ->
@@ -411,7 +420,28 @@ private fun ListaDeSessoes(vm: MainViewModel) {
         conversas = items,
         onAbrir = { vm.resumeSession(it) },
         onNova = { vm.newSession() },
+        onApagar = { aApagar = it },
     )
+
+    // Apagar é sem volta: pergunta-se primeiro, com o título da conversa à vista — para não se
+    // apagar a errada (o toque longo é fácil de disparar sem querer).
+    aApagar?.let { id ->
+        val titulo = items.firstOrNull { it.id == id }?.titulo ?: id.take(8)
+        AlertDialog(
+            onDismissRequest = { aApagar = null },
+            title = { Text(stringResource(R.string.apagar_conversa)) },
+            text = { Text(stringResource(R.string.apagar_conversa_texto, titulo)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    aApagar = null
+                    vm.apagarSessao(id)
+                }) { Text(stringResource(R.string.apagar)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { aApagar = null }) { Text(stringResource(R.string.cancelar)) }
+            },
+        )
+    }
 }
 
 /**
@@ -1665,32 +1695,10 @@ private fun ConversaScreen(vm: MainViewModel) {
         CabecalhoDaConversa(vm)
         LinhaDeTelemetria(vm, if (vm.busy) ((agora - inicio) / 1000).coerceAtLeast(0) else 0)
 
-        if (vm.configOptions.isNotEmpty()) {
-            // FlowRow e não Row com scroll horizontal: assim os chips mudam de linha em vez de
-            // saírem pela borda do ecrã (o «Reasoning effort» nascia cortado a 457 dp, visto no
-            // S10+ em 2026-10-15). E o rótulo inteiro cabe: antes era `take(28)`, que cortava
-            // «DeepSeek-V4-Flash» a meio — «Model: deepseek-official: DeepSeek-» — sem reticências
-            // e contra a linha de cabeçalho, que mostrava o nome todo.
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                vm.configOptions.forEach { opt ->
-                    AssistChip(
-                        onClick = { vm.configPicker = opt },
-                        label = {
-                            Text(
-                                opt.name + ": " + opt.currentLabel,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 280.dp),
-                            )
-                        },
-                    )
-                }
-            }
-        }
+        // O modelo e o esforço saíram daqui: vivem no menu de overflow do cabeçalho, como o
+        // design pedia. Dois chips por cima da conversa custavam ~100 dp de altura em todas as
+        // sessões — e o autor notou-o («usa muito height de espaço, e não está bonito»). O modelo
+        // continua à vista na linha técnica do cabeçalho, que já o mostrava.
         Divider()
 
         LazyColumn(
@@ -1714,13 +1722,7 @@ private fun ConversaScreen(vm: MainViewModel) {
                             }
                         }
                     }
-                    "thought" -> Text(
-                        line.text,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = Mono,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    )
+                    "thought" -> BlocoDePensamento(line.text)
                     "system" -> Text(
                         line.text,
                         style = MaterialTheme.typography.labelSmall,
@@ -1790,6 +1792,7 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
         DaemonController.Mode.SHIZUKU -> "Shizuku"
         else -> "on-device"
     }
+    var menuAberto by remember { mutableStateOf(false) }
     val modelo = vm.configOptions.firstOrNull { it.id == "model" }?.currentLabel
     val tecnica = listOfNotNull(modo, modelo, vm.uso?.texto(ctx)).joinToString("  \u00B7  ")
     Row(
@@ -1827,11 +1830,116 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
-        IconButton(onClick = { vm.sessionId?.let { vm.closeSession(it) } }, enabled = !vm.busy) {
+        // Menu de overflow, como o design o pede: o modelo e o esforço vivem aqui, e não em chips
+        // por cima da conversa (que comiam ~100 dp e empurravam o transcript para baixo), e o
+        // «fechar a sessão» passou a ter **nome** em vez de ser um ícone de power que ninguém sabia
+        // o que fazia.
+        Box {
+            IconButton(onClick = { menuAberto = true }) {
+                Icon(
+                    Icons.Filled.MoreVert,
+                    contentDescription = stringResource(R.string.menu_conversa),
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            DropdownMenu(expanded = menuAberto, onDismissRequest = { menuAberto = false }) {
+                vm.configOptions.forEach { opt ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(opt.name)
+                                Text(
+                                    opt.currentLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = Mono,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                )
+                            }
+                        },
+                        onClick = {
+                            menuAberto = false
+                            vm.configPicker = opt
+                        },
+                    )
+                }
+                if (vm.configOptions.isNotEmpty()) HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.fechar_sessao_menu)) },
+                    enabled = !vm.busy,
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.PowerSettingsNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    onClick = {
+                        menuAberto = false
+                        vm.sessionId?.let { vm.closeSession(it) }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * O que o agente pensou, **fechado por omissão**.
+ *
+ * O design já o pedia («reasoning blocks: muted italic text with a small sparkle glyph and a chevron
+ * to collapse them») e o autor confirmou-o com um caso concreto: a um «olá» respondia com uma
+ * resposta curta e um bloco enorme de pensamento à frente dela, que empurrava a resposta para fora
+ * do ecrã. Fechado, mostra-se o que é e quanto ocupa; aberto, mostra-se tudo.
+ */
+@Composable
+private fun BlocoDePensamento(texto: String) {
+    var aberto by rememberSaveable(texto.take(40)) { mutableStateOf(false) }
+    val linhas = texto.count { it == '\n' } + 1
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { aberto = !aberto }
+                .padding(vertical = 4.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Icon(
-                Icons.Filled.PowerSettingsNew,
-                contentDescription = stringResource(R.string.fechar_sessao_activa),
+                Icons.Filled.AutoAwesome,
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(14.dp),
+            )
+            Text(
+                stringResource(R.string.pensamento),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Text(
+                stringResource(
+                    if (aberto) R.string.pensamento_esconder else R.string.pensamento_ver,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (aberto) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = stringResource(
+                    if (aberto) R.string.pensamento_esconder else R.string.pensamento_ver,
+                ),
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        if (aberto) {
+            Text(
+                texto,
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 4.dp),
             )
         }
     }

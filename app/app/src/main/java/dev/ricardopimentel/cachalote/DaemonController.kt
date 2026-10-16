@@ -293,6 +293,34 @@ class DaemonController(private val context: Context) {
     }
 
     /**
+     * Apaga uma conversa: tira os ficheiros dela do disco.
+     *
+     * O ACP não tem `deletion` (o `dsh-acp` recusa-a explicitamente), portanto «apagar» só pode ser
+     * isto. No daemon é ele que apaga (é root e é quem lê os ficheiros); no modo embutido o
+     * `$DSH_HOME` é da própria app e apaga-se aqui.
+     */
+    suspend fun deleteSession(sessionId: String): JSONObject {
+        if (mode == Mode.EMBEDDED) {
+            val raiz = File(engine.home, "sessions")
+            val pastas = raiz.listFiles()?.filter { it.isDirectory } ?: emptyList()
+            for (slug in pastas) {
+                val alvo = File(slug, sessionId)
+                if (alvo.isDirectory) {
+                    alvo.deleteRecursively()
+                    return JSONObject().put("apagada", sessionId)
+                }
+            }
+            throw IllegalStateException("não encontrei a sessão " + sessionId)
+        }
+        ensureAcp()
+        return client.callForResult(
+            "cachalote.sessions.delete",
+            JSONObject().put("sessionId", sessionId),
+            timeoutMs = 20_000,
+        )
+    }
+
+    /**
      * Fecha uma sessão no motor (`session/close`). Não apaga o histórico em disco: desactiva-a,
      * que é o que o ACP oferece (`sessionCapabilities.close`). Ver knowledge 93.
      */

@@ -221,4 +221,37 @@ function sessionMeta(dshHome, opts = {}) {
   return { sessions: saida };
 }
 
-module.exports = { sessionMeta, lerSessao, textoDaSessao, scanZstdFrames };
+/**
+ * Apaga uma sessão do disco: a pasta inteira (`sessions/<slug>/<id>/`), com o log dela dentro.
+ *
+ * O ACP **não tem** apagar sessões -- o README do `dsh-acp` lista `deletion` entre as superfícies
+ * que recusa. O que existe é `session/close`, que a desactiva e deixa o histórico. Como a lista de
+ * conversas da app é lida do disco (é o daemon que a lê), apagar só pode ser isto: tirar os
+ * ficheiros. O `id` é validado contra o que está lá dentro, para nunca apagar uma pasta escolhida
+ * por quem chama.
+ */
+function apagarSessao(dshHome, id) {
+  if (typeof id !== "string" || !/^[A-Za-z0-9._-]{6,80}$/.test(id)) {
+    throw new Error("id de sessão inválido");
+  }
+  const raiz = path.join(dshHome, "sessions");
+  let slugs;
+  try {
+    slugs = fs.readdirSync(raiz, { withFileTypes: true });
+  } catch {
+    throw new Error("não há sessões para apagar");
+  }
+  for (const slug of slugs) {
+    if (!slug.isDirectory()) continue;
+    const pasta = path.join(raiz, slug.name, id);
+    if (!fs.existsSync(pasta)) continue;
+    // Só se apaga o que parece mesmo uma sessão: nunca uma pasta com outra coisa lá dentro.
+    const conteudo = fs.readdirSync(pasta);
+    if (!conteudo.some((f) => f.startsWith("session.v4.jsonl"))) continue;
+    fs.rmSync(pasta, { recursive: true, force: true });
+    return { apagada: id, pasta };
+  }
+  throw new Error("não encontrei a sessão " + id);
+}
+
+module.exports = { sessionMeta, lerSessao, textoDaSessao, scanZstdFrames, apagarSessao };

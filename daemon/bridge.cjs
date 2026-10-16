@@ -303,6 +303,16 @@ function control(method, params) {
         }
         return mod.sessionMeta(path.join(BASE, "home"));
       });
+    case "cachalote.sessions.delete": {
+      // Apagar uma conversa. O ACP não tem `deletion` (está na lista do que o dsh-acp recusa), por
+      // isso o que se pode fazer é tirar os ficheiros da sessão -- e é o daemon (root) que os pode
+      // tirar. Ver o comentário do `apagarSessao` no session-meta.cjs.
+      const id = String(params && params.sessionId ? params.sessionId : "");
+      return Promise.resolve().then(() => {
+        const mod = require("./session-meta.cjs");
+        return mod.apagarSessao(path.join(BASE, "home"), id);
+      });
+    }
     case "cachalote.doctor":
       return doctorResumo();
     case "cachalote.engine.restart":

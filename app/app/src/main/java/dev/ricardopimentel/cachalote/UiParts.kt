@@ -1,6 +1,8 @@
 package dev.ricardopimentel.cachalote
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -523,6 +525,7 @@ fun ListaDeConversas(
     conversas: List<ItemConversa>,
     onAbrir: (String) -> Unit,
     onNova: () -> Unit,
+    onApagar: (String) -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         if (conversas.isEmpty()) {
@@ -563,11 +566,17 @@ fun ListaDeConversas(
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 4.dp),
+                    modifier = Modifier.padding(start = 16.dp, top = 10.dp),
+                )
+                Text(
+                    stringResource(R.string.conversa_toque_longo),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
                 )
                 LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     items(conversas, key = { it.id }) { c ->
-                        LinhaDeConversa(c, onAbrir)
+                        LinhaDeConversa(c, onAbrir, onApagar)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
@@ -586,13 +595,17 @@ fun ListaDeConversas(
 }
 
 /** Uma linha da lista: iniciais, título, prévia, quando e o estado — com o realce da activa. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit) {
+private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit, onApagar: (String) -> Unit = {}) {
     val destaque = MaterialTheme.colorScheme.primaryContainer
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onAbrir(c.id) }
+            .combinedClickable(
+                onClick = { onAbrir(c.id) },
+                onLongClick = { onApagar(c.id) },
+            )
             .background(
                 if (c.activa) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
             )

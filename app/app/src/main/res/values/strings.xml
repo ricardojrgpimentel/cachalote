@@ -401,4 +401,15 @@
     <string name="motor_embutido_nome">embedded, inside the app</string>
     <string name="motor_root_nome">root</string>
     <string name="motor_shizuku_nome">Shizuku</string>
+    <string name="apagar">Delete</string>
+    <string name="apagar_conversa">Delete conversation</string>
+    <string name="apagar_conversa_texto">The conversation «%1$s» and its whole history are deleted from the phone. This cannot be undone.</string>
+    <string name="cancelar">Cancel</string>
+    <string name="conversa_toque_longo">Press and hold a conversation to delete it</string>
+    <string name="fechar_sessao_menu">Close the session</string>
+    <string name="menu_conversa">More options</string>
+    <string name="pensamento">Thought</string>
+    <string name="pensamento_esconder">Hide the thought</string>
+    <string name="pensamento_ver">See what it thought</string>
+    <string name="sessao_apagada">conversation %1$s deleted</string>
 </resources>

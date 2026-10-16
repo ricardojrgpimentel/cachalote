@@ -1038,6 +1038,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         refreshSessions()
     }
 
+    /**
+     * Apaga uma conversa (toque longo na lista). Se for a que está aberta, fecha-a primeiro: o motor
+     * tem de largar o ficheiro antes de ele desaparecer.
+     */
+    fun apagarSessao(id: String) = run("apagar conversa") {
+        if (id == sessionId) {
+            runCatching { controller.closeSession(id) }
+            sessionId = null
+            conversaAberta = false
+            controller.forgetLastSession()
+            transcript.clear()
+        }
+        controller.deleteSession(id)
+        // A lista deixa de a ter: some já, sem esperar por uma ida ao disco.
+        sessions = sessions.filterNot { it.id == id }
+        sessionTitles = sessionTitles - id
+        transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_apagada, id.take(8))))
+        saveState()
+        refreshSessions()
+    }
+
     /** Muda modelo/esforço e o motor devolve as opções actualizadas. */
     fun chooseOption(configId: String, value: String) = run("opção") {
         val sid = sessionId ?: error("sem sessão activa")

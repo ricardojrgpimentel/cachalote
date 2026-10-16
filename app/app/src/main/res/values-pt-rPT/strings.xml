@@ -401,4 +401,15 @@
     <string name="motor_embutido_nome">embutido, dentro da app</string>
     <string name="motor_root_nome">root</string>
     <string name="motor_shizuku_nome">Shizuku</string>
+    <string name="apagar">Apagar</string>
+    <string name="apagar_conversa">Apagar conversa</string>
+    <string name="apagar_conversa_texto">A conversa «%1$s» e todo o histórico dela são apagados do telefone. Não se pode desfazer.</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="conversa_toque_longo">Toca sem largar numa conversa para a apagar</string>
+    <string name="fechar_sessao_menu">Fechar a sessão</string>
+    <string name="menu_conversa">Mais opções</string>
+    <string name="pensamento">Pensamento</string>
+    <string name="pensamento_esconder">Esconder o pensamento</string>
+    <string name="pensamento_ver">Ver o que ele pensou</string>
+    <string name="sessao_apagada">conversa %1$s apagada</string>
 </resources>
