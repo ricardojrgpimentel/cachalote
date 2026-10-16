@@ -196,6 +196,56 @@ do dono e os erros ficam como estão. Seis testes de JVM.
 
 ---
 
+## Bloco E — a maior lacuna por resolver (2026-10-16)
+
+### E1 · O motor precisa de um computador — e não devia ⬜
+
+**O que se passa.** Escolher root ou Shizuku no assistente não chega: o motor (o *daemon*) tem de
+ser instalado numa pasta de sistema, e a app **não o sabe fazer**. Hoje isso é um script no
+computador (`daemon/install.sh`). Quem instala a app e só tem o telefone fica limitado ao modo
+embutido. O autor disse-o assim: *«o utilizador vai instalar a app e usar, não vai estar a ligar ao
+pc para correr o que quer que seja»*. É uma parede real e não se defende.
+
+**A dependência é histórica, não técnica.** Fui ver o que o `install.sh` empurra e comparar com o
+que a APK já leva dentro:
+
+| O que é preciso | Quem tem |
+|---|---|
+| O kernel do DSH (366 MB) | **a APK** — `assets/kernel.zip`, 212 MB, o mesmo artefacto |
+| O Node (173 MB) | **a APK** — `libnode.so`, 43 MB + 9 bibliotecas na farm; é o mesmo Node que o modo embutido executa |
+| `bridge.cjs`, `session-meta.cjs`, `cachalote`, `cachalote.patch.yml` | **a APK** (falta pôr como assets — são ~60 KB) |
+| `bin/bash` | não é preciso: o patch ao `dsh-bash-local` cai no `/system/bin/sh` via `CACHALOTE_SHELL` |
+| O script do Magisk `service.d` | **a APK** (é um ficheiro de 637 bytes) |
+
+Ou seja: **a app já tem 100% do que é preciso para correr o motor**. O que falta é a canalização
+para o pôr fora do seu sandbox. Não é arquitetura — é uma funcionalidade por fazer.
+
+**Como se faz.** Os dois modos têm caminhos diferentes, e ambos são viáveis:
+
+- **Shizuku (sem root, sem computador).** O destino é `/data/local/tmp/cachalote`, que é gravável
+  pelo uid *shell* — que é exatamente o que o Shizuku dá à app. A app extrai o kernel e o
+  `libnode.so` para o seu sandbox, e envia-os por *stdin* para um `sh -c 'tar xf -'` do lado do
+  Shizuku (o `toybox tar` existe em qualquer Android atual). Não precisa de root nem de PC.
+- **Root (com o `su` que o utilizador já autoriza).** Mesmo princípio, com destino
+  `/data/adb/cachalote` e um `su -c` a mover as pastas, mais o script em `/data/adb/service.d/`
+  para o arranque no boot. O `su` é pedido **uma vez**, no assistente, com contexto.
+
+**O que isto obriga a resolver.**
+- Um ecrã de progresso honesto: são ~540 MB a copiar (extrair o kernel + as bibliotecas), entre um
+  e três minutos no S10+. Não pode ser um botão que parece pendurado.
+- O `libnode.so` tem de ser **copiado** para o destino e corrido de lá: executar um ficheiro de
+  dentro de `/data/app/.../lib/arm64` a partir do contexto do `su`/shell é o tipo de coisa que o
+  SELinux recusa. Copiado para `/data/local/tmp`, corre — é o que já acontece hoje.
+- Integridade: verificar o `sha256` do `kernel.zip` (a app já tem `kernel.sha256` nos assets) e
+  apagar instalações parciais, como já se faz no modo embutido.
+- Espaço: 540 MB duplicados (o kernel do modo embutido + o do daemon). Aceitável, mas vale a pena
+  ver se os dois podem partilhar a mesma cópia.
+- Uma saída à mão: quem quiser (ou precisar) continua a poder usar o `daemon/install.sh`.
+
+**Por fazer.** É a próxima peça de trabalho a sério da primeira utilização.
+
+---
+
 ## Verificação final — feita (2026-10-16)
 
 | Verificação | Resultado |
