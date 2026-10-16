@@ -142,10 +142,30 @@ restore_key() {
 }
 trap restore_key EXIT
 
+# Este teste precisa do **daemon instalado** (é ele que traz o motor, o token e o .env). Numa
+# instalação só com a app — o caso de quem quer ver o percurso de um utilizador — não há daemon, e
+# falhar em cascata não diz nada a ninguém. Diz-se o que falta e sai-se.
+if ! "${ADB[@]}" shell "su -c 'test -x $BASE/bin/cachalote && echo sim'" 2>/dev/null | grep -q sim; then
+  echo "SALTADO: não há daemon instalado em $BASE."
+  echo "         Este teste corre contra o motor; instala-o com daemon/install.sh e repete."
+  echo "         (A app em si — o assistente, as secções e as capacidades — verifica-se à mão.)"
+  exit 0
+fi
+
 echo "== 1. app instalada e aberta =="
 "${ADB[@]}" shell "am force-stop $PKG; am start -n $ACT" >/dev/null 2>&1
 sleep 4
 dump && has "Cachalote" && check 0 "ecrã principal abriu" || check 1 "ecrã principal abriu"
+
+# Numa instalação nova aparece o assistente, e ele **ocupa o ecrã todo**: a barra de baixo não
+# existe e nenhuma secção dos Ajustes está acessível. Salta-se para o teste poder correr (é o que
+# um utilizador faria depois de configurar).
+dump
+if has "Já tenho tudo configurado"; then
+  tap_text "Já tenho tudo configurado" || true
+  sleep 2
+  echo "   (assistente saltado)"
+fi
 
 echo "== 2. estado do daemon =="
 ir_para_secao "Motor"

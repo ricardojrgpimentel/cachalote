@@ -9,6 +9,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -294,19 +301,100 @@ private fun RotuloDeFila(texto: String) {
     )
 }
 
-/** Interruptores por capacidade — é aqui que o dono decide o que o agente pode fazer. */
+/**
+ * Uma linha da lista de autorizações: ícone, nome, o que faz, e o interruptor.
+ *
+ * Era só o nome do motor cru à esquerda e um interruptor à direita («notify», «vscreen_frame»…):
+ * quem nunca viu isto não sabe o que está a autorizar. O design explica cada uma com um rótulo
+ * curto e uma frase — é o que se faz aqui (o autor notou-o no passo 6 do assistente, S10+,
+ * 2026-10-16). As capacidades de ecrã virtual agrupam-se numa só linha, porque para o utilizador
+ * são uma coisa só: «Ecrã virtual».
+ */
+private class DescricaoDeCapacidade(
+    val icone: ImageVector,
+    val nome: Int,
+    val grupo: Int?,      // o rótulo do design («sistema», «visão»…); null = sem grupo
+    val texto: Int,
+)
+
+private val CAPACIDADES: Map<String, DescricaoDeCapacidade> = mapOf(
+    "notify" to DescricaoDeCapacidade(Icons.Filled.Notifications, R.string.cap_notify, R.string.cap_grupo_sistema, R.string.cap_notify_texto),
+    "screen" to DescricaoDeCapacidade(Icons.Filled.Visibility, R.string.cap_screen, R.string.cap_grupo_visao, R.string.cap_screen_texto),
+    "tap" to DescricaoDeCapacidade(Icons.Filled.TouchApp, R.string.cap_tap, null, R.string.cap_tap_texto),
+    "type" to DescricaoDeCapacidade(Icons.Filled.Keyboard, R.string.cap_type, R.string.cap_grupo_escrita, R.string.cap_type_texto),
+    "key" to DescricaoDeCapacidade(Icons.Filled.ArrowBack, R.string.cap_key, R.string.cap_grupo_teclas, R.string.cap_key_texto),
+    "screenshot" to DescricaoDeCapacidade(Icons.Filled.PhotoCamera, R.string.cap_screenshot, R.string.cap_grupo_captura, R.string.cap_screenshot_texto),
+    "vscreen_start" to DescricaoDeCapacidade(Icons.Filled.PhoneAndroid, R.string.cap_vscreen, R.string.cap_grupo_display, R.string.cap_vscreen_texto),
+)
+
+/** O grupo do ecrã virtual é uma linha só: as quatro capacidades são uma coisa para o utilizador. */
+private val GRUPO_VSCREEN = listOf("vscreen_start", "vscreen_status", "vscreen_frame", "vscreen_stop")
+
 @Composable
 fun CapabilityToggles(
     nomes: List<String>,
     autorizadas: Map<String, Boolean>,
     onToggle: (String, Boolean) -> Unit,
+    onPrecisaNotificacoes: () -> Unit = {},
 ) {
+    val doEcrãVirtual = nomes.filter { it in GRUPO_VSCREEN }
+    val linhas = ArrayList<Pair<String, List<String>>>()
+    nomes.forEach { cap ->
+        if (cap in GRUPO_VSCREEN) {
+            if (doEcrãVirtual.first() == cap) linhas.add(cap to doEcrãVirtual)
+        } else {
+            linhas.add(cap to listOf(cap))
+        }
+    }
     Column {
-        nomes.forEach { cap ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(cap, modifier = Modifier.weight(1f))
-                Switch(checked = autorizadas[cap] == true, onCheckedChange = { onToggle(cap, it) })
+        linhas.forEach { (principal, grupo) ->
+            val d = CAPACIDADES[principal]
+            // A linha do ecrã virtual vale o que valerem as quatro (ligar liga todas).
+            val ligado = grupo.all { autorizadas[it] == true }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle(principal, !ligado) }
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    d?.icone ?: Icons.Filled.Tune,
+                    contentDescription = null,
+                    tint = if (ligado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            stringResource(d?.nome ?: R.string.cap_desconhecida),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        d?.grupo?.let {
+                            Text(
+                                stringResource(it),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
+                    }
+                    Text(
+                        stringResource(d?.texto ?: R.string.cap_desconhecida_texto),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                Switch(
+                    checked = ligado,
+                    onCheckedChange = { novo ->
+                        grupo.forEach { onToggle(it, novo) }
+                        if (novo && principal == "notify") onPrecisaNotificacoes()
+                    },
+                )
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }

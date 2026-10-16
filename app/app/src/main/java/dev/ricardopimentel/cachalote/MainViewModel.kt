@@ -201,7 +201,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun concluirWizard() {
         Prefs(getApplication()).wizardConcluido = true
         wizardConcluido = true
-        refreshStatus()
+        // Agora sim: o utilizador acabou de escolher, e a app pode ligar-se e dizer o estado.
+        refreshStatus(consultarSistema = true)
     }
 
     /** Repetir a configuração inicial (Ajustes → Motor, por exemplo). */
@@ -261,6 +262,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             var waitMs = 1_000L
             while (true) {
+                // Sem o assistente feito não há nada a que ligar — e tentar ligar **antes** de a
+                // app explicar o que é o root faz aparecer o diálogo do Magisk a quem acabou de a
+                // instalar. Foi o que o autor viu no S10+ em 2026-10-16: a app a pedir root mal
+                // abria, antes do assistente. Espera-se, sem tocar em nada.
+                if (!wizardConcluido) {
+                    kotlinx.coroutines.delay(1_000)
+                    continue
+                }
                 if (controller.client.connected.value) {
                     waitMs = 1_000L
                     kotlinx.coroutines.delay(2_000)
@@ -336,6 +345,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Ligações automáticas ao arrancar: se o token já estiver guardado e o daemon
         // estiver de pé, a app fica operacional sem tocar em nada.
         viewModelScope.launch {
+            // A mesma regra: numa instalação nova não se liga a nada antes do assistente. Sem isto,
+            // o modo por omissão (root) fazia correr o `su` no arranque — e o Magisk pedia root a
+            // quem ainda não tinha escolhido nada.
+            if (!wizardConcluido) return@launch
             runCatching {
                 controller.ensureConnected()
                 controller.ensureAcp()
@@ -399,9 +412,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             DaemonController.Mode.SHIZUKU -> {
                 if (!controller.shizukuAvailable()) error(getApplication<Application>().getString(R.string.shizuku_nao_corre))
                 if (!controller.shizukuHasPermission()) {
-                    shizukuState = "falta autorizar o Cachalote no Shizuku (botão abaixo)"
+                    // O aviso com o botão de autorizar é a UI que o desenha (passo 3 do assistente
+                    // e secção Motor) — aqui só se marca que falta.
+                    precisoPermissaoShizuku = true
+                    shizukuState = getApplication<Application>().getString(R.string.shizuku_sem_permissao)
                     return@run
                 }
+                precisoPermissaoShizuku = false
                 shizukuState = getApplication<Application>().getString(R.string.shizuku_a_arrancar)
                 controller.startDaemon()
                 shizukuState = getApplication<Application>().getString(R.string.shizuku_activo, controller.ensureToken().take(6))
@@ -613,31 +630,70 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Actualizado pelo listener do MainActivity quando o utilizador responde ao diálogo. */
     fun onShizukuPermissionResult(granted: Boolean) {
-        shizukuState = if (granted) "autorizado pelo Shizuku" else "permissão recusada"
+        val app = getApplication<Application>()
+        shizukuState = if (granted) app.getString(R.string.shizuku_autorizado) else app.getString(R.string.shizuku_recusado)
+        // O estado relê-se **antes** de tentar arrancar o motor: com a permissão dada, o aviso tem
+        // de desaparecer logo. Se o arranque falhar a seguir (o daemon ainda não está instalado),
+        // isso é outro assunto — e antes prendia o aviso no ecrã, porque o `run` rebentava primeiro
+        // e o `refreshStatus` nunca corria.
+        precisoPermissaoShizuku = !granted
+        refreshStatus(consultarSistema = true)
         if (!granted) return
         run("shizuku") {
             startShizukuLocked()
             controller.ensureConnected()
             controller.ensureAcp()
-            refreshStatus()
+            refreshStatus(consultarSistema = true)
             runCatching { refreshKeyStatus() }
         }
     }
 
-    fun refreshStatus() = run("estado") {
-        rootOk = controller.hasRoot()
+    /**
+     * Lê o estado do motor.
+     *
+     * [consultarSistema] só se liga quando a resposta interessa a quem está a olhar — a escolha do
+     * modo no assistente, o passo «ligar o motor», ou a secção Motor. **Não** no arranque.
+     *
+     * O motivo é concreto: saber se há root, e se o daemon está instalado, obriga a correr `su` (o
+     * `/data/adb` é do root). O Magisk mostra então o diálogo do sistema — e a app pedia root a
+     * quem acabava de a instalar, antes de explicar o que o root é. Medido no S10+ em 2026-10-16:
+     * três `su: request rejected` no arranque de uma instalação nova. Não há forma de saber sem
+     * perguntar, por isso a regra é: pergunta-se quando faz sentido perguntar.
+     */
+    fun refreshStatus(consultarSistema: Boolean = false) = run("estado") {
+        if (consultarSistema) {
+            rootOk = controller.hasRoot()
+            daemonInstalled = controller.daemonInstalled()
+        }
+        // No modo Shizuku, a permissão em falta tem de ser visível na UI (a app tem de a *pedir* —
+        // havia o pedido implementado e ninguém o chamava: o autor fez o assistente todo e ficou
+        // sem Shizuku, só com um erro).
+        if (modeKind == DaemonController.Mode.SHIZUKU) {
+            val tem = controller.shizukuHasPermission()
+            precisoPermissaoShizuku = !tem
+            if (!tem) shizukuState = getApplication<Application>().getString(
+                if (controller.shizukuAvailable()) R.string.shizuku_sem_permissao
+                else R.string.shizuku_parado,
+            )
+        }
         // A acessibilidade lê-se pela mesma via que o agente usa (a flag do singleton pode
         // discordar do que o serviço realmente faz — ver knowledge 66).
         accessibilityOn = runCatching {
             caps.execute("status", JSONObject()).optBoolean("accessibility")
         }.getOrElse { CachaloteAccessibilityService.isEnabled() }
         a11yTicks += 1
-        daemonInstalled = controller.daemonInstalled()
+        // Sem consulta ao sistema não se inventa um estado: os campos ficam como estavam (nulos,
+        // numa instalação nova) e a UI mostra o que sabe.
+        if (!consultarSistema) return@run
         if (daemonInstalled != true) {
-            error = if (embeddedMode) "kernel não extraído"
-            else if (modeKind == DaemonController.Mode.SHIZUKU)
-                "o daemon não está instalado em /data/local/tmp/cachalote — corre daemon/install.sh --base /data/local/tmp/cachalote --no-root"
-            else "o daemon não está instalado em ${controller.base} — corre daemon/install.sh no computador"
+            // Mensagem para **quem usa**, não para quem programa. Dizia «corre daemon/install.sh
+            // --base /data/local/tmp/cachalote --no-root», que não quer dizer nada a quem tem o
+            // telefone na mão e não sabe o que é um daemon — e é o primeiro erro que aparece a
+            // quem escolhe root ou Shizuku numa instalação nova (visto pelo autor em 2026-10-16).
+            val app = getApplication<Application>()
+            error = if (embeddedMode) app.getString(R.string.erro_kernel_por_extrair)
+            else if (modeKind == DaemonController.Mode.SHIZUKU) app.getString(R.string.erro_motor_por_instalar_shizuku)
+            else app.getString(R.string.erro_motor_por_instalar_root)
             return@run
         }
         if (embeddedMode) embeddedInfo = if (controller.embeddedEngineRunning()) "motor embutido a correr" else "motor embutido parado"
@@ -1060,6 +1116,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Muda modelo/esforço e o motor devolve as opções actualizadas. */
+    /**
+     * Escolhe o modo e, se for root, **sonda-o agora** — é aqui que o diálogo do Magisk faz
+     * sentido: o utilizador acabou de dizer que quer root, e a app explica-o no cartão ao lado.
+     */
+    fun escolherModo(kind: DaemonController.Mode) {
+        rootOk = null
+        switchMode(kind)
+        // Escolher root é o momento em que o diálogo do Magisk faz sentido: o utilizador acabou de
+        // o pedir. Escolher Shizuku faz aparecer o aviso da permissão (o `switchMode` já lá chega).
+        if (kind == DaemonController.Mode.DAEMON) refreshStatus(consultarSistema = true)
+        else refreshStatus()
+    }
+
+    /** Pede a permissão de notificações — só quando o utilizador liga a capacidade. */
+    fun pedirNotificacoes(activity: android.app.Activity) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            activity.requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+    }
+
     fun chooseOption(configId: String, value: String) = run("opção") {
         val sid = sessionId ?: error("sem sessão activa")
         val res = controller.setConfigOption(sid, configId, value)

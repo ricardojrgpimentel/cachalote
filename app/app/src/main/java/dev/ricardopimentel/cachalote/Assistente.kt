@@ -2,6 +2,10 @@ package dev.ricardopimentel.cachalote
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,7 +98,7 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
                 2 -> LigarMotor(vm)
                 3 -> DarAcesso(vm, ctx)
                 4 -> DarChave(vm)
-                else -> EscolherPoderes(vm)
+                else -> EscolherPoderes(vm, ctx)
             }
         }
 
@@ -196,7 +200,11 @@ private fun Beneficio(texto: String) {
 /** A decisão que mais muda o resto: como o motor corre. Com o que existe no telefone à vista. */
 @Composable
 private fun EscolhaDoModo(vm: MainViewModel) {
+    // `rootOk` é tri-estado: null = ainda não perguntámos (e não se pergunta no arranque, que dava
+    // um diálogo de root a quem acabou de instalar a app). Enquanto não se sabe, o cartão do root
+    // fica **escolhível** — é uma escolha, não um facto — e é ao escolhê-lo que a app pergunta.
     val temRoot = vm.rootOk == true
+    val rootDesconhecido = vm.rootOk == null
     val temShizuku = ShizukuBridge.available()
     Passo(
         titulo = stringResource(R.string.wizard_modo_titulo),
@@ -206,20 +214,22 @@ private fun EscolhaDoModo(vm: MainViewModel) {
             OpcaoDeModo(
                 titulo = stringResource(R.string.wizard_modo_root),
                 detalhe = stringResource(R.string.wizard_modo_root_detalhe),
-                risco = stringResource(R.string.wizard_modo_root_risco),
-                disponivel = temRoot,
+                risco = stringResource(R.string.wizard_modo_root_risco) + "\n" + stringResource(R.string.motor_precisa_computador),
+                disponivel = temRoot || rootDesconhecido,
                 recomendado = temRoot,
                 escolhido = vm.modeKind == DaemonController.Mode.DAEMON,
-                onEscolher = { vm.switchMode(DaemonController.Mode.DAEMON) },
+                onEscolher = { vm.escolherModo(DaemonController.Mode.DAEMON) },
             )
             OpcaoDeModo(
                 titulo = stringResource(R.string.wizard_modo_shizuku),
                 detalhe = stringResource(R.string.wizard_modo_shizuku_detalhe),
-                risco = stringResource(R.string.wizard_modo_shizuku_risco),
-                disponivel = temShizuku,
+                risco = stringResource(R.string.wizard_modo_shizuku_risco) + "\n" + stringResource(R.string.motor_precisa_computador),
+                // Escolhível mesmo com o Shizuku parado: o passo seguinte explica como o ligar,
+                // e é isso que falta a quem instala a app de fresco.
+                disponivel = true,
                 recomendado = !temRoot && temShizuku,
                 escolhido = vm.modeKind == DaemonController.Mode.SHIZUKU,
-                onEscolher = { vm.switchMode(DaemonController.Mode.SHIZUKU) },
+                onEscolher = { vm.escolherModo(DaemonController.Mode.SHIZUKU) },
             )
             OpcaoDeModo(
                 titulo = stringResource(R.string.wizard_modo_embutido),
@@ -228,16 +238,19 @@ private fun EscolhaDoModo(vm: MainViewModel) {
                 disponivel = true,
                 recomendado = !temRoot && !temShizuku,
                 escolhido = vm.modeKind == DaemonController.Mode.EMBEDDED,
-                onEscolher = { vm.switchMode(DaemonController.Mode.EMBEDDED) },
+                onEscolher = { vm.escolherModo(DaemonController.Mode.EMBEDDED) },
             )
             Text(
                 stringResource(
-                    if (temRoot) R.string.wizard_modo_detectado_root
-                    else if (temShizuku) R.string.wizard_modo_detectado_shizuku
-                    else R.string.wizard_modo_detectado_nada,
+                    when {
+                        temRoot -> R.string.wizard_modo_detectado_root
+                        rootDesconhecido -> R.string.wizard_modo_detectado_desconhecido
+                        temShizuku -> R.string.wizard_modo_detectado_shizuku
+                        else -> R.string.wizard_modo_detectado_nada
+                    },
                 ),
+                // Prosa, não telemetria: fonte de texto (a frase é longa).
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = Mono,
                 color = MaterialTheme.colorScheme.secondary,
             )
         }
@@ -310,27 +323,161 @@ private fun OpcaoDeModo(
     }
 }
 
+/**
+ * Passo 3 — ligar o motor.
+ *
+ * O autor fez o assistente todo neste passo e ficou sem perceber o que os botões faziam: «Ligar
+ * daemon» e «Obter token (root)» não diziam nada a quem nunca viu isto, e o «Atualizar» parecia
+ * um botão de acção igual aos outros (S10+, 2026-10-16). Agora cada botão diz o que faz, os
+ * rótulos seguem o modo escolhido (não se fala em root a quem escolheu Shizuku), e o actualizar
+ * é o que sempre foi — uma consulta de estado —, por isso virou um ícone no canto do cartão.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LigarMotor(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU
     Passo(
         titulo = stringResource(R.string.wizard_motor_titulo),
         texto = stringResource(R.string.wizard_motor_texto),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            EstadoLinha(stringResource(R.string.daemon_instalado), vm.daemonInstalled == true)
-            EstadoLinha(stringResource(R.string.token_do_canal), vm.tokenOk)
-            EstadoLinha(stringResource(R.string.motor_responde), vm.agentInfo.isNotBlank())
-            // FlowRow e não Row: com três botões, a 360 dp a soma dos rótulos excede a largura e
-            // a `Row` espremia o último até ele desaparecer por completo (medido no S10+ em
-            // 2026-10-15: o «Refresh» saía da árvore de UI). Aqui mudam de linha.
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text(stringResource(R.string.ligar_daemon)) }
-                OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text(stringResource(R.string.obter_token)) }
-                OutlinedButton(onClick = { vm.refreshStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
+        // Consulta o sistema ao entrar neste passo: é aqui que o utilizador está a olhar para o
+        // estado do motor, e é aqui que faz sentido o diálogo do root (se o escolheu).
+        LaunchedEffect(Unit) { vm.refreshStatus(consultarSistema = true) }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Estado, com o botão de consultar no canto — é uma leitura, não uma acção.
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            stringResource(R.string.wizard_motor_estado),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(
+                            onClick = { vm.refreshStatus(consultarSistema = true) },
+                            enabled = !vm.busy,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Refresh,
+                                contentDescription = stringResource(R.string.wizard_motor_atualizar),
+                                tint = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                    EstadoLinha(stringResource(R.string.daemon_instalado), vm.daemonInstalled == true)
+                    EstadoLinha(stringResource(R.string.token_do_canal), vm.tokenOk)
+                    EstadoLinha(stringResource(R.string.motor_responde), vm.agentInfo.isNotBlank())
+                }
+            }
+
+            // O aviso do Shizuku, com o botão que **pede** a permissão. Era isto que faltava por
+            // completo: o pedido estava implementado e ninguém o chamava.
+            if (shizuku && vm.precisoPermissaoShizuku) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Etiqueta(stringResource(R.string.shizuku_falta), cor = MaterialTheme.colorScheme.error)
+                        Text(
+                            stringResource(R.string.shizuku_falta_texto),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Button(
+                            onClick = { vm.requestShizukuPermission(ctx as? android.app.Activity ?: return@Button) },
+                            enabled = !vm.busy,
+                        ) { Text(stringResource(R.string.shizuku_autorizar)) }
+                        if (vm.shizukuState.isNotBlank()) {
+                            Text(
+                                vm.shizukuState,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = Mono,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Como ligar o Shizuku — o que faltava a quem escolhe este modo.
+            if (shizuku) {
+                Passos(
+                    titulo = stringResource(R.string.shizuku_como_titulo),
+                    itens = listOf(
+                        stringResource(R.string.shizuku_como_1),
+                        stringResource(R.string.shizuku_como_2),
+                        stringResource(R.string.shizuku_como_3),
+                    ),
+                )
+            }
+
+            // As acções, cada uma com a sua explicação.
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                OutlinedButton(
+                    onClick = { vm.startDaemon() },
+                    enabled = !vm.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(
+                            if (shizuku) R.string.ligar_motor_shizuku else R.string.ligar_daemon,
+                        ),
+                    )
+                }
+                Text(
+                    stringResource(R.string.ligar_daemon_nota),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                OutlinedButton(
+                    onClick = { vm.obtainToken() },
+                    enabled = !vm.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(
+                            if (shizuku) R.string.obter_token_shizuku else R.string.obter_token,
+                        ),
+                    )
+                }
+                Text(
+                    stringResource(R.string.obter_token_nota),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Uma lista numerada de instruções, como o design as desenha. */
+@Composable
+fun Passos(titulo: String, itens: List<String>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(titulo, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            itens.forEachIndexed { i, t ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "${i + 1}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    )
+                    Text(t, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
@@ -390,7 +537,7 @@ private fun DarChave(vm: MainViewModel) {
 }
 
 @Composable
-private fun EscolherPoderes(vm: MainViewModel) {
+private fun EscolherPoderes(vm: MainViewModel, ctx: android.content.Context) {
     Passo(
         titulo = stringResource(R.string.wizard_poderes_titulo),
         texto = stringResource(R.string.wizard_poderes_texto),
@@ -403,6 +550,9 @@ private fun EscolherPoderes(vm: MainViewModel) {
                 nomes = vm.capabilityNames,
                 autorizadas = vm.capabilityToggles,
                 onToggle = { cap, ligado -> vm.setCapability(cap, ligado) },
+                // A permissão de notificações do Android é pedida **aqui**, quando o utilizador
+                // liga a capacidade — e não mal a app abre, como estava (o autor apanhou-o).
+                onPrecisaNotificacoes = { vm.pedirNotificacoes(ctx as? android.app.Activity ?: return@CapabilityToggles) },
             )
             Text(
                 stringResource(R.string.capacidades_explicacao),
@@ -416,9 +566,11 @@ private fun EscolherPoderes(vm: MainViewModel) {
 @Composable
 private fun EstadoLinha(rotulo: String, feito: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // ✓ para o que está feito, **✗** para o que falta. Era um `•`, que se lê como um item de
+        // lista e não como «isto ainda não aconteceu» (o autor notou-o no S10+ em 2026-10-16).
         Text(
-            if (feito) "\u2713" else "\u2022",
-            color = if (feito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondary,
+            if (feito) "\u2713" else "\u2717",
+            color = if (feito) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.error,
         )
         Spacer(Modifier.size(8.dp))
         Text(rotulo, style = MaterialTheme.typography.bodySmall)

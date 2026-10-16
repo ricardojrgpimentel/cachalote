@@ -161,13 +161,10 @@ class MainActivity : ComponentActivity() {
         // Sem isto, o Compose desenha por baixo do teclado e o botão Enviar fica
         // inalcançável com o teclado aberto (apanhado em teste de UI).
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        // O agente usa notificações (android_notify): pedir já, para não falhar depois.
-        if (android.os.Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
-        }
+        // A permissão de notificações **não** se pede aqui: era o primeiro diálogo que aparecia a
+        // quem instalava a app, antes de ela explicar para que serve, e a capacidade só se liga no
+        // passo 6 do assistente (ou em Ajustes → Capacidades). Pede-se lá — ver
+        // `MainViewModel.pedirNotificacoes`.
         // Serviço em primeiro plano: sem ele o Android pode matar a app a meio de um turno.
         CachaloteAgentService.start(this)
         setContent { CachaloteApp() }
@@ -190,7 +187,7 @@ fun CachaloteApp() {
     CachaloteTema {
         Surface(modifier = Modifier.fillMaxSize()) {
             var tab by rememberSaveable { mutableStateOf(0) }
-            LaunchedEffect(Unit) { vm.refreshStatus() }
+            LaunchedEffect(Unit) { vm.refreshStatus() }   // sem sondar root: ver MainViewModel
 
             // Uma conversa aberta ocupa o ecrã todo — **sem barra de abas e sem o cabeçalho da
             // app**, como um chat do WhatsApp: em cima só o voltar, o título e o estado; em baixo
@@ -232,10 +229,15 @@ fun CachaloteApp() {
                 // passagem toquei várias vezes no sítio errado por causa disso).
                 Box(modifier = Modifier.padding(pad).fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Configuração inicial: o assistente ocupa o ecrã todo enquanto não estiver feita.
+                    // Configuração inicial: o assistente ocupa o ecrã todo enquanto não estiver
+                    // feita — e **só ele**. Antes era desenhado por cima do resto, que continuava
+                    // composto por baixo: o `LaunchedEffect` da aba corria na mesma e a lista de
+                    // conversas ia ao daemon, o que fazia correr o `su` e pedia root a quem acabava
+                    // de instalar a app, antes do assistente (medido no S10+ em 2026-10-16: 2
+                    // `su: request rejected` no arranque de uma instalação nova).
                     if (!vm.wizardConcluido) {
                         Assistente(vm) { vm.concluirWizard() }
-                    }
+                    } else {
                     if (!emConversa) Header(vm, busy = vm.busy)
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
@@ -256,6 +258,7 @@ fun CachaloteApp() {
                         0 -> if (emConversa) ConversaScreen(vm) else ListaDeSessoes(vm)
                         1 -> ResumoScreen(vm)
                         else -> AjustesScreen(vm)
+                    }
                     }
                 }
                 if (vm.error.isNotBlank()) {
@@ -705,6 +708,7 @@ private fun CartaoKernelDownload(vm: MainViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CartaoCapacidades(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current as android.app.Activity
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
@@ -717,7 +721,10 @@ private fun CartaoCapacidades(vm: MainViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, true) } }) {
+                OutlinedButton(onClick = {
+                    vm.capabilityNames.forEach { vm.setCapability(it, true) }
+                    vm.pedirNotificacoes(ctx)   // a capacidade de notificar precisa da permissão
+                }) {
                     Text(stringResource(R.string.autorizar_todas))
                 }
                 OutlinedButton(onClick = { vm.capabilityNames.forEach { vm.setCapability(it, false) } }) {
@@ -729,6 +736,7 @@ private fun CartaoCapacidades(vm: MainViewModel) {
                 nomes = vm.capabilityNames,
                 autorizadas = vm.capabilityToggles,
                 onToggle = { cap, ligado -> vm.setCapability(cap, ligado) },
+                onPrecisaNotificacoes = { vm.pedirNotificacoes(ctx) },
             )
         }
     }
@@ -1313,7 +1321,7 @@ private fun OnboardingCard(vm: MainViewModel) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.primeiros_passos, missing), fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { vm.refreshStatus(); vm.refreshCapabilities() }, enabled = !vm.busy) { Text(stringResource(R.string.verificar)) }
+                TextButton(onClick = { vm.refreshStatus(consultarSistema = true); vm.refreshCapabilities() }, enabled = !vm.busy) { Text(stringResource(R.string.verificar)) }
             }
             checks.forEach { (label, done, action) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1374,12 +1382,41 @@ private fun StatusScreen(vm: MainViewModel) {
                     Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
                 }
                 if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
-                    // Se o arranque falhou por falta de permissão, pedimo-la sem o utilizador ter
-                    // de descobrir o botão (o diálogo do Shizuku precisa de uma Activity).
+                    // Pede a permissão assim que se sabe que falta, sem o utilizador ter de
+                    // descobrir o botão (o diálogo do Shizuku precisa de uma Activity). Guarda-se
+                    // que já se pediu, numa chave que **não** é a `precisoPermissaoShizuku`: essa
+                    // fica a verdadeira enquanto a permissão faltar, para o aviso abaixo se poder
+                    // desenhar. Antes era posta a falso aqui, e o aviso nunca chegava a aparecer —
+                    // quem escolhesse Shizuku no assistente via um diálogo e mais nada.
+                    var jaPedimos by rememberSaveable { mutableStateOf(false) }
                     LaunchedEffect(vm.precisoPermissaoShizuku) {
-                        if (vm.precisoPermissaoShizuku) {
-                            vm.precisoPermissaoShizuku = false
+                        if (vm.precisoPermissaoShizuku && !jaPedimos) {
+                            jaPedimos = true
                             vm.requestShizukuPermission(ctx as android.app.Activity)
+                        }
+                    }
+                    if (vm.precisoPermissaoShizuku) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Etiqueta(stringResource(R.string.shizuku_falta), cor = MaterialTheme.colorScheme.error)
+                                Text(stringResource(R.string.shizuku_falta_texto), style = MaterialTheme.typography.bodySmall)
+                                Button(
+                                    onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
+                                    enabled = !vm.busy,
+                                ) { Text(stringResource(R.string.shizuku_autorizar)) }
+                                Passos(
+                                    titulo = stringResource(R.string.shizuku_como_titulo),
+                                    itens = listOf(
+                                        stringResource(R.string.shizuku_como_1),
+                                        stringResource(R.string.shizuku_como_2),
+                                        stringResource(R.string.shizuku_como_3),
+                                    ),
+                                )
+                            }
                         }
                     }
                     OutlinedButton(
@@ -1457,7 +1494,7 @@ private fun StatusScreen(vm: MainViewModel) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(onClick = { vm.refreshStatus() }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
+            Button(onClick = { vm.refreshStatus(consultarSistema = true) }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
             OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text(stringResource(R.string.ligar_daemon)) }
         }
         FlowRow(

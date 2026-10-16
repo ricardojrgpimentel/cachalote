@@ -146,15 +146,22 @@ class InterfaceTest {
         val mudancas = mutableListOf<Pair<String, Boolean>>()
         compose.setContent {
             CapabilityToggles(
-                nomes = listOf("notify", "screenshot", "vscreen_start"),
-                autorizadas = mapOf("notify" to true, "screenshot" to false, "vscreen_start" to false),
+                nomes = listOf("notify", "screenshot", "vscreen_start", "vscreen_stop"),
+                autorizadas = mapOf(
+                    "notify" to true, "screenshot" to false,
+                    "vscreen_start" to false, "vscreen_stop" to false,
+                ),
                 onToggle = { cap, ligado -> mudancas += cap to ligado },
             )
         }
 
-        compose.onNodeWithText("notify").assertIsDisplayed()
-        compose.onNodeWithText("screenshot").assertIsDisplayed()
-        compose.onNodeWithText("vscreen_start").assertIsDisplayed()
+        // A lista mostra **nomes para pessoas**, não os nomes crus do motor: «notify» e
+        // «vscreen_start» não diziam nada a quem autoriza (visto no S10+ em 2026-10-16).
+        compose.onNodeWithText("Notificações").assertIsDisplayed()
+        compose.onNodeWithText("Capturas").assertIsDisplayed()
+        compose.onNodeWithText("Ecrã virtual").assertIsDisplayed()
+        // E cada uma explica-se, como no design.
+        compose.onNodeWithText("Publica notificações na barra de estado do Android.").assertIsDisplayed()
 
         // O primeiro interruptor (notify, ligado) desliga-se ao tocar; o segundo liga-se.
         compose.onAllNodes(isToggleable())[0].performClick()
