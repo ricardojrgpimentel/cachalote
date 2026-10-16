@@ -416,6 +416,21 @@ private fun LigarMotor(vm: MainViewModel) {
                 )
             }
 
+            // Sem motor instalado, o primeiro cartão é o que o instala — aqui, no telefone. Era
+            // este o passo que obrigava a ligar o telefone a um computador.
+            if (vm.daemonInstalled != true) {
+                CartaoInstalarMotor(
+                    shizuku = shizuku,
+                    fracao = vm.instalacaoFracao,
+                    passo = vm.instalacaoPasso,
+                    podeInstalar = !vm.busy,
+                    onInstalar = { vm.instalarMotor(ctx as? android.app.Activity) },
+                    onAutorizarShizuku = {
+                        (ctx as? android.app.Activity)?.let { vm.requestShizukuPermission(it) }
+                    },
+                )
+            }
+
             // As acções, cada uma com a sua explicação.
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 OutlinedButton(

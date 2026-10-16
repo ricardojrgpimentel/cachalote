@@ -95,20 +95,159 @@ object ShizukuBridge {
                 } else {
                     runCatching { proc.outputStream.close() }
                 }
-                val out = proc.inputStream.bufferedReader().readText()
-                val err = proc.errorStream.bufferedReader().readText()
-                if (!proc.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)) {
-                    proc.destroyForcibly()
+                // stdout e stderr lidos **em paralelo**: ler um até ao fim antes do outro
+                // encravava se o segundo enchesse o tubo (64 KB), e o processo remoto ficava
+                // preso à espera que alguém o lesse.
+                val out = StringBuilder()
+                val err = StringBuilder()
+                val tOut = leitor(proc.inputStream, out)
+                val tErr = leitor(proc.errorStream, err)
+                // O `waitFor` do processo remoto também pode reclamar («process hasn't exited»)
+                // mesmo quando o comando acabou: não se decide nada por ele. Quem decide é o
+                // **output** — os comandos deste ficheiro terminam com `__OK__` (ver `runOuFalha`).
+                if (!esperarSaida(proc, timeoutSeconds * 1000)) {
+                    runCatching { proc.destroyForcibly() }
                     error("tempo esgotado a correr via Shizuku")
                 }
-                if (proc.exitValue() != 0) {
-                    error("shizuku saiu com ${proc.exitValue()}: ${(err + out).trim().takeLast(300)}")
-                }
-                out.trim()
+                tOut.join(3000); tErr.join(3000)
+                // O stderr vai junto quando existe: um comando que falha em silêncio no stdout
+                // (um `chmod` sobre um ficheiro que não existe, por exemplo) deixava o erro sem
+                // uma única pista.
+                val e = err.toString().trim()
+                if (e.isEmpty()) out.toString().trim() else (out.toString() + "\n" + e).trim()
             } finally {
                 runCatching { proc.destroy() }
             }
         }
+
+    /**
+     * Corre um comando e **exige** que ele diga que correu bem.
+     *
+     * O código de saída de um processo do Shizuku não é de confiança (a implementação remota
+     * atira `process hasn't exited` mesmo depois de o comando terminar — foi o que rebentou a
+     * instalação do motor no S10+ em 2026-10-16). Em vez de adivinhar, o comando é embrulhado
+     * para imprimir `__OK__` no fim: se a marca não vier, falhou.
+     */
+    suspend fun runOuFalha(command: String, timeoutSeconds: Long = 300): String {
+        val saida = run("$command && echo __OK__", timeoutSeconds)
+        if (!saida.contains("__OK__")) {
+            error("o comando não chegou ao fim: ${command.take(120)} — saída: ${saida.takeLast(200)}")
+        }
+        return saida.replace("__OK__", "").trim()
+    }
+
+    /**
+     * Espera que um processo do Shizuku saia — **sem** usar o `Process.waitFor(tempo)`.
+     *
+     * O `waitFor(long, TimeUnit)` do Android faz um ciclo a chamar `exitValue()` e só apanha
+     * `IllegalThreadStateException`. O `ShizukuRemoteProcess` atira **`IllegalArgumentException`**
+     * («process hasn't exited»), que passa pelo ciclo fora e rebenta a chamada — sempre, a partir
+     * do momento em que o processo ainda não acabou. Foi isto que partiu a instalação do motor três
+     * vezes seguidas (S10+, 2026-10-16), incluindo dentro do `sendFile`, no primeiro ficheiro.
+     *
+     * Aqui o `exitValue()` é sondado por nós, e o `runCatching` apanha as duas exceções.
+     */
+    private fun esperarSaida(proc: Process, timeoutMs: Long): Boolean {
+        val limite = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < limite) {
+            if (runCatching { proc.exitValue() }.isSuccess) return true
+            Thread.sleep(50)
+        }
+        return runCatching { proc.exitValue() }.isSuccess
+    }
+
+    /** Um leitor de stream numa thread, para stdout e stderr não se encravarem um ao outro. */
+    private fun leitor(entrada: java.io.InputStream, destino: StringBuilder): Thread =
+        Thread {
+            runCatching {
+                entrada.bufferedReader().use { r ->
+                    val buf = CharArray(8192)
+                    while (true) {
+                        val n = r.read(buf)
+                        if (n <= 0) break
+                        synchronized(destino) { destino.append(buf, 0, n) }
+                    }
+                }
+            }
+        }.apply { isDaemon = true; start() }
+
+    /**
+     * Envia um ficheiro para o lado do Shizuku, **pelos bytes do stdin** do comando.
+     *
+     * É o que permite à app instalar o motor sozinha: ela não pode escrever em `/data/local/tmp`,
+     * mas o uid *shell* que o Shizuku lhe dá pode — e os bytes vão por um tubo local, sem passar
+     * por memória (o kernel tem 212 MB).
+     *
+     * [onBytes] é chamado a cada bloco, para a UI poder mostrar progresso a sério em vez de um
+     * botão pendurado.
+     */
+    suspend fun sendFile(
+        command: String,
+        origem: java.io.InputStream,
+        timeoutSeconds: Long = 900,
+        onBytes: (Long) -> Unit = {},
+    ): Long = withContext(Dispatchers.IO) {
+        require(available()) { "o Shizuku não está a correr (abre a app Shizuku e inicia-o)" }
+        require(hasPermission()) { "o Cachalote ainda não tem permissão do Shizuku" }
+        val proc = spawn(command)
+        var total = 0L
+        try {
+            // O stderr é lido enquanto se escreve: se o `cat` reclamar (disco cheio, por exemplo),
+            // o tubo não pode encher e encravar-nos a meio do envio.
+            val err = StringBuilder()
+            val tErr = leitor(proc.errorStream, err)
+            proc.outputStream.use { out ->
+                val buf = ByteArray(1 shl 20)
+                while (true) {
+                    val n = origem.read(buf)
+                    if (n <= 0) break
+                    out.write(buf, 0, n)
+                    total += n
+                    onBytes(total)
+                }
+                out.flush()
+            }
+            if (!esperarSaida(proc, timeoutSeconds * 1000)) {
+                runCatching { proc.destroyForcibly() }
+                error("tempo esgotado a enviar por Shizuku")
+            }
+            tErr.join(3000)
+            val erro = err.toString().trim()
+            if (erro.contains("No space left", ignoreCase = true)) {
+                error("sem espaço no telefone: $erro")
+            }
+            total
+        } finally {
+            runCatching { proc.destroy() }
+        }
+    }
+
+    /**
+     * Arranca um comando **destacado** (`nohup … &`) e espera que ele deixe uma marca.
+     *
+     * A extracção do kernel mexe em 24 000 ficheiros e leva minutos. Mantê-la presa a um processo
+     * do Shizuku (com o binder e os tubos vivos todo esse tempo) era frágil — foi assim que a
+     * primeira instalação morreu a meio. Destacada, o trabalho continua no telefone e a app só
+     * olha para o resultado: mais simples e não se perde se a app for para segundo plano.
+     */
+    suspend fun runDestacado(
+        comando: String,
+        marca: String,
+        timeoutSeconds: Long = 900,
+        onEspera: suspend (Long) -> Unit = {},
+    ): String {
+        require(available()) { "o Shizuku não está a correr" }
+        require(hasPermission()) { "o Cachalote ainda não tem permissão do Shizuku" }
+        run("rm -f $marca; nohup $comando >/dev/null 2>&1; touch $marca && echo iniciado", 60)
+        val limite = System.currentTimeMillis() + timeoutSeconds * 1000
+        while (System.currentTimeMillis() < limite) {
+            kotlinx.coroutines.delay(1500)
+            onEspera(System.currentTimeMillis())
+            val pronto = runCatching { run("test -f $marca.pronto && echo sim", 30) }.getOrDefault("")
+            if (pronto.contains("sim")) return run("cat $marca.pronto", 30)
+        }
+        error("tempo esgotado à espera de: $comando")
+    }
 
     /** O daemon do modo Shizuku está instalado em /data/local/tmp? */
     suspend fun daemonInstalled(): Boolean = runCatching {

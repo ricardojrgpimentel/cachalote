@@ -459,4 +459,15 @@
     <string name="motor_precisa_computador">Este modo precisa de um computador uma vez, para instalar o motor. O modo «Sem nada» não precisa.</string>
     <string name="shizuku_autorizado">autorizado pelo Shizuku</string>
     <string name="shizuku_recusado">permissão do Shizuku recusada</string>
+    <string name="instalar_a_arrancar">a arrancar o motor</string>
+    <string name="instalar_a_arranque">a instalar o arranque no boot</string>
+    <string name="instalar_a_comecar">a começar</string>
+    <string name="instalar_botao">Instalar o motor agora</string>
+    <string name="instalar_espaco">Ocupa ~600 MB no telefone. Costuma levar um ou dois minutos.</string>
+    <string name="instalar_feito">Motor instalado neste telefone.</string>
+    <string name="instalar_nao_sair">Não feches a app enquanto isto corre.</string>
+    <string name="instalar_precisa_shizuku">Autoriza primeiro o Cachalote no Shizuku — é ele que escreve os ficheiros do motor.</string>
+    <string name="instalar_texto_root">A app leva tudo o que é preciso e pode instalá-lo aqui mesmo, com o acesso root que autorizaste.</string>
+    <string name="instalar_texto_shizuku">A app leva tudo o que é preciso e pode instalá-lo aqui mesmo, com o acesso que o Shizuku lhe dá — sem computador e sem root.</string>
+    <string name="instalar_titulo">Instalar o motor neste telefone</string>
 </resources>

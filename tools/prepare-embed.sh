@@ -115,5 +115,26 @@ cp -f "$WS/.work/jniLibs/embed-libs.txt" "$WS/app/app/src/main/assets/embed-libs
 echo "total: $(du -sh "$DST" | cut -f1)"
 echo "manifesto: app/app/src/main/assets/embed-libs.txt"
 cat "$WS/app/app/src/main/assets/embed-libs.txt" | sed 's/^/   /'
+# ---------------------------------------------------------------------------
+# O que a app precisa para instalar o motor **sozinha** (sem computador).
+#
+# O kernel e as bibliotecas ja vao nos assets; o que faltava eram os ficheiros pequenos do daemon
+# (~60 KB) que o `daemon/install.sh` empurrava do computador. Vao para os assets com um prefixo
+# `motor-` para nao se confundirem com os do modo embutido.
+# ---------------------------------------------------------------------------
+A="$WS/app/app/src/main/assets"
+cp -f "$WS/daemon/bridge.cjs"          "$A/motor-bridge.cjs"
+cp -f "$WS/daemon/session-meta.cjs"    "$A/motor-session-meta.cjs"
+cp -f "$WS/daemon/cachalote"           "$A/motor-cachalote"
+cp -f "$WS/daemon/cachalote.service.sh" "$A/motor-service.sh"
+cp -f "$WS/config/cachalote.patch.yml" "$A/motor-cachalote.patch.yml"
+echo "payload do instalador do motor:"
+ls -lh "$A"/motor-* | awk '{printf "   %-40s %s\n", $9, $5}'
+
 gitignore="$WS/.gitignore"
-grep -q "app/src/main/assets/embed-libs.txt" "$gitignore" 2>/dev/null || printf '\n# runtime embutido (gerado por tools/prepare-embed.sh)\napp/app/src/main/assets/embed-libs.txt\n' >> "$gitignore"
+for f in embed-libs.txt; do
+  grep -q "app/src/main/assets/$f" "$gitignore" 2>/dev/null || printf '\n# runtime embutido (gerado por tools/prepare-embed.sh)\napp/app/src/main/assets/%s\n' "$f" >> "$gitignore"
+done
+if ! grep -q "app/src/main/assets/motor-" "$gitignore" 2>/dev/null; then
+  printf '\n# payload do instalador do motor (gerado por tools/prepare-embed.sh)\napp/app/src/main/assets/motor-*\n' >> "$gitignore"
+fi

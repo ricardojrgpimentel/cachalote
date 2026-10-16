@@ -219,6 +219,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val embeddedMode: Boolean get() = modeKind == DaemonController.Mode.EMBEDDED
     var embeddedInfo by mutableStateOf("")
     var shizukuState by mutableStateOf("")
+
+    /** Progresso da instalação do motor (null = não está a instalar). */
+    var instalacaoFracao by mutableStateOf<Float?>(null)
+    var instalacaoPasso by mutableStateOf("")
     var allowedRootsText by mutableStateOf("")
     var allowedRootsSaved by mutableStateOf("")
     var capabilityToggles by mutableStateOf<Map<String, Boolean>>(emptyMap())
@@ -709,6 +713,66 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         controller.connect()
         agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
         refreshKeyStatus()
+    }
+
+    /**
+     * Instala o motor **no telefone**, sem computador.
+     *
+     * É a resposta à maior lacuna da primeira utilização: quem instala a app e só tem o telefone
+     * ficava limitado ao modo embutido, porque o motor era instalado por um script a partir do
+     * computador. A app já levava tudo o que é preciso (kernel, Node, ficheiros do daemon); o que
+     * faltava era canalização — ver [MotorSelfInstall].
+     */
+    fun instalarMotor(activity: android.app.Activity?) = run("instalar motor") {
+        val app = getApplication<Application>()
+        val destino = when (modeKind) {
+            DaemonController.Mode.SHIZUKU -> MotorSelfInstall.Destino.SHIZUKU
+            DaemonController.Mode.DAEMON -> MotorSelfInstall.Destino.ROOT
+            else -> MotorSelfInstall.Destino.ROOT
+        }
+        // No modo Shizuku é ele que escreve no destino — sem autorização não há instalação.
+        if (destino == MotorSelfInstall.Destino.SHIZUKU && !controller.shizukuHasPermission()) {
+            precisoPermissaoShizuku = true
+            shizukuState = app.getString(R.string.shizuku_sem_permissao)
+            runCatching { activity?.let { vmScopePedirShizuku(it) } }
+            error = app.getString(R.string.instalar_precisa_shizuku)
+            return@run
+        }
+        instalacaoFracao = 0f
+        instalacaoPasso = app.getString(R.string.instalar_a_comecar)
+        try {
+            MotorSelfInstall.instalar(app, destino) { p ->
+                instalacaoPasso = p.passo
+                instalacaoFracao = p.fracao
+            }
+            // No modo root instala-se também o arranque no boot (é o que o Magisk corre).
+            if (destino == MotorSelfInstall.Destino.ROOT) {
+                instalacaoPasso = app.getString(R.string.instalar_a_arranque)
+                runCatching { MotorSelfInstall.instalarArranque(app, MotorSelfInstall.baseDe(destino)) }
+            }
+            instalacaoPasso = app.getString(R.string.instalar_a_arrancar)
+            controller.startDaemon()
+            // O token do canal e a ligação: sem isto o passo 3 ficava com dois ✗ e o utilizador
+            // tinha de carregar em dois botões que já não faziam falta nenhuma. Tem de ser aqui o
+            // mesmo que o `obtainToken` faz — inclusive **pôr as bandeiras da UI** (`tokenOk`),
+            // que era o que faltava: o token era lido mas o ecrã continuava a dizer ✗.
+            val t = controller.ensureToken(ignorarCache = true)
+            tokenState = app.getString(R.string.token_obtido_n, t.length)
+            tokenOk = true
+            controller.connect()
+            agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
+            refreshStatus(consultarSistema = true)
+            runCatching { refreshKeyStatus() }
+            transcript.add(ChatLine("system", app.getString(R.string.instalar_feito)))
+        } finally {
+            instalacaoFracao = null
+            instalacaoPasso = ""
+        }
+    }
+
+    /** Pede a permissão do Shizuku a partir de uma Activity (o diálogo exige uma). */
+    fun vmScopePedirShizuku(activity: android.app.Activity) {
+        if (controller.shizukuAvailable()) ShizukuBridge.requestPermission(activity)
     }
 
     fun startDaemon() = run("arrancar daemon") {

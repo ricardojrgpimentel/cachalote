@@ -459,4 +459,15 @@
     <string name="motor_precisa_computador">This mode needs a computer once, to install the engine. The "Nothing at all" mode does not.</string>
     <string name="shizuku_autorizado">authorised by Shizuku</string>
     <string name="shizuku_recusado">Shizuku permission denied</string>
+    <string name="instalar_a_arrancar">starting the engine</string>
+    <string name="instalar_a_arranque">installing the boot autostart</string>
+    <string name="instalar_a_comecar">starting</string>
+    <string name="instalar_botao">Install the engine now</string>
+    <string name="instalar_espaco">It takes about 600 MB on the phone, and usually one or two minutes.</string>
+    <string name="instalar_feito">Engine installed on this phone.</string>
+    <string name="instalar_nao_sair">Do not close the app while this runs.</string>
+    <string name="instalar_precisa_shizuku">Authorise Cachalote in Shizuku first - it is what writes the engine files.</string>
+    <string name="instalar_texto_root">The app carries everything it needs and can install it right here, with the root access you granted.</string>
+    <string name="instalar_texto_shizuku">The app carries everything it needs and can install it right here, with the access Shizuku gives it - no computer and no root.</string>
+    <string name="instalar_titulo">Install the engine on this phone</string>
 </resources>

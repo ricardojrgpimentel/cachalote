@@ -1381,6 +1381,17 @@ private fun StatusScreen(vm: MainViewModel) {
                 if (vm.shizukuState.isNotBlank()) {
                     Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
                 }
+                // Sem motor instalado, o cartão que o instala — a app já leva tudo o que precisa.
+                if (vm.daemonInstalled != true) {
+                    CartaoInstalarMotor(
+                        shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU,
+                        fracao = vm.instalacaoFracao,
+                        passo = vm.instalacaoPasso,
+                        podeInstalar = !vm.busy && (vm.modeKind != DaemonController.Mode.SHIZUKU || !vm.precisoPermissaoShizuku),
+                        onInstalar = { vm.instalarMotor(ctx as android.app.Activity) },
+                        onAutorizarShizuku = { vm.requestShizukuPermission(ctx as android.app.Activity) },
+                    )
+                }
                 if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
                     // Pede a permissão assim que se sabe que falta, sem o utilizador ter de
                     // descobrir o botão (o diálogo do Shizuku precisa de uma Activity). Guarda-se

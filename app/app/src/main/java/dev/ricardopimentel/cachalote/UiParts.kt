@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -1151,5 +1153,84 @@ private fun spansParaTexto(spans: List<Span>): AnnotatedString = buildAnnotatedS
                 fontFamily = if (s.codigo) mono else null,
             ),
         ) { append(s.texto) }
+    }
+}
+
+/**
+ * O cartão que instala o motor **no telefone**, sem computador.
+ *
+ * Aparece quando o motor ainda não está instalado — o caso de quem acabou de instalar a app. Diz o
+ * que vai acontecer (quanto pesa, quanto demora) antes de acontecer, e mostra progresso a sério
+ * enquanto acontece: são ~540 MB, e um botão que parece pendurado é pior do que não existir.
+ */
+@Composable
+fun CartaoInstalarMotor(
+    shizuku: Boolean,
+    fracao: Float?,
+    passo: String,
+    podeInstalar: Boolean,
+    onInstalar: () -> Unit,
+    onAutorizarShizuku: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primaryContainer),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(
+                    Icons.Filled.Download,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    stringResource(R.string.instalar_titulo),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                stringResource(if (shizuku) R.string.instalar_texto_shizuku else R.string.instalar_texto_root),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (fracao == null) {
+                if (shizuku && !podeInstalar) {
+                    // Sem autorização do Shizuku não há instalação: ele é quem escreve no destino.
+                    Button(onClick = onAutorizarShizuku, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.shizuku_autorizar))
+                    }
+                }
+                Button(
+                    onClick = onInstalar,
+                    enabled = podeInstalar,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.instalar_botao)) }
+                Text(
+                    stringResource(R.string.instalar_espaco),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            } else {
+                LinearProgressIndicator(
+                    progress = { fracao },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "$passo  ·  ${(fracao * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = Mono,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Text(
+                    stringResource(R.string.instalar_nao_sair),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+        }
     }
 }

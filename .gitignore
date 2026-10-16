@@ -30,3 +30,6 @@ app/app/src/main/assets/kernel.remote.json
 # Cópias de segurança da chave de assinatura (e afins): nunca entram no repositório.
 *.enc
 cachalote-chave.jks.enc
+
+# payload do instalador do motor (gerado por tools/prepare-embed.sh)
+app/app/src/main/assets/motor-*
