@@ -198,7 +198,7 @@ do dono e os erros ficam como estão. Seis testes de JVM.
 
 ## Bloco E — a maior lacuna por resolver (2026-10-16)
 
-### E1 · O motor precisa de um computador — e não devia ⬜
+### E1 · O motor precisa de um computador — e não devia 🔄 (Shizuku feito; root por verificar)
 
 **O que se passa.** Escolher root ou Shizuku no assistente não chega: o motor (o *daemon*) tem de
 ser instalado numa pasta de sistema, e a app **não o sabe fazer**. Hoje isso é um script no
@@ -242,7 +242,26 @@ para o pôr fora do seu sandbox. Não é arquitetura — é uma funcionalidade p
   ver se os dois podem partilhar a mesma cópia.
 - Uma saída à mão: quem quiser (ou precisar) continua a poder usar o `daemon/install.sh`.
 
-**Por fazer.** É a próxima peça de trabalho a sério da primeira utilização.
+**Feito (2026-10-16) — modo Shizuku.** A app instala o motor sozinha: o assistente, passo 3, tem
+um cartão «Instalar o motor neste telefone» que envia o kernel pelos bytes do stdin de um processo
+do Shizuku, manda extrair lá com o `/usr/bin/unzip` do telefone, copia o `libnode.so` e as
+bibliotecas para `runtime/`, põe o perfil `home/cordis.patch.yml` (sem ele o agente **não tem as
+ferramentas `android_*`** — o instalador do computador fazia-o e eu só o vi porque corri o
+`doctor`), corrige os caminhos `/data/adb/cachalote` → base e escreve a marca de origem do kernel.
+
+Verificado no S10+ com o telefone limpo e o daemon apagado: assistente → Shizuku → instalar →
+daemon, token e motor os três a ✓, em menos de um minuto. E o agente a correr no motor que a app
+instalou, a chamar `android_status` e a responder «32 ferramentas».
+
+Três armadilhas que só apareceram no aparelho, e que valem para o modo root: o
+`Process.waitFor(tempo)` do Android não serve para processos do Shizuku (atira
+`IllegalArgumentException`, não `IllegalThreadStateException`), o código de saída deles não é de
+confiança (os comandos passaram a dizer eles próprios que correram bem), e a extracção tem de ir
+destacada, com ficheiro-marca.
+
+**Por fazer:** o **modo root** pelo mesmo mecanismo (destino `/data/adb/cachalote` mais o script
+do `service.d` para o arranque no boot, com o `su` que o utilizador autoriza). O código já lá
+está (`MotorSelfInstall` trata dos dois destinos) — falta verificar no aparelho.
 
 ---
 
