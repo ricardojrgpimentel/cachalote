@@ -259,9 +259,15 @@ Três armadilhas que só apareceram no aparelho, e que valem para o modo root: o
 confiança (os comandos passaram a dizer eles próprios que correram bem), e a extracção tem de ir
 destacada, com ficheiro-marca.
 
-**Por fazer:** o **modo root** pelo mesmo mecanismo (destino `/data/adb/cachalote` mais o script
-do `service.d` para o arranque no boot, com o `su` que o utilizador autoriza). O código já lá
-está (`MotorSelfInstall` trata dos dois destinos) — falta verificar no aparelho.
+**Modo root — bloqueado no Magisk, não no código.** O `MotorSelfInstall` trata dos dois destinos e
+o teste foi feito: o Magisk **recusa** o `su` da app — `su: request rejected (10179)`, cinco
+tentativas seguidas —, enquanto o mesmo comando pelo `adb shell` passa. É uma política do Magisk
+para o uid da app (uma decisão anterior, «negar», que ele guarda e aplica em silêncio, sem voltar a
+perguntar), e não um defeito da app: a faixa de erro do app diz exatamente isso
+(«su saiu com 13: Permission denied»).
+
+Para o verificar é preciso, **no Magisk**, autorizar o Cachalote (Superuser → Cachalote →
+permitir). Fica registado porque é o único passo que falta e não depende do código.
 
 ---
 
