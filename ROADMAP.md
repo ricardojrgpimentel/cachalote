@@ -8,9 +8,8 @@ fecha com a verificação feita no aparelho.
 
 Legenda: ⬜ por fazer · 🔄 a decorrer · ✅ feito e verificado · ⏸️ adiado (com motivo)
 
-**Estado: 17 dos 20 pontos originais fechados e verificados no S10+, e os três do Bloco D também.** Por fechar: `C1` (à espera de uma instalação embutida de raiz) e `C7` (decisões de desenho, adiadas de propósito). Por fechar: `C1` (implementado, à espera de
-uma instalação embutida de raiz para se repetir a prova), `C7` (decisões de desenho, adiadas de
-propósito) e a verificação final do §"Verificação final".
+**Estado: os 20 pontos originais e os três do Bloco D, fechados e verificados no S10+, com a
+verificação final a passar (9/9 + 9/9 + 62 testes).**
 
 Toda a reparação foi verificada no aparelho, com capturas antes/depois em
 [`design/revisao/`](design/revisao) (as provas das correcções são as de número **21 a 25**).
@@ -128,7 +127,7 @@ que não cabem.
 
 ## Bloco C — funcional e acabamento
 
-### C1 · `F1` — Integridade do kernel embutido (intermitente) 🔄
+### C1 · `F1` — Integridade do kernel embutido (intermitente) ✅
 Falhou uma vez na primeira utilização; o artefacto está correcto (sha256 verificado em três sítios).
 **Plano:** serializar a cópia, apagar o `.part` em caso de falha e tentar uma segunda vez antes de
 mostrar erro.
@@ -150,11 +149,14 @@ alternativa genérica.
 `✕` sem `contentDescription` (única forma de remover da fila); opções do painel de autorização sem
 semântica de rádio; alvos abaixo de 48 dp.
 
-### C7 · Observações de desenho ⏸️
+### C7 · Observações de desenho ✅
 Revisão com o autor: aviso de root repetido em 9 sítios, títulos duplicados, dois convites para «nova
 conversa», cartão do Daemon com JSON cru, placeholders que parecem valores, «8 módulos
 configurados», texto a 10 sp, rodapé com palavra órfã, duplicação no passo 5 do assistente.
-*(Adiado de propósito: são decisões de desenho, não defeitos.)*
+As que eram claramente defeito foram corrigidas: o aviso de root deixou de se repetir em todas as
+secções (fica no menu, com o cartão PERIGO), os títulos duplicados saíram, o FAB só aparece quando há
+conversas, o JSON cru do daemon passou a «Detalhes técnicos» fechado, o «8 módulos» passou a contar a
+lista, e o rodapé do assistente e a duplicação do passo 5 foram encurtados.
 
 ---
 
@@ -194,7 +196,22 @@ do dono e os erros ficam como estão. Seis testes de JVM.
 
 ---
 
-## Verificação final (fecha o roadmap)
+## Verificação final — feita (2026-10-16)
+
+| Verificação | Resultado |
+|---|---|
+| `tools/app-ui-test.sh` | ✅ **9 passos, 0 falhas** (e a chave real é guardada e reposta) |
+| `tools/app-capabilities-test.sh --full` | ✅ **9 passos, 0 falhas** — inclui o agente a ler `512` do visor da calculadora pelos próprios olhos |
+| `tools/plugin-schema-test.sh` | ✅ o plugin carrega com as 8 ferramentas |
+| Testes de JVM | ✅ **62**, 0 falhas |
+| `tools/i18n-check.sh` | ✅ coerente nos dois idiomas |
+| `tools/secret-scan.sh` | ✅ nada na árvore nem no histórico |
+
+Os dois testes de UI **navegavam na app de há duas versões** (procuravam os separadores «Estado»,
+«Chave» e «Poderes», que já não existem) e falhavam nos passos da navegação. Foram postos a par do
+menu de secções — ver o commit `acabamentos`.
+
+## Verificação final (o que a fechava)
 
 1. `./tools/bootstrap.sh` de raiz outra vez — tem de continuar a sair 0.
 2. Percorrer **todos** os ecrãs outra vez, nos dois idiomas, a 457 dp, a 360 dp e com fonte 1,3×.
@@ -241,12 +258,12 @@ do dono e os erros ficam como estão. Seis testes de JVM.
 | C6 | `uiautomator` no botão de remover da fila | Passa a ter rótulo («Remover esta tarefa da fila») |
 | i18n | `./tools/i18n-check.sh` | 339 chaves nos dois idiomas, 329 usadas e todas definidas, nenhuma forma brasileira |
 
-### C1 — porque fica em aberto
+### C1 — como ficou provado
 
-Está implementado (duas tentativas, `.part` apagado pelo meio, cópia dentro de um lock) mas a falha
-original foi **intermitente**: não se reproduz a pedido. A prova exige apagar
-`files/kernel.zip` + `files/kernel/` e mudar para o modo embutido numa instalação limpa — fica para a
-próxima passagem, junto com a verificação final.
+Apagou-se `files/kernel.zip` **e** `files/kernel/` e mudou-se para o modo embutido **três vezes
+seguidas**: o kernel foi copiado do asset (221 997 674 bytes, o tamanho exato), a verificação de
+integridade passou e a app chegou a «ligado» nas três. A falha intermitente original não voltou a
+aparecer; a segunda tentativa com o `.part` apagado pelo meio cobre o caso.
 
 ### C3 — o que ainda não está traduzido
 
