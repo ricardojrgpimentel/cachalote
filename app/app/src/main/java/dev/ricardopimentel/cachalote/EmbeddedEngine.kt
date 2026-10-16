@@ -309,6 +309,11 @@ class EmbeddedEngine(private val ctx: Context) {
             streams?.let { if (proc?.isAlive == true) return@withContext it }
         }
         stop()
+        // Um motor embutido de uma execução anterior da app (a app foi morta pelo sistema e o
+        // `libnode` ficou) não tem dono: ninguém lhe fala, e continua a segurar o `$DSH_HOME`. Foi
+        // o que se viu no S10+ em 2026-10-16 — um `libnode` do dia anterior a correr, e a app a
+        // arrancar outro a cada poucos segundos sem conseguir ligar-se a nenhum.
+        matarMotoresOrfaos()
         require(isPrepared()) { "kernel não extraído" }
         val farm = libraryFarm()
         val node = File(ctx.applicationInfo.nativeLibraryDir, "libnode.so")
@@ -364,6 +369,37 @@ class EmbeddedEngine(private val ctx: Context) {
         val s = CachaloteClient.Streams(p.inputStream, p.outputStream, close = { runCatching { p.destroy() } })
         streams = s
         s
+    }
+
+    /**
+     * Mata os motores embutidos que ficaram de execuções anteriores **nossas**.
+     *
+     * O `libnode` corre com o uid da app, por isso a app pode matá-lo — mas só depois de confirmar
+     * que é mesmo dele: o `/proc/<pid>/status` diz o uid, e um uid diferente nunca é tocado.
+     */
+    private fun matarMotoresOrfaos() {
+        val meuPid = android.os.Process.myPid()
+        val meuUid = android.os.Process.myUid()
+        runCatching {
+            File("/proc").listFiles()?.forEach { entrada ->
+                val pid = entrada.name.toIntOrNull() ?: return@forEach
+                if (pid == meuPid) return@forEach
+                val linhaCmd = runCatching {
+                    File(entrada, "cmdline").readText().replace('\u0000', ' ')
+                }.getOrNull() ?: return@forEach
+                // Só o nosso motor: o binário da app e o kernel que ela extraiu.
+                if (!linhaCmd.contains("libnode.so") || !linhaCmd.contains(kernelRoot.absolutePath)) return@forEach
+                val uid = runCatching {
+                    File(entrada, "status").readLines()
+                        .firstOrNull { it.startsWith("Uid:") }
+                        ?.split("\t", " ")
+                        ?.getOrNull(1)?.toIntOrNull()
+                }.getOrNull() ?: return@forEach
+                if (uid != meuUid) return@forEach
+                android.util.Log.i("cachalote-kernel", "a terminar um motor embutido órfão (pid $pid)")
+                android.os.Process.killProcess(pid)
+            }
+        }
     }
 
     fun stop() {

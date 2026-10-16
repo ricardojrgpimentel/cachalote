@@ -3,6 +3,12 @@ package dev.ricardopimentel.cachalote
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -922,5 +928,136 @@ internal fun recursoDaFerramenta(nome: String): Int? {
         n.contains("read") || n.contains("write") || n.contains("edit") || n.contains("patch") ->
             R.string.trabalho_ficheiros
         else -> null
+    }
+}
+
+/**
+ * Texto em markdown, para as mensagens do agente.
+ *
+ * Só o **agente** passa por aqui: o que o dono escreve mostra-se como ele o escreveu (se escrever
+ * `**x**` quer mesmo os asteriscos). Os erros também ficam em texto — são mensagens técnicas, não
+ * prosa formatada.
+ */
+@Composable
+fun TextoComMarkdown(texto: String, cor: Color = Color.Unspecified) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        analisarMarkdown(texto).forEach { bloco ->
+            when (bloco) {
+                is Bloco.Paragrafo -> Text(
+                    spansParaTexto(bloco.spans),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cor,
+                )
+                is Bloco.Titulo -> Text(
+                    spansParaTexto(bloco.spans),
+                    style = when (bloco.nivel) {
+                        1 -> MaterialTheme.typography.titleMedium
+                        2 -> MaterialTheme.typography.titleSmall
+                        else -> MaterialTheme.typography.bodyMedium
+                    },
+                    fontWeight = FontWeight.SemiBold,
+                    color = cor,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+                is Bloco.ItemDeLista -> Row(
+                    modifier = Modifier.padding(start = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        bloco.marcador,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                    Text(
+                        spansParaTexto(bloco.spans),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = cor,
+                    )
+                }
+                is Bloco.Citacao -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // A barra da citação, como no desenho.
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .heightIn(min = 18.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.outlineVariant),
+                    )
+                    Text(
+                        spansParaTexto(bloco.spans),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontStyle = FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                is Bloco.Codigo -> Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        bloco.linhas.joinToString("\n"),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.secondary,
+                        softWrap = false,
+                    )
+                }
+                is Bloco.Tabela -> TabelaDeMarkdown(bloco.linhas, cor)
+                Bloco.Separador -> HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+        }
+    }
+}
+
+/** Uma tabela do markdown: o cabeçalho a bold, um separador, e as linhas por baixo. */
+@Composable
+private fun TabelaDeMarkdown(linhas: List<List<String>>, cor: Color) {
+    if (linhas.isEmpty()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        linhas.forEachIndexed { i, celulas ->
+            if (i == 1) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                celulas.forEach { c ->
+                    Text(
+                        spansParaTexto(analisarInline(c)),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (i == 0) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (i == 0) cor else MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Junta os pedaços de uma linha num texto com a ênfase de cada um. */
+@Composable
+private fun spansParaTexto(spans: List<Span>): AnnotatedString = buildAnnotatedString {
+    val mono = Mono
+    spans.forEach { s ->
+        withStyle(
+            SpanStyle(
+                fontWeight = if (s.negrito) FontWeight.Bold else null,
+                fontStyle = if (s.italico) FontStyle.Italic else null,
+                fontFamily = if (s.codigo) mono else null,
+            ),
+        ) { append(s.texto) }
     }
 }

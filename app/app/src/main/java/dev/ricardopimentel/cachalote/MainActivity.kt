@@ -1487,11 +1487,17 @@ private fun CartaoDeMensagem(line: ChatLine) {
                 ehUser -> Etiqueta(stringResource(R.string.etiqueta_tu))
                 else -> Etiqueta(stringResource(R.string.etiqueta_agente))
             }
-            Text(
-                line.text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (ehErro) MaterialTheme.colorScheme.error else Color.Unspecified,
-            )
+            // O agente escreve em markdown: passa pelo renderizador. O dono e os erros ficam em
+            // texto — o que ele escreveu mostra-se como escreveu.
+            if (line.role == "assistant") {
+                TextoComMarkdown(line.text)
+            } else {
+                Text(
+                    line.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (ehErro) MaterialTheme.colorScheme.error else Color.Unspecified,
+                )
+            }
         }
     }
 }
