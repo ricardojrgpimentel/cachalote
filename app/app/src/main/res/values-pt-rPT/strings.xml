@@ -397,4 +397,8 @@
     <string name="trabalho_tocar">A tocar no ecrã</string>
     <string name="trabalho_trabalhar">A trabalhar</string>
     <string name="trabalho_ver">A ver o ecrã</string>
+    <string name="erro_motor_sem_ligacao">o motor (%1$s) não está a responder: %2$s</string>
+    <string name="motor_embutido_nome">embutido, dentro da app</string>
+    <string name="motor_root_nome">root</string>
+    <string name="motor_shizuku_nome">Shizuku</string>
 </resources>

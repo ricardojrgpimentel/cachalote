@@ -348,14 +348,15 @@ class EmbeddedEngine(private val ctx: Context) {
 
         val p = pb.start()
         proc = p
-        // O stderr do motor vai para um ficheiro, para diagnóstico.
+        // O stderr do motor vai para um ficheiro, para diagnóstico — **a cada linha**, e não só
+        // quando o processo acaba. Com `readText()` o ficheiro ficava vazio enquanto o motor
+        // estivesse vivo (ou pendurado), que é precisamente quando se quer ler o que ele diz:
+        // foi o que tornou este modo impossível de diagnosticar no S10+ em 2026-10-16.
         val log = File(ctx.filesDir, "engine-embedded.log")
         Thread {
             runCatching {
-                p.errorStream.bufferedReader().use { r ->
-                    // stderr do motor num ficheiro (com tecto, para não encher o telefone).
-                    val text = r.readText()
-                    if (log.length() < 1_000_000) log.appendText(text)
+                p.errorStream.bufferedReader().forEachLine { linha ->
+                    if (log.length() < 1_000_000) log.appendText(linha + "\n")
                 }
             }
         }.apply { isDaemon = true; start() }

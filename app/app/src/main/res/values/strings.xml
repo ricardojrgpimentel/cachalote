@@ -397,4 +397,8 @@
     <string name="trabalho_tocar">Tapping the screen</string>
     <string name="trabalho_trabalhar">Working</string>
     <string name="trabalho_ver">Looking at the screen</string>
+    <string name="erro_motor_sem_ligacao">the engine (%1$s) is not responding: %2$s</string>
+    <string name="motor_embutido_nome">embedded, inside the app</string>
+    <string name="motor_root_nome">root</string>
+    <string name="motor_shizuku_nome">Shizuku</string>
 </resources>

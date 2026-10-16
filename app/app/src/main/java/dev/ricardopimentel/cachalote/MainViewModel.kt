@@ -112,6 +112,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * falta uma autorização). Consumido uma vez por quem o lê — ver `AjustesScreen`.
      */
     var pedidoDeSecao by mutableStateOf<String?>(null)
+
+    /** Última causa de falha de ligação e quantas vezes seguidas — ver o laço de reconexão. */
+    private var erroDeLigacao by mutableStateOf("")
+    private var falhasDeLigacao = 0
     fun pedirSecao(secao: String) { pedidoDeSecao = secao }
     var reconnecting by mutableStateOf(false)
     var pendingImage by mutableStateOf<PendingImage?>(null)
@@ -262,7 +266,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     kotlinx.coroutines.delay(2_000)
                     continue
                 }
-                val ok = runCatching {
+                // `runCatching` guarda o erro, e não só um booleano: quando o motor não sobe (ou
+                // sobe e não responde), o laço tentava para sempre **em silêncio** e o utilizador
+                // via «desligado» sem uma única pista (visto no S10+ em 2026-10-16, no modo
+                // embutido: um `libnode` novo a cada poucos segundos e nada no ecrã).
+                val tentativa = runCatching {
                     reconnecting = true
                     controller.ensureConnected()
                     controller.ensureAcp()
@@ -295,8 +303,32 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             }
                         }
                     }
-                }.isSuccess
+                }
+                val ok = tentativa.isSuccess
                 reconnecting = false
+                // Depois de três tentativas seguidas sem ligar, diz-se o que se passa — uma vez,
+                // e não a cada volta (senão vira ruído). Some quando a ligação volta.
+                if (ok) {
+                    falhasDeLigacao = 0
+                    if (erroDeLigacao.isNotBlank()) { erroDeLigacao = ""; error = "" }
+                } else {
+                    falhasDeLigacao++
+                    val causa = tentativa.exceptionOrNull()?.message.orEmpty()
+                    if (falhasDeLigacao == 3 || (causa.isNotBlank() && causa != erroDeLigacao)) {
+                        erroDeLigacao = causa
+                        error = getApplication<Application>().getString(
+                            R.string.erro_motor_sem_ligacao,
+                            getApplication<Application>().getString(
+                                when (modeKind) {
+                                    DaemonController.Mode.EMBEDDED -> R.string.motor_embutido_nome
+                                    DaemonController.Mode.SHIZUKU -> R.string.motor_shizuku_nome
+                                    else -> R.string.motor_root_nome
+                                },
+                            ),
+                            explicaErroDoMotor(causa.ifBlank { "?" }),
+                        )
+                    }
+                }
                 waitMs = if (ok) 1_000L else (waitMs * 2).coerceAtMost(30_000L)
                 kotlinx.coroutines.delay(waitMs)
             }
