@@ -228,7 +228,7 @@
     <string name="wizard_bemvindo_p3">Os teus prompts e as imagens que anexas vão para a API do provedor; nada mais sai por iniciativa da app.</string>
     <string name="wizard_bemvindo_texto">O Cachalote põe o agente do DeepSeek Harness a correr dentro deste telemóvel. Nas próximas páginas escolhes como ele corre, dás-lhe acesso ao ecrã e pões a tua chave do provedor. Leva dois minutos.</string>
     <string name="wizard_bemvindo_titulo">Bem-vindo ao Cachalote</string>
-    <string name="wizard_chave_texto">É com ela que o agente fala com a DeepSeek. A chave é enviada ao daemon, que a escreve em home/.env com modo 600 — a app não a guarda.</string>
+    <string name="wizard_chave_texto">É com ela que o agente fala com a DeepSeek. Cola-a aqui e o daemon guarda-a.</string>
     <string name="wizard_chave_titulo">A tua chave do provedor</string>
     <string name="wizard_comecar">Começar a conversar</string>
     <string name="wizard_continuar">Continuar</string>
@@ -260,7 +260,7 @@
     <string name="wizard_pronto_titulo">Pronto</string>
     <string name="wizard_recomendado">RECOMENDADO</string>
     <string name="wizard_repetir">Repetir a configuração inicial</string>
-    <string name="wizard_rodape">Nada disto é obrigatório: podes saltar e configurar depois, nos Ajustes.</string>
+    <string name="wizard_rodape">Nada disto é obrigatório — podes configurar depois.</string>
     <string name="wizard_saltar">Saltar</string>
     <string name="web_a_arrancar">a arrancar o motor web…</string>
     <string name="web_a_obter">a obter o URL do motor web…</string>
@@ -412,4 +412,5 @@
     <string name="pensamento_esconder">Esconder o pensamento</string>
     <string name="pensamento_ver">Ver o que ele pensou</string>
     <string name="sessao_apagada">conversa %1$s apagada</string>
+    <string name="detalhes_tecnicos">Detalhes técnicos</string>
 </resources>

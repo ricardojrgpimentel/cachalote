@@ -98,6 +98,32 @@ tap_text() {
 }
 has() { python3 "$WS/tools/ui.py" "$UI" exists "$1" 2>/dev/null; }
 
+# Vai a uma secção dos Ajustes.
+#
+# Antes isto procurava os separadores «Estado» e «Chave», que **já não existem**: a barra de baixo
+# passou a ter Conversa/Resumo/Ajustes e o resto virou um menu de secções (ver STATUS §60 e §69).
+# O teste andava à procura de um ecrã que já não havia — e falhava nos passos 2, 3 e 4.
+ir_para_secao() {
+  foreground_app || true
+  sleep 1
+  hide_kb
+  # Garantir que estamos nos Ajustes (a barra de baixo tem o rótulo exacto).
+  tap_exact "Ajustes" >/dev/null 2>&1 || true
+  sleep 1
+  # Se estivermos dentro de outra secção, o BACK volta ao menu (há BackHandler).
+  local i
+  for i in 1 2 3; do
+    dump
+    has "módulos" && break
+    "${ADB[@]}" shell input keyevent 4 >/dev/null 2>&1
+    sleep 1
+  done
+  # Correspondência EXACTA: o `find` é substring e sem isto «Motor» casava com o cabeçalho
+  # «motor DSH no telefone · ligado» e o toque caía no vazio (era o que fazia o passo 3 falhar).
+  tap_exact "$1" || true
+  sleep 1
+}
+
 # ⚠ SEGURANÇA: este teste grava (e remove) uma chave de teste no daemon. Se já existir
 # uma chave real, guardamo-la e repomo-la no fim — nunca deixar o utilizador sem chave.
 HAD_KEY=0
@@ -122,6 +148,7 @@ sleep 4
 dump && has "Cachalote" && check 0 "ecrã principal abriu" || check 1 "ecrã principal abriu"
 
 echo "== 2. estado do daemon =="
+ir_para_secao "Motor"
 tap_text "Atualizar" || true
 sleep 2; dump
 has "daemon" && check 0 "estado do daemon visível" || check 1 "estado do daemon visível"
@@ -133,25 +160,40 @@ echo "== 3. obter token (root) =="
 #      estado guardado sobrevive à recriação da actividade, e rolar nunca chega ao botão;
 #  (b) logo a seguir ao arranque o botão pode ainda estar abaixo da dobra.
 # Por isso: garantir o separador Estado e só depois procurar o botão, verificando o resultado.
-ensure_token_tab() { foreground_app || true; sleep 1; tap_exact "Estado" || true; }
+ensure_token_tab() { ir_para_secao "Motor"; }
 ensure_token_tab
-for attempt in 1 2 3; do
-  tap_text "Obter token" || true
-  sleep 5; dump
-  has "obtido" && break
+# Procurar o estado em TODA a secção, rolando — o cartão «Acesso» fica abaixo da dobra.
+procurar_token() {
+  local i
+  for i in 1 2 3 4; do
+    dump
+    has "obtido" && return 0
+    "${ADB[@]}" shell input swipe 720 2000 720 1200 200 >/dev/null 2>&1
+    sleep 1
+  done
+  dump
+  has "obtido"
+}
+# Se o token **já** está obtido, o botão nem aparece (o «Primeiros passos» só mostra o que falta):
+# procurar primeiro e só tocar se ainda não estiver. Era isto que fazia o passo falhar com o token
+# obtido — andava à procura de um botão que já não existia.
+if ! procurar_token; then
   ensure_token_tab
-done
+  tap_text "Obter token" || true
+  sleep 5
+  procurar_token || true
+fi
 has "obtido" && check 0 "token obtido" || check 1 "token obtido"
 
 echo "== 4. ecrã da chave: colar e guardar =="
-# O teclado pode estar aberto (separador Conversa) e tapa a barra de navegação.
+# O teclado pode estar aberto (separador Conversa) e tapa a barra de baixo.
 hide_kb; sleep 1
 foreground_app || true
 hide_kb; sleep 1
-# Ir para o separador Chave e CONFIRMAR que lá estamos (antes, um toque falhado deixava o
-# teste a escrever no vazio e a apagar a chave do utilizador sem se aperceber).
+# Ir à secção da chave e CONFIRMAR que lá estamos (antes, um toque falhado deixava o teste a
+# escrever no vazio e a apagar a chave do utilizador sem se aperceber).
 for attempt in 1 2 3; do
-  tap_exact "Chave" || true
+  ir_para_secao "Chave do provedor"
   dump
   python3 "$WS/tools/ui.py" "$UI" exists "DEEPSEEK_API_KEY" && break
   foreground_app || true
@@ -241,7 +283,7 @@ if [ "$KEEP" = 0 ]; then
   # não há teclado nenhum para esconder — o `hide_kb` sai daqui.
   # (A chave real do utilizador está a salvo em .env.bak e é reposta pelo trap no fim.)
   for attempt in 1 2 3; do
-    tap_exact "Chave" || true
+    ir_para_secao "Chave do provedor"
     sleep 1; dump
     tap_text "Remover chave" || true
     for i in $(seq 1 6); do

@@ -65,12 +65,29 @@ else
     && check 0 "serviço de acessibilidade ligado (activado agora)" || check 1 "serviço de acessibilidade ligado"
 fi
 
-echo "== 1. autorizar todas as capacidades na app (separador Poderes) =="
-# O separador Poderes é uma lista longa: o "Autorizar todas" pode ficar abaixo da dobra,
+echo "== 1. autorizar todas as capacidades na app (Ajustes -> Capacidades) =="
+# A navegação mudou: já não há separador «Poderes» (ver STATUS §60). As capacidades vivem em
+# Ajustes, no menu de secções. E a lista é longa: o «Autorizar todas» pode ficar abaixo da dobra,
 # por isso insistimos com um scroll entre tentativas.
 FOUND=1
+ir_para_capacidades() {
+  "${ADB[@]}" shell "am start -n $PKG/.MainActivity" >/dev/null 2>&1; sleep 2
+  T "Ajustes" || true; sleep 1
+  local i
+  for i in 1 2 3; do
+    L
+    python3 "$WS/tools/ui.py" "$UI" exists "módulos" && break
+    "${ADB[@]}" shell input keyevent 4 >/dev/null 2>&1; sleep 1
+  done
+  # Correspondência exacta: o `find` é substring e «Capacidades» também está em
+  # «(no separador Capacidades)» e no subtítulo da linha.
+  local c
+  c="$(python3 "$WS/tools/ui.py" "$UI" find-exact "Capacidades autorizadas" 2>/dev/null)" || true
+  if [ -n "$c" ]; then set -- $c; "${ADB[@]}" shell input tap "$1" "$2" >/dev/null 2>&1; fi
+  sleep 2
+}
 for _ in 1 2 3; do
-  T "Poderes" || true
+  ir_para_capacidades
   T "Autorizar todas" || true
   sleep 1
   L

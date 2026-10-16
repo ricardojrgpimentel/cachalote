@@ -512,7 +512,7 @@ private fun AjustesScreen(vm: MainViewModel) {
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    stringResource(R.string.ajustes_modulos, 8),
+                    stringResource(R.string.ajustes_modulos, ENTRADAS_DE_AJUSTE.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -619,11 +619,6 @@ private fun AjustesScreen(vm: MainViewModel) {
                     CartaoLicencas(vm)
                 }
             }
-            Text(
-                stringResource(R.string.aviso_root),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-            )
         }
     }
 }
@@ -649,7 +644,6 @@ private fun CartaoAcessibilidade() {
     val accessibilityOn = CachaloteAccessibilityService.isEnabled()
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(R.string.acessibilidade), fontWeight = FontWeight.SemiBold)
             Text(
                 if (accessibilityOn) stringResource(R.string.acessibilidade_servico_ligado)
                 else stringResource(R.string.acessibilidade_servico_desligado),
@@ -713,7 +707,6 @@ private fun CartaoKernelDownload(vm: MainViewModel) {
 private fun CartaoCapacidades(vm: MainViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(stringResource(R.string.capacidades_titulo), fontWeight = FontWeight.SemiBold)
             Text(
                 stringResource(R.string.capacidades_explicacao),
                 style = MaterialTheme.typography.bodySmall,
@@ -772,7 +765,6 @@ private fun CartaoRegisto(vm: MainViewModel) {
 private fun CartaoAreasBash(vm: MainViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(stringResource(R.string.areas_bash), fontWeight = FontWeight.SemiBold)
             Text(
                 stringResource(R.string.areas_bash_texto),
                 style = MaterialTheme.typography.bodySmall,
@@ -800,7 +792,6 @@ private fun CartaoAreasBash(vm: MainViewModel) {
 private fun CartaoMcp(vm: MainViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(stringResource(R.string.mcp_titulo), fontWeight = FontWeight.SemiBold)
             Text(
                 stringResource(R.string.mcp_texto),
                 style = MaterialTheme.typography.bodySmall,
@@ -1355,7 +1346,6 @@ private fun StatusScreen(vm: MainViewModel) {
         OnboardingCard(vm)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.motor), fontWeight = FontWeight.SemiBold)
                 Text(
                     when (vm.modeKind) {
                         DaemonController.Mode.DAEMON -> stringResource(R.string.modo_daemon_texto)
@@ -1406,14 +1396,36 @@ private fun StatusScreen(vm: MainViewModel) {
                 }
             }
         }
+        // O JSON cru do daemon estava sempre à vista, no meio das definições. É diagnóstico:
+        // fica atrás de um «Detalhes técnicos», fechado (o autor notou-o na revisão).
         Card(modifier = Modifier.fillMaxWidth()) {
+            var tecnicos by rememberSaveable { mutableStateOf(false) }
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(if (vm.embeddedMode) "Motor" else "Daemon", fontWeight = FontWeight.SemiBold)
-                Text(
-                    vm.daemonInfo,
-                    fontFamily = Mono,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { tecnicos = !tecnicos },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.detalhes_tecnicos),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        if (tecnicos) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                if (tecnicos) {
+                    Text(
+                        vm.daemonInfo,
+                        fontFamily = Mono,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -1581,11 +1593,8 @@ private fun KeyScreen(vm: MainViewModel) {
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.chave_provedor),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
+                    // O título saiu: a secção («Chave do provedor») e o cabeçalho da página
+                    // («Acesso ao provedor») já o dizem. Fica o chip do HTTPS.
                     Chip(stringResource(R.string.chave_https))
                 }
                 Text(

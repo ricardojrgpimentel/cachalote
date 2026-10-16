@@ -362,6 +362,34 @@ web-start)
   done
   echo "não ficou pronta em 40s — ver $BASE/logs/web.log"; exit 1
   ;;
+web-stop)
+  # Faltava: o `web-stop` estava na lista de comandos do `uso` mas não existia, e o motor web
+  # (um Node inteiro com o perfil `web`) não tinha como ser parado pela CLI — ficava a correr
+  # depois de se sair do ecrã do «Modo completo» (visto no S10+ em 2026-10-16).
+  parou=0
+  if [ -f "$WEBPID" ]; then
+    P="$(cat "$WEBPID" 2>/dev/null)"
+    if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then kill "$P" 2>/dev/null; parou=1; fi
+  fi
+  # Também pelo caminho: o pid do ficheiro pode estar velho (ou o processo ter sido levantado
+  # por outro caminho) e o motor tem de sair à mesma.
+  for p in $(ls /proc 2>/dev/null | grep -E '^[0-9]+$'); do
+    [ "$p" = "$$" ] && continue
+    if [ -r "/proc/$p/cmdline" ] && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q -- "--profile web"; then
+      kill "$p" 2>/dev/null && parou=1
+    fi
+  done
+  sleep 2
+  # Quem não saiu a bem, sai à força.
+  for p in $(ls /proc 2>/dev/null | grep -E '^[0-9]+$'); do
+    [ "$p" = "$$" ] && continue
+    if [ -r "/proc/$p/cmdline" ] && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q -- "--profile web"; then
+      kill -9 "$p" 2>/dev/null || true
+    fi
+  done
+  rm -f "$WEBPID" "$BASE/home/web.url"
+  [ "$parou" = 1 ] && echo "interface web parada" || echo "interface web já estava parada"
+  ;;
 web-url)
   # URL autenticado da interface web (a app usa-o no WebView).
   if [ -s "$BASE/home/web.url" ]; then cat "$BASE/home/web.url";
@@ -423,5 +451,5 @@ key-status)
   NAME="${2:-DEEPSEEK_API_KEY}"
   if grep -q "^$NAME=" "$BASE/home/.env" 2>/dev/null; then echo "presente"; else echo "ausente"; fi
   ;;
-*) echo "uso: cachalote start|stop|restart|watchdog [seg]|ctl <método> [params]|doctor|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|key-set|key-remove|key-status"; exit 2 ;;
+*) echo "uso: cachalote start|stop|restart|watchdog [seg]|ctl <método> [params]|doctor|status|logs [n]|env|app-token [--rotate]|app-info|web-start|web-stop|web-status|web-url|key-set|key-remove|key-status"; exit 2 ;;
 esac

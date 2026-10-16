@@ -228,7 +228,7 @@
     <string name="wizard_bemvindo_p3">Your prompts and attached images go to the provider API; nothing else leaves on the app\'s own initiative.</string>
     <string name="wizard_bemvindo_texto">Cachalote runs the DeepSeek Harness agent inside this phone. In the next pages you choose how it runs, give it access to the screen and set your provider key. It takes two minutes.</string>
     <string name="wizard_bemvindo_titulo">Welcome to Cachalote</string>
-    <string name="wizard_chave_texto">It is how the agent talks to DeepSeek. The key is sent to the daemon, which writes it to home/.env with mode 600 — the app does not keep it.</string>
+    <string name="wizard_chave_texto">It is how the agent talks to DeepSeek. Paste it here and the daemon stores it.</string>
     <string name="wizard_chave_titulo">Your provider key</string>
     <string name="wizard_comecar">Start chatting</string>
     <string name="wizard_continuar">Continue</string>
@@ -260,7 +260,7 @@
     <string name="wizard_pronto_titulo">Ready</string>
     <string name="wizard_recomendado">RECOMMENDED</string>
     <string name="wizard_repetir">Run the first-time setup again</string>
-    <string name="wizard_rodape">None of this is mandatory: you can skip it and set things up later in Settings.</string>
+    <string name="wizard_rodape">None of this is mandatory — you can set it up later.</string>
     <string name="wizard_saltar">Skip</string>
     <string name="web_a_arrancar">starting the web engine…</string>
     <string name="web_a_obter">getting the web engine URL…</string>
@@ -412,4 +412,5 @@
     <string name="pensamento_esconder">Hide the thought</string>
     <string name="pensamento_ver">See what it thought</string>
     <string name="sessao_apagada">conversation %1$s deleted</string>
+    <string name="detalhes_tecnicos">Technical details</string>
 </resources>

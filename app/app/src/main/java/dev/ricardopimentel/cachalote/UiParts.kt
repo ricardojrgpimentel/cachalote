@@ -589,13 +589,17 @@ fun ListaDeConversas(
             }
         }
 
-        ExtendedFloatingActionButton(
-            onClick = onNova,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.nova_sessao))
-            Spacer(Modifier.size(8.dp))
-            Text(stringResource(R.string.conversa_nova))
+        // Com a lista vazia há o botão centrado logo acima; dois convites para a mesma coisa é
+        // ruído (e o FAB fica por cima do texto do estado vazio).
+        if (conversas.isNotEmpty()) {
+            ExtendedFloatingActionButton(
+                onClick = onNova,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.nova_sessao))
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.conversa_nova))
+            }
         }
     }
 }
