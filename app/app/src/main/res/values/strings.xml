@@ -337,6 +337,8 @@
     <string name="sessao_fechada">session %1$s closed</string>
     <string name="sessao_fechada_nova">session %1$s closed — the next message opens a new one</string>
     <string name="sessao_retomada">session %1$s resumed</string>
+    <string name="historico_truncado">history truncated — showing the last %1$d messages of this conversation</string>
+    <string name="historico_indisponivel">in embedded mode the app cannot read this conversation\'s history (the file is compressed and there is no daemon to read it)</string>
     <string name="turno_cancelado">turn cancelled</string>
     <string name="voz_nao_percebi">I did not catch that — try again</string>
     <string name="voz_sem_reconhecedor">there is no voice recogniser on this device</string>

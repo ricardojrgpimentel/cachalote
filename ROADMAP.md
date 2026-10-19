@@ -8,8 +8,8 @@ fecha com a verificação feita no aparelho.
 
 Legenda: ⬜ por fazer · 🔄 a decorrer · ✅ feito e verificado · ⏸️ adiado (com motivo)
 
-**Estado: os 20 pontos originais e os três do Bloco D, fechados e verificados no S10+, com a
-verificação final a passar (9/9 + 9/9 + 62 testes).**
+**Estado: os 20 pontos originais, os três do Bloco D e o F1 fechados e verificados no S10+, com a
+verificação final a passar (9/9 + 9/9 + 62 testes; 67 testes depois do F1).**
 
 Toda a reparação foi verificada no aparelho, com capturas antes/depois em
 [`design/revisao/`](design/revisao) (as provas das correcções são as de número **21 a 25**).
@@ -268,6 +268,35 @@ perguntar), e não um defeito da app: a faixa de erro do app diz exatamente isso
 
 Para o verificar é preciso, **no Magisk**, autorizar o Cachalote (Superuser → Cachalote →
 permitir). Fica registado porque é o único passo que falta e não depende do código.
+
+---
+
+## Bloco F — a maior lacuna que sobrava (2026-10-19)
+
+### F1 · Abrir uma conversa antiga mostrava só «sessão X retomada» ✅
+
+**O que era.** O ACP não tem `session/load` (está na lista do que o `dsh-acp` recusa), e a app não
+lia o histórico: tocar numa conversa antiga abria-a vazia, com uma linha de sistema. Foi o passo
+seguinte apontado em [`STATUS.md`](STATUS.md) §69.6 — e o que mais se notava no uso diário.
+
+**Feito.** O daemon lê o ficheiro da sessão (o mesmo leitor de frames zstd dos metadados) e devolve
+os eventos na forma em que eles chegaram em direto; a app enche o transcript ao retomar. Um
+`cachalote.sessions.history` novo no `bridge.cjs`, um [`Historico.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/Historico.kt)
+do lado da app. O que o motor injecta (`runtime-context`, `system-prompt`) fica de fora, o estado
+das ferramentas vem do resultado, e o corte (300 eventos / 512 KB) diz que cortou.
+
+**Prova:** a conversa antiga do S10+ aberta pelo Shizuku, com o pedido, os dois pensamentos, o
+cartão `Android capabilities` **CONCLUÍDA** e a resposta em markdown →
+[`design/revisao/41-historico-da-conversa.png`](design/revisao/41-historico-da-conversa.png).
+`session-meta-test.cjs` (16 asserções novas) e 5 testes de JVM (`HistoricoTest`); 67 testes no total.
+
+**De caminho, um bug antigo:** o `lerSessao` ficava com o **primeiro** `session/title`, que é o de
+recurso («usa aa ferramenta…»); o do provedor vem depois e é o bom («Contagem total de ferramentas
+Android»). Passou a preferir o do provedor — via-se na lista e no cabeçalho.
+
+**O que continua fora:** o modo embutido não tem daemon que leia o ficheiro (é zstd e o Kotlin não
+o descomprime), e a app di-lo em vez de fingir. Um daemon já instalado só ganha o método novo
+quando o motor for reinstalado pela app (`motor-bridge.cjs` e `motor-session-meta.cjs` são assets).
 
 ---
 

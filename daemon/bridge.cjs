@@ -303,6 +303,20 @@ function control(method, params) {
         }
         return mod.sessionMeta(path.join(BASE, "home"));
       });
+    case "cachalote.sessions.history": {
+      // O histórico de uma conversa antiga, lido do ficheiro da sessão. O ACP não tem
+      // `session/load` (está na lista do que o `dsh-acp` recusa), por isso sem isto abrir uma
+      // sessão antiga só dizia «sessão X retomada». Vai fora do ciclo de eventos (promessa) e o
+      // `require` é tardio, como nos metadados.
+      const id = String(params && params.sessionId ? params.sessionId : "");
+      return Promise.resolve().then(() => {
+        const mod = require("./session-meta.cjs");
+        return mod.historicoSessao(path.join(BASE, "home"), id, {
+          maxEvents: params && Number.isFinite(params.maxEvents) ? params.maxEvents : undefined,
+          maxBytes: params && Number.isFinite(params.maxBytes) ? params.maxBytes : undefined,
+        });
+      });
+    }
     case "cachalote.sessions.delete": {
       // Apagar uma conversa. O ACP não tem `deletion` (está na lista do que o dsh-acp recusa), por
       // isso o que se pode fazer é tirar os ficheiros da sessão -- e é o daemon (root) que os pode

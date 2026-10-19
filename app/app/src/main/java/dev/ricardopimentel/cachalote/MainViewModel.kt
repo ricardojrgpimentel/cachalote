@@ -1126,10 +1126,40 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (!jaEraEsta) {
             transcript.clear()
             transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_retomada, id.take(8))))
+            carregarHistorico(id)
         }
         anotarAvisoMcp()
         conversaAberta = true
         saveState()
+    }
+
+    /**
+     * Enche o transcript com o que já estava escrito na sessão.
+     *
+     * É a única forma de abrir uma conversa antiga: o ACP não tem `session/load` (o `dsh-acp`
+     * recusa-o), mas o daemon lê o ficheiro da sessão e devolve os eventos na mesma forma em que
+     * eles chegaram em direto. Sem isto, tocar numa conversa antiga mostrava só «sessão X retomada».
+     *
+     * Falhar não é fatal: fica-se com a nota do `resumeSession` e a conversa continua utilizável.
+     */
+    private suspend fun carregarHistorico(id: String) {
+        if (modeKind == DaemonController.Mode.EMBEDDED) {
+            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.historico_indisponivel)))
+            return
+        }
+        val res = runCatching { controller.sessionHistory(id) }.getOrNull() ?: return
+        val lido = Historico.ler(res)
+        if (lido.linhas.isEmpty()) return // sessão sem conversa gravada: fica a nota do resume
+        transcript.clear()
+        if (lido.truncado) {
+            transcript.add(
+                ChatLine(
+                    "system",
+                    getApplication<Application>().getString(R.string.historico_truncado, lido.total),
+                ),
+            )
+        }
+        transcript.addAll(lido.linhas)
     }
 
     /**

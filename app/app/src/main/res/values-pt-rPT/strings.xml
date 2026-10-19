@@ -337,6 +337,8 @@
     <string name="sessao_fechada">sessão %1$s fechada</string>
     <string name="sessao_fechada_nova">sessão %1$s fechada — a próxima mensagem abre uma nova</string>
     <string name="sessao_retomada">sessão %1$s retomada</string>
+    <string name="historico_truncado">histórico truncado — mostra as últimas %1$d mensagens desta conversa</string>
+    <string name="historico_indisponivel">no modo embutido a app não consegue ler o histórico desta conversa (o ficheiro é comprimido e não há daemon que o leia)</string>
     <string name="turno_cancelado">turno cancelado</string>
     <string name="voz_nao_percebi">não percebi nada — tenta outra vez</string>
     <string name="voz_sem_reconhecedor">não há reconhecedor de voz neste dispositivo</string>

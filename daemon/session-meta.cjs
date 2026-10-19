@@ -157,9 +157,17 @@ function lerSessao(dir, id, opts = {}) {
       if (typeof registo.id === "string" && registo.id) dados.sessionId = registo.id;
       if (typeof registo.cwd === "string" && registo.cwd) dados.cwd = registo.cwd;
     }
-    if (registo.type === "session/title" && !tituloDoMotor) {
+    if (registo.type === "session/title") {
+      // O motor grava **dois**: primeiro um de recurso (o primeiro prompt cortado) e só depois o
+      // que ele mesmo gerou (`source.kind === "provider"`). Ficar com o primeiro dava o título de
+      // recurso na lista — era o que se via no S10+ (o cabeçalho mostrava «usa aa ferramenta…» em
+      // vez de «Contagem total de ferramentas Android»). O do provedor ganha; sem ele, fica o
+      // primeiro de recurso, que já é melhor do que nada.
       const t = registo.data && registo.data.title;
-      if (typeof t === "string" && t.trim()) tituloDoMotor = t.trim();
+      const fonte = registo.data && registo.data.source && registo.data.source.kind;
+      if (typeof t === "string" && t.trim() && (fonte === "provider" || !tituloDoMotor)) {
+        tituloDoMotor = t.trim();
+      }
     }
     if (!tituloDoPedido && (registo.type === "user/message" || registo.type === "agent/inbox/spliced")) {
       const data = registo.data || {};
@@ -183,6 +191,178 @@ function lerSessao(dir, id, opts = {}) {
   dados.title = tituloDoMotor || tituloDoPedido;
   dados.preview = ultimaMensagem.replace(/\s+/g, " ").trim().slice(0, 200);
   return dados;
+}
+
+/**
+ * A pasta de uma sessão (`sessions/<slug>/<id>`), ou `null` se não existir. O `id` é validado para
+ * nunca se seguir um caminho escolhido por quem chama.
+ */
+function pastaDaSessao(dshHome, id) {
+  if (typeof id !== "string" || !/^[A-Za-z0-9._-]{6,80}$/.test(id)) {
+    throw new Error("id de sessão inválido");
+  }
+  const raiz = path.join(dshHome, "sessions");
+  let slugs;
+  try {
+    slugs = fs.readdirSync(raiz, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  for (const slug of slugs) {
+    if (!slug.isDirectory()) continue;
+    const pasta = path.join(raiz, slug.name, id);
+    if (fs.existsSync(pasta)) return pasta;
+  }
+  return null;
+}
+
+// Limites do histórico: uma conversa antiga pode ter megabytes. O que interessa ao abrir uma
+// sessão é o **fim** dela, por isso corta-se pelo princípio — e diz-se que se cortou.
+const LIMITE_TEXTO_LIDO = 16 * 1024 * 1024; // texto descomprimido que se chega a analisar
+const LIMITE_EVENTOS = 300; // igual ao que o `SessionStore` da app guarda
+const LIMITE_BYTES_EVENTOS = 512 * 1024;
+const LIMITE_POR_PAPEL = { user: 8000, assistant: 32000, thought: 6000, tool: 200 };
+
+/** Corta o texto de um evento ao que faz sentido mostrar, marcando que se cortou. */
+function cortarTexto(role, texto) {
+  const limite = LIMITE_POR_PAPEL[role] ?? 8000;
+  if (texto.length <= limite) return texto;
+  return texto.slice(0, limite) + "…";
+}
+
+/**
+ * O histórico de uma sessão, na mesma forma em que ele chegou ao cliente em direto:
+ * `user`, `thought`, `assistant` e `tool` (com `toolId`, `estado` e `done`).
+ *
+ * É o que o ACP não dá: o `session/load` está na lista das superfícies que o `dsh-acp` recusa, e
+ * sem isto abrir uma conversa antiga só dizia «sessão X retomada». O daemon é quem pode ler os
+ * ficheiros, pela mesma via dos metadados (ver [textoDaSessao]).
+ *
+ * Nunca lança por conteúdo estranho: um registo ilegível é saltado. Um cartão de ferramenta sem
+ * resultado fica `in_progress` — é a verdade do ficheiro, não um erro a esconder.
+ */
+function historicoSessao(dshHome, id, opts = {}) {
+  const pasta = pastaDaSessao(dshHome, id);
+  if (!pasta) throw new Error("não encontrei a sessão " + id);
+  const zst = path.join(pasta, FICHEIRO_ZSTD);
+  const plain = path.join(pasta, FICHEIRO_PLAIN);
+  const arquivo = fs.existsSync(zst) ? zst : fs.existsSync(plain) ? plain : null;
+  if (!arquivo) throw new Error("a sessão " + id + " não tem ficheiro de registo");
+
+  let texto = textoDaSessao(arquivo, opts.maxFrames ?? 4096);
+  if (texto.length > LIMITE_TEXTO_LIDO) texto = texto.slice(texto.length - LIMITE_TEXTO_LIDO);
+
+  const eventos = [];
+  const ferramentas = new Map();
+  let titulo = "";
+  let totalEventos = 0;
+
+  // Junta pedaços do mesmo papel (o texto do agente chega em pedaços), separando blocos distintos.
+  // O que o dono escreveu **nunca** se junta: cada prompt é o seu balão, mesmo que dois seguidos
+  // não tenham tido resposta (turno interrompido).
+  const juntar = (role, t) => {
+    if (!t) return;
+    const limpo = cortarTexto(role, t);
+    if (!limpo) return;
+    const anterior = eventos[eventos.length - 1];
+    if (anterior && anterior.role === role && role !== "user" && role !== "system") {
+      anterior.text = anterior.text ? anterior.text + "\n\n" + limpo : limpo;
+      return;
+    }
+    eventos.push({ role, text: limpo });
+    totalEventos += 1;
+  };
+
+  for (const linha of texto.split("\n")) {
+    if (!linha.trim()) continue;
+    let registo;
+    try {
+      registo = JSON.parse(linha);
+    } catch {
+      continue;
+    }
+    const data = registo.data || {};
+    if (registo.type === "session/title") {
+      // Mesma preferência dos metadados: o título do provedor ganha ao de recurso.
+      const t = data.title;
+      const fonte = data.source && data.source.kind;
+      if (typeof t === "string" && t.trim() && (fonte === "provider" || !titulo)) titulo = t.trim();
+      continue;
+    }
+    if (registo.type === "user/message") {
+      // O motor guarda no mesmo sítio o que o dono escreveu e o que ele próprio injecta
+      // (`runtime-context`, `system-prompt`). Só o primeiro é conversa.
+      const kind = data.source && data.source.kind;
+      if (kind && kind !== "user") continue;
+      juntar("user", primeiroTexto(data.content));
+      continue;
+    }
+    if (registo.type === "assistant/message" || registo.type === "assistant/attempt") {
+      const blocos = data.message && Array.isArray(data.message.content) ? data.message.content : [];
+      let textoDoAgente = "";
+      for (const bloco of blocos) {
+        if (!bloco) continue;
+        if (bloco.type === "reasoning") juntar("thought", String(bloco.text || "").trim());
+        else if (bloco.type === "text") textoDoAgente += bloco.text || "";
+      }
+      juntar("assistant", textoDoAgente.trim());
+      // Sessões anteriores à versão 4 guardam a resposta em pedaços (`stream[].chunk`), não em
+      // blocos; o `assistant/attempt` é o que existe lá (e o que o `lerSessao` já lê). Um
+      // `assistant/message` **com** blocos também pode trazer o `stream` (turno interrompido) —
+      // nesse caso os blocos já são o texto montado e ler o stream duplicava-o.
+      if (blocos.length > 0) continue;
+      let textoDoStream = "";
+      for (const s of data.stream || []) {
+        const c = s && s.chunk;
+        if (!c) continue;
+        if (c.type === "text") textoDoStream += c.text || "";
+        else if (c.type === "reasoning") juntar("thought", String(c.text || "").trim());
+      }
+      juntar("assistant", textoDoStream.trim());
+      continue;
+    }
+    if (registo.type === "tool/call") {
+      const callId = String(data.callId || "");
+      const nome = String(data.name || "").trim() || "ferramenta";
+      const cartao = { role: "tool", text: cortarTexto("tool", nome), toolId: callId, estado: "in_progress", done: false };
+      eventos.push(cartao);
+      totalEventos += 1;
+      if (callId) ferramentas.set(callId, cartao);
+      continue;
+    }
+    if (registo.type === "tool/result") {
+      const mensagem = data.message || {};
+      const callId = String(mensagem.toolCallId || data.toolCallId || "");
+      const cartao = ferramentas.get(callId);
+      if (!cartao) continue; // a chamada ficou para trás no corte: um resultado sozinho não diz nada
+      cartao.estado = mensagem.isError === true ? "failed" : "completed";
+      cartao.done = true;
+      const nome = data.meta && data.meta.title;
+      if (typeof nome === "string" && nome.trim()) cartao.text = cortarTexto("tool", nome.trim());
+      continue;
+    }
+  }
+
+  let truncado = false;
+  const limiteEventos = Math.max(1, opts.maxEvents ?? LIMITE_EVENTOS);
+  if (eventos.length > limiteEventos) {
+    eventos.splice(0, eventos.length - limiteEventos);
+    truncado = true;
+  }
+  const limiteBytes = Math.max(4096, opts.maxBytes ?? LIMITE_BYTES_EVENTOS);
+  let bytes = eventos.reduce((n, e) => n + e.text.length + 40, 0);
+  while (bytes > limiteBytes && eventos.length > 20) {
+    bytes -= eventos.shift().text.length + 40;
+    truncado = true;
+  }
+
+  // O título também se pode tirar do primeiro pedido, como nos metadados — só quando o motor não
+  // gravou nenhum (é o caso das sessões interrompidas antes de o título ser gerado).
+  if (!titulo) {
+    const primeiro = eventos.find((e) => e.role === "user");
+    if (primeiro) titulo = primeiro.text.slice(0, 120);
+  }
+  return { sessionId: id, title: titulo, events: eventos, totalEvents: totalEventos, truncated: truncado };
 }
 
 /**
@@ -254,4 +434,12 @@ function apagarSessao(dshHome, id) {
   throw new Error("não encontrei a sessão " + id);
 }
 
-module.exports = { sessionMeta, lerSessao, textoDaSessao, scanZstdFrames, apagarSessao };
+module.exports = {
+  sessionMeta,
+  lerSessao,
+  historicoSessao,
+  pastaDaSessao,
+  textoDaSessao,
+  scanZstdFrames,
+  apagarSessao,
+};

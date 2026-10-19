@@ -2,10 +2,17 @@
 
 > ## Estado (S10+ ligado por USB)
 >
-> **§69 é o trabalho desta ronda**: as **fontes do design** (Space Grotesk, Geist, JetBrains Mono)
-> passaram a estar empacotadas, o **menu dos Ajustes** foi refeito como as Definições do Android
+> **§70 é o trabalho desta ronda**: o **histórico das conversas** deixou de ser uma linha de sistema
+> — abrir uma sessão antiga mostra a conversa toda (pedido, pensamentos, cartões de ferramenta com
+> o estado e a resposta em markdown). O daemon passou a ler o ficheiro da sessão por um método novo
+> (`cachalote.sessions.history`) e a app enche o transcript ao retomar. De caminho, o título do
+> provedor passou a ganhar ao de recurso («Contagem total de ferramentas Android» em vez de «usa aa
+> ferramenta…»). Verificado no S10+ por Shizuku, com **67 testes de JVM**.
+>
+> **§69** tinha posto as **fontes do design** (Space Grotesk, Geist, JetBrains Mono)
+> empacotadas, o **menu dos Ajustes** refeito como as Definições do Android
 > (linhas de 72dp, ícone em círculo tonal, chevron e separadores recuados) e a lista de conversas
-> ganhou **prévias reais**. Pelo caminho caíram dois bugs que a lista nova desenterrou: o
+> com **prévias reais**. Pelo caminho caíram dois bugs que a lista nova desenterrou: o
 > `session/list` do motor não é a verdade (listou 24 de 78 sessões) e abrir a conversa já activa
 > dava erro. Verificado no S10+ com 52 testes de JVM e 0 crashes.
 >
@@ -2308,7 +2315,82 @@ testes do `session-meta` cobrem os dois casos (com e sem resposta do agente).
 
 | Item | Nota |
 |---|---|
-| **Histórico das conversas antigas** | ao abrir uma sessão antiga o transcript só diz «sessão X retomada»: o ACP não tem `session/load` e a app não lê o histórico. Agora que o daemon **já lê os ficheiros das sessões** (69.3), o caminho está aberto: é o passo seguinte mais óbvio |
+| **Histórico das conversas antigas** | ✅ **feito em §70**: o daemon lê o ficheiro da sessão e a app enche o transcript ao retomar — os eventos entram na mesma forma em que chegaram em direto |
 | Linha de telemetria do turno | continua à espera do motor (§64) |
 | Escolha de modelo/esforço e Licenças (diálogos) | são os dois únicos ecrãs **sem desenho** — ainda são `AlertDialog` de Material puro |
 | Filtros da lista | ficaram de fora de propósito (§68.1) |
+
+---
+
+## 70. O histórico das conversas: abrir uma sessão antiga deixa de ser uma linha de sistema
+
+Era a maior lacuna que sobrava (§69.6). O ACP **não tem `session/load`** — está na lista das
+superfícies que o `dsh-acp` recusa, a par de apagar, fork e modos. Sem ele, tocar numa conversa
+antiga retomava a sessão e mostrava uma única linha: «sessão c3744d0d retomada». A conversa estava
+toda em disco, mas ninguém a lia.
+
+O caminho já estava aberto desde §69.3: o daemon lê os ficheiros das sessões para os metadados
+(`daemon/session-meta.cjs`), incluindo o leitor de **frames zstd concatenados**. Foi só levar o
+mesmo leitor mais longe.
+
+### 70.1 Do lado do daemon: `cachalote.sessions.history`
+
+Um método novo no [`bridge.cjs`](daemon/bridge.cjs) e o `historicoSessao()` no
+[`session-meta.cjs`](daemon/session-meta.cjs). Devolve `{sessionId, title, events, totalEvents,
+truncated}` com os eventos **na mesma forma em que chegaram ao cliente em direto**, porque é isso
+que o transcript da app sabe desenhar:
+
+| Registo no ficheiro | Vira |
+|---|---|
+| `user/message` com `source.kind: "user"` | `user` |
+| tudo o resto com `user/message` (`runtime-context`, `system-prompt`) | **fora** — não é conversa |
+| `assistant/message` (`reasoning` / `text`) | `thought` / `assistant` (blocos juntos, markdown intacto) |
+| `assistant/attempt` (`stream[].chunk`, sessões anteriores à v4) | idem — o formato antigo também entra |
+| `tool/call` + `tool/result` | um cartão `tool` (`toolId`, `text` = título do resultado, `estado` + `done`) |
+| `assistant/message` com `tool-call` | **ignorado**: o cartão já vem do `tool/call` (senão era duplicado) |
+| `session/title` | o título do provedor ganha ao de recurso |
+
+Limites, porque uma conversa antiga pode ter megabytes: lê-se a **cauda** (16 MB de texto), guardam
+-se os últimos **300 eventos** e no máximo **512 KB** de texto, com cortes por papel (32 KB para o
+agente, 6 KB para o pensamento, 8 KB para o dono). Quando se corta, `truncated` é `true` e
+`totalEvents` diz quantos havia — a app mostra-o em vez de fingir que aquilo é o princípio. Um
+cartão de ferramenta sem resultado **fica `in_progress`**: é a verdade do ficheiro, não um erro a
+esconder.
+
+### 70.2 Do lado da app
+
+`DaemonController.sessionHistory()` chama o método novo; [`Historico.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/Historico.kt)
+traduz o JSON em `ChatLine` (lógica pura, testável sem aparelho) e o `resumeSession` enche o
+transcript quando a sessão **não** é a que já está em memória. Se o histórico vier vazio, fica a
+nota «sessão X retomada» de antes; se falhar, também — abrir a conversa nunca depende disto.
+
+No **modo embutido** não há daemon que leia o ficheiro (é zstd e o Kotlin não o descomprime): a app
+di-lo em vez de mostrar uma conversa vazia.
+
+Como os ficheiros do daemon são *assets* (`motor-bridge.cjs`, `motor-session-meta.cjs`), um daemon
+já instalado só ganha o método quando o motor for reinstalado pela app; até lá a app cai na nota
+antiga, sem quebrar.
+
+### 70.3 Um bug antigo que apareceu na prova
+
+A lista mostrava «usa aa ferramenta android_status e» em vez de «Contagem total de ferramentas
+Android». O motor grava **dois** `session/title`: primeiro um de recurso (o primeiro prompt
+cortado) e só depois o que ele gerou (`source.kind: "provider"`). O `lerSessao` ficava com o
+primeiro. Passou a preferir o do provedor — e o teste fixa-o.
+
+### 70.4 Verificação (S10+, 2026-10-19, Shizuku)
+
+| Verificação | Resultado |
+|---|---|
+| O método no aparelho | `cachalote ctl cachalote.sessions.history` devolve 5 eventos: `user`, 2×`thought`, `tool` **completed**, `assistant` |
+| A conversa antiga na app | abre com o pedido, dois blocos de pensamento, o cartão `Android capabilities` **CONCLUÍDA** e a resposta em markdown → [`design/revisao/41-historico-da-conversa.png`](design/revisao/41-historico-da-conversa.png) |
+| O título | cabeçalho e lista passam a «Contagem total de ferramentas Android» |
+| Registo da conversa | o transcript restaurado sobrevive a reinstalar a app (fica no `sessao-shizuku.json`) |
+| `tools/session-meta-test.cjs` | ✅ 16 asserções novas (ordem, filtros, estado das ferramentas, stream antigo, turno interrompido sem duplicar, título do provedor, corte) |
+| Testes de JVM | ✅ **67**, 0 falhas (5 novos: `HistoricoTest`) |
+| `tools/i18n-check.sh` | ✅ 460 chaves iguais, 425 usadas |
+| `tools/plugin-schema-test.sh` / `tools/secret-scan.sh` | ✅ 8 ferramentas; nada na árvore nem no histórico |
+
+**O que continua por fazer:** o histórico no modo embutido (precisa de descomprimir zstd do lado da
+app — o daemon não existe lá). Fora isso, os pendentes de §69.6 não mudaram: telemetria do turno
+(bloqueada no motor), os dois diálogos sem desenho e os filtros da lista (de propósito).

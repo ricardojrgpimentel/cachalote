@@ -293,6 +293,24 @@ class DaemonController(private val context: Context) {
     }
 
     /**
+     * O histórico de uma conversa antiga, lido do ficheiro da sessão pelo daemon.
+     *
+     * O ACP não tem `session/load` (o `dsh-acp` recusa-o), portanto sem isto abrir uma sessão
+     * antiga só dizia «sessão X retomada» e a conversa ficava vazia. No modo embutido não há
+     * daemon que leia o ficheiro (é zstd e o Kotlin não o descomprime): devolve vazio e quem
+     * chama diz isso mesmo.
+     */
+    suspend fun sessionHistory(sessionId: String): JSONObject {
+        if (mode == Mode.EMBEDDED) return JSONObject()
+        ensureAcp()
+        return client.callForResult(
+            "cachalote.sessions.history",
+            JSONObject().put("sessionId", sessionId),
+            timeoutMs = 20_000,
+        )
+    }
+
+    /**
      * Apaga uma conversa: tira os ficheiros dela do disco.
      *
      * O ACP não tem `deletion` (o `dsh-acp` recusa-a explicitamente), portanto «apagar» só pode ser
