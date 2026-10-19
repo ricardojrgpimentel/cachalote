@@ -44,6 +44,10 @@ object RootShell {
         timeoutSeconds: Long = 900,
         onBytes: (Long) -> Unit = {},
     ): Long = withContext(Dispatchers.IO) {
+        // `0` não é «sem limite»: era o que parecia, e fazia o `esperarSaida` desistir no mesmo
+        // instante (foi assim que o arranque no boot deixou de ser escrito). Um ficheiro pequeno
+        // não precisa de mais do que isto; quem quer outro limite diz explicitamente.
+        val segundos = if (timeoutSeconds <= 0) 60 else timeoutSeconds
         runCatching {
             val p = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
             var total = 0L
@@ -59,7 +63,7 @@ object RootShell {
                     }
                     out.flush()
                 }
-                if (!esperarSaida(p, timeoutSeconds * 1000)) {
+                if (!esperarSaida(p, segundos * 1000)) {
                     p.destroyForcibly()
                     error("tempo esgotado a enviar com su")
                 }

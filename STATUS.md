@@ -2,12 +2,17 @@
 
 > ## Estado (S10+ ligado por USB)
 >
-> **§70 é o trabalho desta ronda**: o **histórico das conversas** deixou de ser uma linha de sistema
-> — abrir uma sessão antiga mostra a conversa toda (pedido, pensamentos, cartões de ferramenta com
-> o estado e a resposta em markdown). O daemon passou a ler o ficheiro da sessão por um método novo
-> (`cachalote.sessions.history`) e a app enche o transcript ao retomar. De caminho, o título do
-> provedor passou a ganhar ao de recurso («Contagem total de ferramentas Android» em vez de «usa aa
-> ferramenta…»). Verificado no S10+ por Shizuku, com **67 testes de JVM**.
+> **§71 fechou o E1**: o modo **root** passou a ser instalado pela app, sem computador. O bloqueio
+> era uma política do Magisk (uid 10179 em «negar»), não código; com ela aberta, a instalação limpa
+> revelou e corrigiu **dois bugs do auto-instalador** — faltava o shim `bin/bash` (o agente falhava
+> tudo com `spawn bash ENOENT`) e o arranque no boot não era escrito (`sendFile(..., 0)` era lido
+> como timeout imediato). Verificado num turno real: o agente correu `id` e devolveu
+> `uid=0(root)` → [`design/revisao/42-root-bash.png`](design/revisao/42-root-bash.png).
+>
+> **§70** tinha fechado o **histórico das conversas** — abrir uma sessão antiga mostra a conversa
+> toda (pedido, pensamentos, cartões de ferramenta com o estado e a resposta em markdown), por um
+> método novo do daemon (`cachalote.sessions.history`). De caminho, o título do provedor passou a
+> ganhar ao de recurso. Verificado no S10+, 67 testes de JVM.
 >
 > **§69** tinha posto as **fontes do design** (Space Grotesk, Geist, JetBrains Mono)
 > empacotadas, o **menu dos Ajustes** refeito como as Definições do Android
@@ -2394,3 +2399,53 @@ primeiro. Passou a preferir o do provedor — e o teste fixa-o.
 **O que continua por fazer:** o histórico no modo embutido (precisa de descomprimir zstd do lado da
 app — o daemon não existe lá). Fora isso, os pendentes de §69.6 não mudaram: telemetria do turno
 (bloqueada no motor), os dois diálogos sem desenho e os filtros da lista (de propósito).
+
+---
+
+## 71. O modo root, instalado pela app — e os dois bugs do auto-instalador que ele desenterrou
+
+O E1 tinha o Shizuku feito e o root parado numa política do Magisk: o uid **10179** (Cachalote)
+estava em `policy=1` (**negar**), uma decisão antiga que o Magisk aplica em silêncio, sem popup — daí
+o `su: request rejected (10179)` e a app dizer «su saiu com 13: Permission denied». Não era código.
+
+A política passou a `policy=2` (permitir) com a mesma escrita que o
+[`install-app.sh`](tools/install-app.sh#L76) faz em cada instalação; desta vez não tinha corrido
+porque a APK foi instalada com `adb install`. Provado **em nome da app**:
+`run-as dev.ricardopimentel.cachalote su -c id` → `uid=0(root)`.
+
+### 71.1 A instalação limpa e os dois bugs
+
+Com o `su` a passar, apagou-se `/data/adb/cachalote` e carregou-se em **Instalar o motor agora**, no
+ecrã Motor. A instalação completou (token de 32 caracteres, motor a responder) e o primeiro turno
+revelou dois defeitos que o caminho do PC (`daemon/install.sh`) não tinha:
+
+| Bug | Sintoma | Causa | Correção |
+|---|---|---|---|
+| **Faltava o shim `bash`** | todos os comandos do agente: `Error: spawn bash ENOENT`; o agente passou a responder lendo `/proc/self/status` | o `install.sh` do PC escreve `$BASE/bin/bash` (→ `/system/bin/sh`); o `MotorSelfInstall` não escrevia, e o `bridge.cjs` põe `$BASE/bin` no `PATH` do motor | `MotorSelfInstall` passou a escrever o shim, com modo 755 |
+| **O arranque no boot falhava em silêncio** | `/data/adb/service.d` **vazio**; o `doctor` avisava que o watchdog não subia | `RootShell.sendFile(..., 0)`: o `0` era lido como «timeout imediato» pelo `esperarSaida`, e o `runCatching` do `instalarArranque` engolia o erro | o call passou a 60 s; o `sendFile` trata `<= 0` como 60 s (nunca zero) |
+
+O primeiro foi apanhado porque o turno falhou; o segundo porque o `doctor` foi lido a seguir. Sem o
+primeiro, o motor root parecia saudável e o agente não conseguia correr **nada**.
+
+### 71.2 Verificação (S10+, 2026-10-19, instalação de raiz pela app)
+
+| Verificação | Resultado |
+|---|---|
+| Instalação limpa | `/data/adb/cachalote` apagado, «Instalar o motor agora» → token ✓, motor ✓, sem faixa de erro |
+| O shim | `bin/bash` 42 bytes, 755 |
+| O arranque no boot | `service.d/cachalote.sh` 637 bytes, 755 |
+| Chave | migrada de `/data/local/tmp` (53 bytes, modo 600); `doctor`: `DEEPSEEK_API_KEY presente` |
+| `cachalote doctor` | **3 avisos, nenhum problema** — watchdog a vigiar, ponte sem erros |
+| Turno real | `bash` CONCLUÍDA, agente responde `uid=0(root) gid=0(root) groups=0(root) context=u:r:magisk:s0` → [`design/revisao/42-root-bash.png`](design/revisao/42-root-bash.png) |
+| Testes de JVM | ✅ 67, 0 falhas |
+
+Os 3 avisos do `doctor` são do dono, não do motor: acessibilidade desligada, notificações não
+permitidas, e 2 entradas do motor que não activam (`plugin-exemplo`, um exemplo que falha o import e
+já vinha assim desde a instalação do Shizuku).
+
+### 71.3 Nota de operação
+
+Os dois daemons (root e Shizuku) usam o **mesmo porto por omissão** (39731). Ao trocar de modo, o
+antigo tem de ser parado — fizemo-lo aqui com `cachalote stop` antes de arrancar o root. Se não for
+parado, a app liga-se ao daemon errado e o sintoma é «token inválido», que não aponta para a causa.
+O `start` já mata bridges do **mesmo** `BASE`; falta-o fazer para o outro modo. Fica registado.

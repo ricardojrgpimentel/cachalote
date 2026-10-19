@@ -8,8 +8,9 @@ fecha com a verificação feita no aparelho.
 
 Legenda: ⬜ por fazer · 🔄 a decorrer · ✅ feito e verificado · ⏸️ adiado (com motivo)
 
-**Estado: os 20 pontos originais, os três do Bloco D e o F1 fechados e verificados no S10+, com a
-verificação final a passar (9/9 + 9/9 + 62 testes; 67 testes depois do F1).**
+**Estado: os 20 pontos originais, os três do Bloco D, o E1 (Shizuku **e** root, os dois instalados
+pela app) e o F1 fechados e verificados no S10+, com a verificação final a passar (9/9 + 9/9; 67
+testes de JVM).**
 
 Toda a reparação foi verificada no aparelho, com capturas antes/depois em
 [`design/revisao/`](design/revisao) (as provas das correcções são as de número **21 a 25**).
@@ -198,7 +199,7 @@ do dono e os erros ficam como estão. Seis testes de JVM.
 
 ## Bloco E — a maior lacuna por resolver (2026-10-16)
 
-### E1 · O motor precisa de um computador — e não devia 🔄 (Shizuku feito; root desbloqueado, falta a instalação a valer)
+### E1 · O motor precisa de um computador — e não devia ✅ (Shizuku e root, os dois pela app)
 
 **O que se passa.** Escolher root ou Shizuku no assistente não chega: o motor (o *daemon*) tem de
 ser instalado numa pasta de sistema, e a app **não o sabe fazer**. Hoje isso é um script no
@@ -214,7 +215,7 @@ que a APK já leva dentro:
 | O kernel do DSH (366 MB) | **a APK** — `assets/kernel.zip`, 212 MB, o mesmo artefacto |
 | O Node (173 MB) | **a APK** — `libnode.so`, 43 MB + 9 bibliotecas na farm; é o mesmo Node que o modo embutido executa |
 | `bridge.cjs`, `session-meta.cjs`, `cachalote`, `cachalote.patch.yml` | **a APK** (falta pôr como assets — são ~60 KB) |
-| `bin/bash` | não é preciso: o patch ao `dsh-bash-local` cai no `/system/bin/sh` via `CACHALOTE_SHELL` |
+| `bin/bash` | **não**: o daemon cria um shim `bash` → `/system/bin/sh` em `$BASE/bin` (é o que o `PATH` do motor põe à frente) — o auto-instalador da app **não o criava**, e o agente falhava tudo com `spawn bash ENOENT`; corrigido a 2026-10-19 |
 | O script do Magisk `service.d` | **a APK** (é um ficheiro de 637 bytes) |
 
 Ou seja: **a app já tem 100% do que é preciso para correr o motor**. O que falta é a canalização
@@ -259,25 +260,30 @@ Três armadilhas que só apareceram no aparelho, e que valem para o modo root: o
 confiança (os comandos passaram a dizer eles próprios que correram bem), e a extracção tem de ir
 destacada, com ficheiro-marca.
 
-**Modo root — o bloqueio era o Magisk, e já caiu (2026-10-19).** O `MotorSelfInstall` trata dos
-dois destinos e o teste foi feito: o Magisk **recusava** o `su` da app — `su: request rejected
-(10179)`, cinco tentativas seguidas —, enquanto o mesmo comando pelo `adb shell` passava. Não era
-um defeito da app: a tabela de políticas do Magisk tinha o uid **10179** (Cachalote) em
-`policy=1` (**negar**), uma decisão anterior que ele guarda e aplica em silêncio, sem voltar a
-perguntar.
+**Modo root — fechado (2026-10-19).** O bloqueio era o Magisk e caiu. A tabela de políticas tinha
+o uid **10179** (Cachalote) em `policy=1` (**negar**), uma decisão anterior que ele guarda e aplica
+em silêncio, sem voltar a perguntar. Passou a `policy=2` (permitir) pela mesma via que o
+[`install-app.sh`](tools/install-app.sh#L76) já usava — desta vez não tinha corrido porque a APK
+foi instalada directamente com `adb install`. Provado **em nome da app**, não do adb:
+`run-as dev.ricardopimentel.cachalote su -c id` → `uid=0(root)`.
 
-A política passou a `policy=2` (permitir) pela mesma via que o [`install-app.sh`](tools/install-app.sh#L76)
-já usava em cada instalação — desta vez não correu porque a APK foi instalada directamente com
-`adb install`. Provado **em nome da app**, não do adb:
+Com o `su` a passar, a instalação limpa (apagar `/data/adb/cachalote` e carregar em «Instalar o
+motor agora») revelou **dois bugs do auto-instalador**, ambos corrigidos:
 
-```
-run-as dev.ricardopimentel.cachalote su -c id
-  → uid=0(root) gid=0(root) context=u:r:magisk:s0
-```
+| Bug | Efeito | Correção |
+|---|---|---|
+| Não criava `$BASE/bin/bash` | todos os comandos do agente falhavam com `spawn bash ENOENT` — o `install.sh` do PC criava o shim, o da app não | `MotorSelfInstall` escreve o shim (`#!/system/bin/sh` + `exec /system/bin/sh "$@"`) e dá-lhe 755 |
+| `RootShell.sendFile(..., 0)` no arranque no boot | o `0` era lido como «timeout imediato»; o `runCatching` engolia o erro e `/data/adb/service.d` ficava **vazio** | o call passou a 60 s e o `sendFile` trata `<= 0` como 60 s, não como zero |
 
-**O que falta agora** é só a verificação ponta a ponta do modo root a valer: instalar o motor em
-`/data/adb/cachalote` pelo cartão do assistente (os mesmos ~540 MB) e correr o `doctor` + um turno.
-Já não há nenhum bloqueio externo.
+Verificação, com a instalação feita **de raiz pela app**: `bin/bash` e `service.d/cachalote.sh` com
+755; chave migrada do daemon Shizuku; `doctor` **3 avisos, nenhum problema** (com watchdog a
+vigiar); e um turno real num motor root — o agente correu `id` e respondeu
+`uid=0(root) gid=0(root) groups=0(root) context=u:r:magisk:s0` →
+[`design/revisao/42-root-bash.png`](design/revisao/42-root-bash.png).
+
+**Continua fora:** o `doctor` avisa que a acessibilidade e as notificações estão desligadas (são
+definições do dono) e que 2 entradas do motor não activaram (`plugin-exemplo`, que falha o import e
+já vinha assim). Nenhum destes impede o motor root.
 
 ---
 

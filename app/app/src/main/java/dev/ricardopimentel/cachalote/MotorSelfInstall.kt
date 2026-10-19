@@ -170,6 +170,13 @@ object MotorSelfInstall {
         }
         ctx.assets.open("motor-session-meta.cjs").use { lado.enviar("cat > $base/session-meta.cjs", it, 0) {} }
 
+        // **O `bash`.** O Android não tem bash, mas o `bash-local` do motor spawna `bash` por nome
+        // e o `bridge.cjs` põe `$base/bin` à frente do PATH. Sem este shim, todos os comandos do
+        // agente falham com `spawn bash ENOENT` — o `install.sh` do PC criava-o e o instalador da
+        // app não (apanhado no S10+ em 2026-10-19, no primeiro turno do modo root).
+        val shim = "#!/system/bin/sh\nexec /system/bin/sh \"\$@\"\n"
+        lado.enviar("cat > $base/bin/bash", shim.byteInputStream(), 0) {}
+
         // **O perfil.** Sem `home/cordis.patch.yml` o motor arranca com o perfil por omissão e o
         // agente **não tem as ferramentas `android_*`** — o `doctor` dizia-o em letras grandes
         // («o perfil não insere o plugin das capacidades»). O `install.sh` copia-o para aqui; o
@@ -200,7 +207,7 @@ object MotorSelfInstall {
         // ---- 5. Permissões e a marca de «está instalado»
         diz("a acabar", 0.99f)
         lado.run(
-            "chmod 755 $base/bin/cachalote $base/runtime/bin/node && " +
+            "chmod 755 $base/bin/cachalote $base/bin/bash $base/runtime/bin/node && " +
                 "chmod 644 $base/bridge.cjs $base/session-meta.cjs $base/cachalote.patch.yml " +
                 "$base/home/cordis.patch.yml $base/kernel/.cachalote-origem && " +
                 "touch $base/$MARCA",
@@ -223,7 +230,11 @@ object MotorSelfInstall {
         withContext(Dispatchers.IO) {
             val script = ctx.assets.open("motor-service.sh").use { it.readBytes().toString(Charsets.UTF_8) }
             RootShell.run("mkdir -p /data/adb/service.d").getOrThrow()
-            RootShell.sendFile("cat > /data/adb/service.d/cachalote.sh", script.byteInputStream(), 0) {}
+            // 60 s e não 0: o `0` era interpretado como «timeout imediato» pelo `esperarSaida` do
+            // `RootShell` e o arranque no boot nunca chegava a ser escrito (o `runCatching` acima
+            // engolia o erro em silêncio). Apanhado no S10+ em 2026-10-19: `/data/adb/service.d`
+            // estava vazio e o `doctor` avisava que o watchdog não subia no arranque.
+            RootShell.sendFile("cat > /data/adb/service.d/cachalote.sh", script.byteInputStream(), 60) {}
             RootShell.run("chmod 755 /data/adb/service.d/cachalote.sh").getOrThrow()
         }
     }
