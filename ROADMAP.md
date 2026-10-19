@@ -198,7 +198,7 @@ do dono e os erros ficam como estão. Seis testes de JVM.
 
 ## Bloco E — a maior lacuna por resolver (2026-10-16)
 
-### E1 · O motor precisa de um computador — e não devia 🔄 (Shizuku feito; root por verificar)
+### E1 · O motor precisa de um computador — e não devia 🔄 (Shizuku feito; root desbloqueado, falta a instalação a valer)
 
 **O que se passa.** Escolher root ou Shizuku no assistente não chega: o motor (o *daemon*) tem de
 ser instalado numa pasta de sistema, e a app **não o sabe fazer**. Hoje isso é um script no
@@ -259,15 +259,25 @@ Três armadilhas que só apareceram no aparelho, e que valem para o modo root: o
 confiança (os comandos passaram a dizer eles próprios que correram bem), e a extracção tem de ir
 destacada, com ficheiro-marca.
 
-**Modo root — bloqueado no Magisk, não no código.** O `MotorSelfInstall` trata dos dois destinos e
-o teste foi feito: o Magisk **recusa** o `su` da app — `su: request rejected (10179)`, cinco
-tentativas seguidas —, enquanto o mesmo comando pelo `adb shell` passa. É uma política do Magisk
-para o uid da app (uma decisão anterior, «negar», que ele guarda e aplica em silêncio, sem voltar a
-perguntar), e não um defeito da app: a faixa de erro do app diz exatamente isso
-(«su saiu com 13: Permission denied»).
+**Modo root — o bloqueio era o Magisk, e já caiu (2026-10-19).** O `MotorSelfInstall` trata dos
+dois destinos e o teste foi feito: o Magisk **recusava** o `su` da app — `su: request rejected
+(10179)`, cinco tentativas seguidas —, enquanto o mesmo comando pelo `adb shell` passava. Não era
+um defeito da app: a tabela de políticas do Magisk tinha o uid **10179** (Cachalote) em
+`policy=1` (**negar**), uma decisão anterior que ele guarda e aplica em silêncio, sem voltar a
+perguntar.
 
-Para o verificar é preciso, **no Magisk**, autorizar o Cachalote (Superuser → Cachalote →
-permitir). Fica registado porque é o único passo que falta e não depende do código.
+A política passou a `policy=2` (permitir) pela mesma via que o [`install-app.sh`](tools/install-app.sh#L76)
+já usava em cada instalação — desta vez não correu porque a APK foi instalada directamente com
+`adb install`. Provado **em nome da app**, não do adb:
+
+```
+run-as dev.ricardopimentel.cachalote su -c id
+  → uid=0(root) gid=0(root) context=u:r:magisk:s0
+```
+
+**O que falta agora** é só a verificação ponta a ponta do modo root a valer: instalar o motor em
+`/data/adb/cachalote` pelo cartão do assistente (os mesmos ~540 MB) e correr o `doctor` + um turno.
+Já não há nenhum bloqueio externo.
 
 ---
 
