@@ -214,7 +214,7 @@ private fun EscolhaDoModo(vm: MainViewModel) {
             OpcaoDeModo(
                 titulo = stringResource(R.string.wizard_modo_root),
                 detalhe = stringResource(R.string.wizard_modo_root_detalhe),
-                risco = stringResource(R.string.wizard_modo_root_risco) + "\n" + stringResource(R.string.motor_precisa_computador),
+                risco = stringResource(R.string.wizard_modo_root_risco),
                 disponivel = temRoot || rootDesconhecido,
                 recomendado = temRoot,
                 escolhido = vm.modeKind == DaemonController.Mode.DAEMON,
@@ -223,7 +223,7 @@ private fun EscolhaDoModo(vm: MainViewModel) {
             OpcaoDeModo(
                 titulo = stringResource(R.string.wizard_modo_shizuku),
                 detalhe = stringResource(R.string.wizard_modo_shizuku_detalhe),
-                risco = stringResource(R.string.wizard_modo_shizuku_risco) + "\n" + stringResource(R.string.motor_precisa_computador),
+                risco = stringResource(R.string.wizard_modo_shizuku_risco),
                 // Escolhível mesmo com o Shizuku parado: o passo seguinte explica como o ligar,
                 // e é isso que falta a quem instala a app de fresco.
                 disponivel = true,
@@ -337,6 +337,7 @@ private fun OpcaoDeModo(
 private fun LigarMotor(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU
+    val embutido = vm.modeKind == DaemonController.Mode.EMBEDDED
     Passo(
         titulo = stringResource(R.string.wizard_motor_titulo),
         texto = stringResource(R.string.wizard_motor_texto),
@@ -368,9 +369,23 @@ private fun LigarMotor(vm: MainViewModel) {
                             )
                         }
                     }
-                    EstadoLinha(stringResource(R.string.daemon_instalado), vm.daemonInstalled == true)
-                    EstadoLinha(stringResource(R.string.token_do_canal), vm.tokenOk)
+                    if (embutido) {
+                        // No modo embutido não há daemon nem token: o que se prepara é o kernel
+                        // dentro da app.
+                        EstadoLinha(stringResource(R.string.wizard_motor_kernel), vm.daemonInstalled == true)
+                    } else {
+                        EstadoLinha(stringResource(R.string.daemon_instalado), vm.daemonInstalled == true)
+                        EstadoLinha(stringResource(R.string.token_do_canal), vm.tokenOk)
+                    }
                     EstadoLinha(stringResource(R.string.motor_responde), vm.agentInfo.isNotBlank())
+                    if (embutido && vm.embeddedInfo.isNotBlank()) {
+                        Text(
+                            vm.embeddedInfo,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = Mono,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
                 }
             }
 
@@ -418,7 +433,36 @@ private fun LigarMotor(vm: MainViewModel) {
 
             // Sem motor instalado, o primeiro cartão é o que o instala — aqui, no telefone. Era
             // este o passo que obrigava a ligar o telefone a um computador.
-            if (vm.daemonInstalled != true) {
+            if (embutido) {
+                // No modo embutido o «motor» é o kernel extraído dentro da app: não há daemon, e
+                // mostrar aqui o cartão de instalação root era pedir ao utilizador que instalasse
+                // uma coisa que ele explicitamente não quer.
+                if (vm.daemonInstalled != true) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primaryContainer),
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                stringResource(R.string.wizard_kernel_titulo),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                stringResource(R.string.wizard_kernel_texto),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(
+                                onClick = { vm.downloadKernel() },
+                                enabled = !vm.busy,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.wizard_kernel_botao)) }
+                        }
+                    }
+                }
+            } else if (vm.daemonInstalled != true) {
                 CartaoInstalarMotor(
                     shizuku = shizuku,
                     fracao = vm.instalacaoFracao,
@@ -431,44 +475,61 @@ private fun LigarMotor(vm: MainViewModel) {
                 )
             }
 
-            // As acções, cada uma com a sua explicação.
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                OutlinedButton(
-                    onClick = { vm.startDaemon() },
-                    enabled = !vm.busy,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+            // As acções, cada uma com a sua explicação. No modo embutido não há daemon nem token
+            // para ligar/obter: há um motor dentro da app, que se liga (ou reinicia) aqui.
+            if (embutido) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    OutlinedButton(
+                        onClick = { vm.restartEngine() },
+                        enabled = !vm.busy && vm.daemonInstalled == true,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.wizard_motor_ligar)) }
                     Text(
-                        stringResource(
-                            if (shizuku) R.string.ligar_motor_shizuku else R.string.ligar_daemon,
-                        ),
+                        stringResource(R.string.wizard_motor_embutido_nota),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 4.dp),
                     )
                 }
-                Text(
-                    stringResource(R.string.ligar_daemon_nota),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                OutlinedButton(
-                    onClick = { vm.obtainToken() },
-                    enabled = !vm.busy,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    OutlinedButton(
+                        onClick = { vm.startDaemon() },
+                        enabled = !vm.busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            stringResource(
+                                if (shizuku) R.string.ligar_motor_shizuku else R.string.ligar_daemon,
+                            ),
+                        )
+                    }
                     Text(
-                        stringResource(
-                            if (shizuku) R.string.obter_token_shizuku else R.string.obter_token,
-                        ),
+                        stringResource(R.string.ligar_daemon_nota),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 4.dp),
                     )
                 }
-                Text(
-                    stringResource(R.string.obter_token_nota),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    OutlinedButton(
+                        onClick = { vm.obtainToken() },
+                        enabled = !vm.busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            stringResource(
+                                if (shizuku) R.string.obter_token_shizuku else R.string.obter_token,
+                            ),
+                        )
+                    }
+                    Text(
+                        stringResource(R.string.obter_token_nota),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                }
             }
         }
     }
@@ -526,12 +587,15 @@ private fun DarAcesso(vm: MainViewModel, ctx: android.content.Context) {
 @Composable
 private fun DarChave(vm: MainViewModel) {
     var valor by remember { mutableStateOf("") }
+    val embutido = vm.modeKind == DaemonController.Mode.EMBEDDED
     Passo(
         titulo = stringResource(R.string.wizard_chave_titulo),
         texto = stringResource(R.string.wizard_chave_texto),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            EstadoLinha(stringResource(R.string.chave_provedor), vm.keyLength > 0)
+            // `keyPresent` e não `keyLength`: no modo Shizuku o estado vem do CLI, que só diz
+            // «presente/ausente» — a chave estava gravada e o passo ficava ✗ (S10+, 2026-10-19).
+            EstadoLinha(stringResource(R.string.chave_provedor), vm.keyPresent)
             OutlinedTextField(
                 value = valor,
                 onValueChange = { valor = it },
@@ -540,10 +604,12 @@ private fun DarChave(vm: MainViewModel) {
                 singleLine = true,
             )
             OutlinedButton(onClick = { vm.saveKey(valor); valor = "" }, enabled = valor.isNotBlank() && !vm.busy) {
-                Text(stringResource(R.string.guardar_no_daemon))
+                // Embutido não tem daemon: dizer «guardar no daemon» a quem escolheu «sem nada»
+                // era a mesma mentira que o cartão de instalação root (visto a 2026-10-19).
+                Text(stringResource(if (embutido) R.string.guardar_na_app else R.string.guardar_no_daemon))
             }
             Text(
-                stringResource(R.string.chave_explicacao),
+                stringResource(if (embutido) R.string.chave_explicacao_embutida else R.string.chave_explicacao),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
@@ -560,6 +626,11 @@ private fun EscolherPoderes(vm: MainViewModel, ctx: android.content.Context) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick = {
                 listOf("notify", "screen", "tap", "type", "key", "screenshot").forEach { vm.setCapability(it, true) }
+                // A capacidade `notify` sem a permissão do Android não faz nada: o atalho tem de
+                // pedir POST_NOTIFICATIONS, como o interruptor individual já faz. Faltava aqui —
+                // numa instalação limpa a UI dizia que estava ligado e `pm` dizia `granted=false`
+                // (S10+, 2026-10-19).
+                (ctx as? android.app.Activity)?.let { vm.pedirNotificacoes(it) }
             }) { Text(stringResource(R.string.wizard_poderes_essenciais)) }
             CapabilityToggles(
                 nomes = vm.capabilityNames,

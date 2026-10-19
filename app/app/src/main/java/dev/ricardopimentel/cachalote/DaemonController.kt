@@ -419,7 +419,17 @@ class DaemonController(private val context: Context) {
     suspend fun keyStatus(name: String = "DEEPSEEK_API_KEY"): JSONObject {
         if (mode == Mode.SHIZUKU) {
             val present = runCatching { ShizukuBridge.keyStatus(name) }.getOrDefault("ausente").contains("presente")
+            // O CLI só diz «presente/ausente»; o comprimento lê-se do ficheiro, sem expor a chave.
+            // Sem isto a app mostrava «0 caracteres» e o passo 5 do assistente ficava ✗ com a
+            // chave gravada (visto no S10+ em 2026-10-19).
+            val comprimento = runCatching {
+                ShizukuBridge.run(
+                    "awk -F= '/^$name=/{print length(\$2)}' ${ShizukuBridge.DAEMON_BASE}/home/.env",
+                    20,
+                ).trim().lineSequence().lastOrNull()?.toIntOrNull()
+            }.getOrNull() ?: 0
             return JSONObject().put("name", name).put("present", present)
+                .put("length", comprimento)
                 .put("file", ShizukuBridge.DAEMON_BASE + "/home/.env")
         }
         if (mode == Mode.EMBEDDED) {
@@ -511,6 +521,10 @@ class DaemonController(private val context: Context) {
 
     suspend fun daemonInstalled(): Boolean = when (mode) {
         Mode.SHIZUKU -> ShizukuBridge.daemonInstalled()
+        // No modo embutido «instalado» é o kernel extraído na app: não há daemon nenhum, e
+        // perguntar por `/data/adb` fazia o passo 3 do assistente mostrar o cartão de instalação
+        // **root** a quem escolheu «sem nada» — e correr `su` nesse caminho (visto em 2026-10-19).
+        Mode.EMBEDDED -> engine.isPrepared()
         else -> RootShell.daemonInstalled()
     }
 

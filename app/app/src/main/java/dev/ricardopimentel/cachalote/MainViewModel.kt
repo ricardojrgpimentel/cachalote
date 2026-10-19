@@ -435,7 +435,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         controller.ensureConnected()
-        controller.ensureAcp()
+        // `agentInfo` é o que o passo 3 mostra em «motor a responder»; sem isto ficava ✗ mesmo
+        // com o motor embutido de pé (visto no ensaio de instalação limpa de 2026-10-19).
+        agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
         refreshStatus()
         runCatching { refreshKeyStatus() }
     }
@@ -464,6 +466,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (controller.embeddedPrepared()) { embeddedInfo = "kernel já está pronto"; return@run }
         provisionKernel()
         controller.ensureConnected()
+        agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
         refreshStatus()
     }
 
@@ -666,8 +669,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun refreshStatus(consultarSistema: Boolean = false) = run("estado") {
         if (consultarSistema) {
-            rootOk = controller.hasRoot()
-            daemonInstalled = controller.daemonInstalled()
+            // No modo embutido não se pergunta pelo root: quem escolheu «sem nada» não tem de ver
+            // um diálogo do Magisk (e o `su` não existe nesse caminho). O que interessa é o kernel
+            // extraído na app.
+            if (modeKind == DaemonController.Mode.EMBEDDED) {
+                rootOk = null
+                daemonInstalled = controller.embeddedPrepared()
+            } else {
+                rootOk = controller.hasRoot()
+                daemonInstalled = controller.daemonInstalled()
+            }
         }
         // No modo Shizuku, a permissão em falta tem de ser visível na UI (a app tem de a *pedir* —
         // havia o pedido implementado e ninguém o chamava: o autor fez o assistente todo e ficou
@@ -787,6 +798,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun restartEngine() = run("reiniciar motor") {
         controller.ensureConnected()
         controller.restartEngine()
+        agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
         refreshStatus()
     }
 

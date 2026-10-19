@@ -8,7 +8,8 @@ própria app).
 
 > Estado: **funcional e verificado num Samsung Galaxy S10+ (LineageOS 23.2 / Android 16)**.
 > O plano completo está em [`PLANO.md`](PLANO.md) e o que já foi verificado, com provas, em
-> [`STATUS.md`](STATUS.md).
+> [`STATUS.md`](STATUS.md). O ensaio de **instalação limpa nos três modos** (root, Shizuku e
+> embutido, com o assistente do início ao fim) está em [`READINESS.md`](READINESS.md).
 
 **Como está feito?** [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) — as peças, os três motores, os
 canais, os segredos e o que trava (e não trava) o agente.

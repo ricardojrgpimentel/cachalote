@@ -2,6 +2,12 @@
 
 > ## Estado (S10+ ligado por USB)
 >
+> **O ensaio de instalação limpa nos três modos está em [`READINESS.md`](READINESS.md)**
+> (2026-10-19): root, Shizuku e embutido **funcionam** do assistente ao turno real; ficaram
+> corrigidos seis defeitos do primeiro arranque (textos do «computador», cartão root no embutido,
+> permissão de notificações, chave do Shizuku, linguagem da chave embutida e botões do Resumo). Ficam
+> como P0 o **diálogo temporizado do Magisk** e a **colisão de portos** entre os dois daemons.
+>
 > **§71 fechou o E1**: o modo **root** passou a ser instalado pela app, sem computador. O bloqueio
 > era uma política do Magisk (uid 10179 em «negar»), não código; com ela aberta, a instalação limpa
 > revelou e corrigiu **dois bugs do auto-instalador** — faltava o shim `bin/bash` (o agente falhava

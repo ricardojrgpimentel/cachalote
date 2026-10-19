@@ -141,6 +141,10 @@ function startEngine() {
     TMPDIR: path.join(BASE, "tmp"),
     PATH: `${path.join(BASE, "bin")}:${path.join(BASE, "runtime", "bin")}:/system/bin:/system/xbin`,
     LD_LIBRARY_PATH: path.join(BASE, "runtime", "lib"),
+    // O `dsh-bash-local` do kernel foi patchado para aceitar este shell: o Android não tem
+    // `bash`. O shim em `$BASE/bin/bash` continua a ser a primeira via, mas se ele faltar (uma
+    // instalação antiga, por exemplo) o agente não fica sem shell nenhum.
+    CACHALOTE_SHELL: "/system/bin/sh",
     TERM: "dumb",
     NODE_OPTIONS: "",
     // O plugin do kernel fala com o daemon por TCP: tem de saber QUAL (o daemon root e o do

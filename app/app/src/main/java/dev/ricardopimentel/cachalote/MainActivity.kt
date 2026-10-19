@@ -1347,6 +1347,8 @@ private fun OnboardingCard(vm: MainViewModel) {
 @Composable
 private fun StatusScreen(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU
+    val embutido = vm.modeKind == DaemonController.Mode.EMBEDDED
     // Sem scroll próprio: quem rola é o contentor da secção (ver AjustesScreen).
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1506,13 +1508,25 @@ private fun StatusScreen(vm: MainViewModel) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Button(onClick = { vm.refreshStatus(consultarSistema = true) }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
-            OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) { Text(stringResource(R.string.ligar_daemon)) }
+            // No modo embutido não há daemon para ligar: quem manda é o «Reiniciar motor».
+            if (!embutido) {
+                OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) {
+                    Text(stringResource(if (shizuku) R.string.ligar_motor_shizuku else R.string.ligar_daemon))
+                }
+            }
         }
-        FlowRow(
+        if (!embutido) FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) { Text(stringResource(R.string.obter_token)) }
+            OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) {
+                Text(stringResource(if (shizuku) R.string.obter_token_shizuku else R.string.obter_token))
+            }
+            OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text(stringResource(R.string.reiniciar_motor)) }
+        } else FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text(stringResource(R.string.reiniciar_motor)) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
