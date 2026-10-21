@@ -6,7 +6,8 @@ própria app).
 
 [![CI](https://github.com/ricardojrgpimentel/cachalote/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardojrgpimentel/cachalote/actions/workflows/ci.yml)
 
-> Estado: **funcional e verificado num Samsung Galaxy S10+ (LineageOS 23.2 / Android 16)**.
+> Estado: **funcional e verificado num Samsung Galaxy S10+ (LineageOS 23.2 / Android 16)** — nos três
+> modos, com a verificação automatizada a correr no modo em que a app está.
 > O plano completo está em [`PLANO.md`](PLANO.md) e o que já foi verificado, com provas, em
 > [`STATUS.md`](STATUS.md). O ensaio de **instalação limpa nos três modos** (root, Shizuku e
 > embutido, com o assistente do início ao fim) está em [`READINESS.md`](READINESS.md).

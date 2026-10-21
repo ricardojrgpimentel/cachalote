@@ -1233,10 +1233,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Falhar não é fatal: fica-se com a nota do `resumeSession` e a conversa continua utilizável.
      */
     private suspend fun carregarHistorico(id: String) {
-        if (modeKind == DaemonController.Mode.EMBEDDED) {
-            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.historico_indisponivel)))
-            return
-        }
         val res = runCatching { controller.sessionHistory(id) }.getOrNull() ?: return
         val lido = Historico.ler(res)
         if (lido.linhas.isEmpty()) return // sessão sem conversa gravada: fica a nota do resume

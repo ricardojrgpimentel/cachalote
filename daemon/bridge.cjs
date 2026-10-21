@@ -571,11 +571,23 @@ tcpServer.on("error", (e) => {
   // sem saber porquê. Acontece quando dois `start` correm ao mesmo tempo (a app pede-o no fim da
   // instalação e no laço de reconexão): o segundo tomava o pidfile e o primeiro ficava com o
   // porto. Visto no S10+ em 2026-10-21. Quem já está no porto é que manda; este sai.
-  log(`ERRO no servidor tcp: ${e.message} (porta ${PORT} ocupada por outro daemon?) — a sair`);
+  // **Aviso**, não ERRO: isto é a guarda a funcionar (outro daemon já serve o porto), não uma falha
+  // da ponte. Como o `doctor` conta os `ERRO` do registo, chamar-lhe ERRO dava um aviso permanente
+  // por uma coisa que se resolve sozinha (visto no S10+ em 2026-10-21, ao trocar de modo).
+  log(`aviso: porta ${PORT} já servida por outro daemon (${e.message}) — a sair`);
   shutdown("porta ocupada");
 });
 tcpServer.listen(PORT, "127.0.0.1", () => {
   log(`TCP à escuta em 127.0.0.1:${PORT} (token obrigatório)`);
+  // **O pidfile é escrito por quem fica com o porto**, e não pelo `start` que lançou o processo:
+  // com dois `start` em corrida, o pidfile ficava a apontar para o que perdeu o porto e morreu —
+  // e o `doctor`/perfil do daemon (oom_score_adj, watchdog) olhavam para um pid morto. Visto no
+  // S10+ em 2026-10-21 (`status` dizia «a correr (pid 21200)» com o bridge real em 21058).
+  try {
+    fs.writeFileSync(path.join(BASE, "run", "daemon.pid"), String(process.pid));
+  } catch (e) {
+    log("aviso: não consegui escrever o pidfile (" + e.message + ")");
+  }
   bootEngine();
 });
 

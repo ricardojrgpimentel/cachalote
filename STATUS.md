@@ -2584,3 +2584,64 @@ e o diálogo «Permitir Cachalote a Acessar Shizuku?»; ao aceitar, o cartão de
 acessibilidade**. O Shizuku passa a mostrar o Cachalote com o interruptor desligado; a app mostra o
 cartão de autorização no sítio do costume e resolve-se com um toque. Não é nosso — mas é a razão pela
 qual «a app pediu outra vez» depois de uma instalação.
+
+---
+
+## 75. O fecho do READINESS: os testes de dispositivo por modo, e a conversa antiga no embutido
+
+O [READINESS](READINESS.md) fechava com uma frase que resumia o que faltava: «o ensaio de dispositivo
+foi manual, não acrescentado aos scripts de CI — os scripts `app-ui-test.sh` continuam a assumir o
+daemon root em `/data/adb`». Ou seja: os sete pontos estavam fechados, mas a **verificação** só sabia
+testar um dos modos.
+
+### 75.1 Os testes passaram a seguir o modo da app
+
+`tools/lib-device.sh` ganhou três funções — `cachalote_modo`, `cachalote_base` e `cachalote_tem_root` —
+que lêem as preferências da app por `run-as`. Os dois scripts de dispositivo usam-nas e um `sh_do` que
+corre como root quando há `su` (a base é `root:600`) e como shell quando não há.
+
+O que isto muda, em concreto:
+
+| Antes | Agora |
+|---|---|
+| `BASE=/data/adb/cachalote` fixo | a base do modo em uso (root **ou** Shizuku) |
+| Com a app em Shizuku dizia «não há daemon instalado» (e o motor estava a correr) | corre contra `/data/local/tmp/cachalote` |
+| No embutido falhava em cascata | `SALTADO` com o motivo (não há daemon nesse modo) |
+| Sem `su` falhava a meio, ao ler `.env` | `SALTADO` antes de tocar em nada |
+
+E dois defeitos do próprio teste, que só apareceram ao correr a sério: o passo «interruptores
+visíveis» procurava a palavra `screenshot` (que é o **id** da capacidade, não o rótulo do ecrã) e o
+teste das capacidades entrava nos Ajustes **com a conversa aberta** — que não tem barra de abas, logo
+o toque caía no vazio.
+
+**Prova (S10+, 2026-10-21, app em Shizuku):** `app-ui-test.sh` 9/9 e `app-capabilities-test.sh` 5/5,
+ambos contra `/data/local/tmp/cachalote`.
+
+### 75.2 A conversa antiga no modo embutido
+
+Era o último «não dá» da app: no embutido não há daemon que leia o ficheiro da sessão, e o registo é
+**zstd de frames concatenados** — o Kotlin não o descomprime. Mas o **Node que já está na APK**
+descomprime (Node 24, `zlib.zstdDecompressSync`) e o leitor é o mesmo do daemon.
+
+Ficou assim: `config/session-history.cjs` (12 linhas) vai nos assets, e o `EmbeddedEngine` corre-o com
+o runtime embutido, passando o `$DSH_HOME` e o id da sessão; o stdout é o mesmo JSON que o daemon
+devolve, por isso o `Historico.kt` não mudou uma linha. A prova foi abrir a conversa `a884cdc6` no
+modo embutido e vê-la com o pedido, o pensamento e a resposta →
+[`design/revisao/51-historico-no-embutido.png`](design/revisao/51-historico-no-embutido.png).
+
+### 75.3 O seletor de modelo/esforço
+
+Era o último ecrã com Material puro (§69.6). Passou a ser o mesmo **painel que sobe de baixo** que a
+autorização usa: título, a escolha actual em mono, e as opções com um visto na escolhida →
+[`design/revisao/52-escolha-do-modelo.png`](design/revisao/52-escolha-do-modelo.png).
+
+### 75.4 Verificação
+
+| Verificação | Resultado |
+|---|---|
+| `app-ui-test.sh` (Shizuku) | ✅ 9/9 |
+| `app-capabilities-test.sh` (Shizuku) | ✅ 5/5 |
+| Conversa antiga no embutido | ✅ com histórico |
+| `doctor` nas duas bases | ✅ `tudo bem` |
+| Testes de JVM | ✅ 76 |
+| `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ |

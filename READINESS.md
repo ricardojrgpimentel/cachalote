@@ -97,3 +97,42 @@ boot** (`service.d/cachalote.sh`, que o `sendFile(..., 0)` impedia de escrever).
 **Testes:** `testDebugUnitTest` ✅ (67), `session-meta-test` ✅, `i18n-check` ✅. O ensaio de
 dispositivo foi manual (uiautomator + capturas), não acrescentado aos scripts de CI — os scripts
 `app-ui-test.sh` continuam a assumir o daemon root em `/data/adb`.
+
+---
+
+## Fecho (2026-10-21) — o que faltava, e o que já não é manual
+
+Esta ronda fechou o que o ensaio de 2026-10-19 deixou por fazer. O veredicto dos três modos mantém-se;
+o que mudou é que os pontos abertos têm correção e prova, e a verificação deixou de ser só à mão.
+
+### O que ficou feito
+
+| # | O que faltava | Como ficou |
+|---|---|---|
+| 1 | Os sete pontos de «O que fica aberto» | ✅ [Bloco G do ROADMAP](ROADMAP.md#bloco-g--o-que-a-instalação-limpa-deixou-aberto-2026-10-19--2026-10-21): porto por base, cartão do Magisk, modo sugerido, progresso do kernel, faixa da acessibilidade, conversas por modo, diagnóstico por base |
+| 2 | **Os testes de dispositivo só serviam no modo root** (assumiam `/data/adb`) | ✅ `tools/lib-device.sh` passou a ler o **modo em que a app está** (`cachalote_modo`, `cachalote_base`, `cachalote_tem_root`); os dois scripts correm contra a base desse modo e dizem «SALTADO» quando não aplicável (embutido, ou sem `su`) em vez de falharem ou de testarem o outro daemon |
+| 3 | O ensaio não estava nos scripts | ✅ `app-ui-test.sh` e `app-capabilities-test.sh` corridos **em modo Shizuku** e a passar (abaixo), sem intervenção manual |
+| 4 | Abrir uma conversa antiga no **modo embutido** dizia «não consigo ler» | ✅ a app lê o ficheiro da sessão com o **Node que já está na APK** (o mesmo leitor do daemon: `history.cjs` + `session-meta.cjs`); prova em [51](design/revisao/51-historico-no-embutido.png) |
+| 5 | O seletor de modelo/esforço era o único ecrã sem desenho | ✅ painel que sobe de baixo, com a escolha actual e o visto na escolhida — [52](design/revisao/52-escolha-do-modelo.png) |
+
+### Verificação desta ronda (S10+, app em **Shizuku**)
+
+| Teste | Resultado |
+|---|---|
+| `./tools/app-ui-test.sh` | ✅ **9 passos, 0 falhas** — contra `/data/local/tmp/cachalote` (antes só funcionava contra `/data/adb`) |
+| `./tools/app-capabilities-test.sh` | ✅ **5 passos, 0 falhas** |
+| Conversa antiga no modo embutido | ✅ abre com o histórico (não só «sessão X retomada») |
+| `doctor` nas duas bases | ✅ `resultado: tudo bem` |
+| Testes de JVM | ✅ 76, 0 falhas |
+| `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ todos verdes |
+
+### O que continua fora, e porquê
+
+- **Telemetria do turno** (linha com tokens/custo em directo): o motor não a envia — está bloqueada
+  no `dsh-acp` (§64/§69.6), não na app.
+- **Filtros da lista de conversas**: ficaram de fora **de propósito** (§68.1).
+- **Janela de licenças**: continua um diálogo de leitura; é uma lista de referência que se abre uma
+  vez, e o redesenho não acrescentava nada ao uso.
+- **Watchdog no modo Shizuku**: não existe `service.d` sem root. O `doctor` já não avisa disso.
+
+**Números actualizados:** 76 testes de JVM, 484 chaves nos dois idiomas (449 usadas).

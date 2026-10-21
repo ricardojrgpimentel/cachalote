@@ -325,7 +325,9 @@ class DaemonController(private val context: Context) {
      * chama diz isso mesmo.
      */
     suspend fun sessionHistory(sessionId: String): JSONObject {
-        if (mode == Mode.EMBEDDED) return JSONObject()
+        // No modo embutido não há daemon, mas há o Node da APK: o motor lê o ficheiro da sessão
+        // com o mesmo leitor (ver `EmbeddedEngine.sessionHistory`).
+        if (mode == Mode.EMBEDDED) return JSONObject(engine.sessionHistory(sessionId))
         ensureAcp()
         return client.callForResult(
             "cachalote.sessions.history",

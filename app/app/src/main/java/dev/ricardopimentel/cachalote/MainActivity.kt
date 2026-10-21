@@ -362,40 +362,67 @@ private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
     }
 }
 
-/** Escolha de uma opção da sessão (modelo, esforço de raciocínio) — as escolhas vêm do motor. */
+/**
+ * Escolha de uma opção da sessão (modelo, esforço de raciocínio) — as escolhas vêm do motor.
+ *
+ * Era um `AlertDialog` de Material puro: o único ecrã sem desenho (STATUS §69.6). Passou a ser o
+ * mesmo painel que sobe de baixo que a autorização usa — título, a escolha **actual** em mono, as
+ * opções com um visto na escolhida e o toque a decidir. É o mesmo gesto em toda a app.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConfigPickerDialog(vm: MainViewModel, opt: ConfigOption) {
-    AlertDialog(
-        onDismissRequest = { vm.configPicker = null },
-        title = { Text(opt.name) },
-        text = {
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = { vm.configPicker = null }, sheetState = sheet) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(opt.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.escolha_actual, opt.currentLabel),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = Mono,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            Spacer(Modifier.height(6.dp))
             LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                 itemsIndexed(opt.choices) { _, ch ->
                     val selected = ch.value == opt.currentValue
-                    TextButton(
-                        onClick = { vm.chooseOption(opt.id, ch.value) },
-                        modifier = Modifier.fillMaxWidth(),
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { vm.chooseOption(opt.id, ch.value) }
+                            .padding(vertical = 12.dp, horizontal = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            (if (selected) "✓ " else "") + ch.label,
-                            modifier = Modifier.fillMaxWidth(),
-                            color = if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                            if (selected) "\u2713" else "",
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            fontFamily = Mono,
+                            modifier = Modifier.width(18.dp),
+                        )
+                        Text(
+                            ch.label,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Unspecified,
+                            modifier = Modifier.weight(1f),
                         )
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = { vm.configPicker = null }) { Text(stringResource(R.string.fechar)) } },
-    )
+            Spacer(Modifier.height(4.dp))
+            TextButton(onClick = { vm.configPicker = null }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.fechar))
+            }
+        }
+    }
 }
 
-/**
- * O adaptador entre o modelo e a lista de conversas: resolve cada sessão do motor no que a linha
- * mostra. A prévia vem do daemon (a última mensagem lida do ficheiro da sessão) e, para a conversa
- * aberta, do transcript, que é mais fresco. Sem metadados nenhuns (modo embutido), a linha mostra o
- * identificador curto em vez de um resumo inventado.
- */
+/** A lista de conversas do motor (a segunda aba) — extraída para o ecrã principal a poder compor. */
 @Composable
 private fun ListaDeSessoes(vm: MainViewModel) {
     var aApagar by remember { mutableStateOf<String?>(null) }

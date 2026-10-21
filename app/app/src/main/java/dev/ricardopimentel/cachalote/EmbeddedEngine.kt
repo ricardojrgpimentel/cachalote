@@ -304,6 +304,65 @@ class EmbeddedEngine(private val ctx: Context) {
     }
 
     /** Arranca o motor e devolve os streams do seu stdio (idempotente e sincronizado). */
+    /**
+     * O registo de uma sessão, lido do ficheiro dela (zstd de frames concatenados).
+     *
+     * Porque é que isto vive aqui: no modo embutido não há daemon, e o Kotlin não descomprime zstd
+     * — mas o **Node que já está na APK** descomprime (`zlib.zstdDecompressSync`, Node 24) e o
+     * leitor é o mesmo do daemon (`daemon/session-meta.cjs`). Corre-se um script com o runtime
+     * embutido e lê-se o JSON. Era o que faltava para abrir uma conversa antiga neste modo
+     * (STATUS §70.4): antes a app dizia que não dava.
+     */
+    suspend fun sessionHistory(id: String, timeoutSeconds: Long = 25): String = withContext(Dispatchers.IO) {
+        require(isPrepared()) { "kernel não extraído" }
+        val node = File(ctx.applicationInfo.nativeLibraryDir, "libnode.so")
+        require(node.isFile) { "libnode.so não está na APK" }
+        val scripts = scriptsDir().apply { mkdirs() }
+        garantirScriptsDeHistorico(scripts)
+        val tmp = File(ctx.cacheDir, "tmp").apply { mkdirs() }
+        val pb = ProcessBuilder(
+            node.absolutePath,
+            File(scripts, "history.cjs").absolutePath,
+            home.absolutePath,
+            id,
+        )
+        val env = pb.environment()
+        env["LD_LIBRARY_PATH"] = libraryFarm().absolutePath
+        env["HOME"] = ctx.filesDir.absolutePath
+        env["TMPDIR"] = tmp.absolutePath
+        env["TERM"] = "dumb"
+        env["NODE_OPTIONS"] = ""
+        val p = pb.start()
+        val saida = p.inputStream.bufferedReader().use { it.readText() }
+        val erro = p.errorStream.bufferedReader().use { it.readText() }
+        if (!p.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
+            p.destroyForcibly()
+            error("tempo esgotado a ler a sessão (zstd)")
+        }
+        if (p.exitValue() != 0) {
+            error(erro.lineSequence().lastOrNull { it.isNotBlank() }?.take(300) ?: "o leitor de sessões falhou")
+        }
+        saida
+    }
+
+    /** Onde ficam os scripts auxiliares que correm com o Node embutido. */
+    private fun scriptsDir(): File = File(ctx.filesDir, "bin")
+
+    /**
+     * O leitor de sessões e o seu atalho, copiados dos assets.
+     *
+     * Copiam-se a cada chamada (são ~20 KB): assim uma actualização da app nunca deixa um script
+     * velho a ler um formato novo — e não há estado a limpar quando o formato muda.
+     */
+    private fun garantirScriptsDeHistorico(destino: File) {
+        ctx.assets.open("motor-session-meta.cjs").use { entrada ->
+            File(destino, "session-meta.cjs").outputStream().use { entrada.copyTo(it) }
+        }
+        ctx.assets.open("motor-session-history.cjs").use { entrada ->
+            File(destino, "history.cjs").outputStream().use { entrada.copyTo(it) }
+        }
+    }
+
     suspend fun start(allowedRoots: String = ""): CachaloteClient.Streams = withContext(Dispatchers.IO) {
         synchronized(startLock) {
             streams?.let { if (proc?.isAlive == true) return@withContext it }

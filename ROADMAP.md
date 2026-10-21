@@ -310,9 +310,10 @@ cartão `Android capabilities` **CONCLUÍDA** e a resposta em markdown →
 recurso («usa aa ferramenta…»); o do provedor vem depois e é o bom («Contagem total de ferramentas
 Android»). Passou a preferir o do provedor — via-se na lista e no cabeçalho.
 
-**O que continua fora:** o modo embutido não tem daemon que leia o ficheiro (é zstd e o Kotlin não
-o descomprime), e a app di-lo em vez de fingir. Um daemon já instalado só ganha o método novo
-quando o motor for reinstalado pela app (`motor-bridge.cjs` e `motor-session-meta.cjs` são assets).
+**O que continua fora:** já não é o modo embutido — a app passou a ler o ficheiro da sessão com o
+**Node que já está na APK** (o mesmo leitor do daemon), e a conversa antiga abre também aí
+([`STATUS.md`](STATUS.md) §75.2, prova 51). O que resta é operacional: um daemon já instalado só ganha
+métodos novos quando o motor for reinstalado pela app (`motor-*.cjs` são assets).
 
 ---
 
