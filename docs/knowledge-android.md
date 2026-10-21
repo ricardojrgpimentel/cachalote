@@ -1711,10 +1711,12 @@ todos invisíveis no dia-a-dia do modo root:
   `mDisplayId=0`); o que não sobrevive é o *fim* — quem estava lá dentro sai para o ecrã do dono.
 - **Como confirmar:** `dumpsys window windows | grep -E "Window #|mDisplayId="` antes e depois de
   parar o ecrã virtual.
-- **Correcção (por fazer, com caminho definido):** antes de libertar o display, fechar as tasks que
-  lá estão (`am task remove <id>` ou `am force-stop <pkg>`) — pelo daemon, que em modo root/Shizuku
-  pode fazê-lo. No modo embutido não é preciso: sem root não se consegue lançar apps no ecrã virtual,
-  portanto não há nada para saltar. Enquanto não estiver feito, **avisar quem toca em «Parar»**.
+- **Correcção (feita em 2026-10-21):** antes de libertar o display, fecha-se o que lá está — pelo
+  daemon (root) ou pelo Shizuku. **`am task remove` não existe no Android 16**: o comando é
+  `am stack remove <rootTaskId>`, e o id sai do `am stack list` (as linhas `RootTask id=N …
+  displayId=D`). No modo embutido não há nada a fazer: sem root/shell não se lançam apps lá.
+  Quando não há como fechar (sem `su`/Shizuku), a app **avisa** no transcript em vez de deixar a app
+  aparecer de surpresa. Ver `HostCapabilities.fecharTasksDoDisplay`.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-15, ao aplicar o ecrã do design).
 
 ### 134. Um MCP configurado e inalcançável responde «Internal error» a tudo — e esconde o erro verdadeiro
@@ -1741,9 +1743,11 @@ todos invisíveis no dia-a-dia do modo root:
 - **Como diagnosticar:** `su -c 'tail -30 /data/adb/cachalote/logs/engine.log'` — o `-32602 unknown
   session` está lá, seguido do `-32603` do MCP. Para testar a recuperação de sessão, **limpar
   primeiro o MCP** (guardar `mcpServersJson` das prefs e repor depois).
-- **A fazer (robustez):** a recuperação devia olhar também para o código de erro (`-32602`) ou, no
-  mínimo, dizer no transcript que a sessão nova não se conseguiu abrir — hoje o utilizador só vê
-  «Internal error», que não é acção nenhuma.
+- **Robustez (feita em 2026-10-21):** a app passou a **reconhecer** esta falha
+  (`FalhasDeLigacao.suspeitaDeMcp`: «internal error» **e** haver MCP configurado), fecha e retoma a
+  sessão **sem MCP** e repete o prompt uma vez — o turno não chegou a correr, por isso repetir é
+  seguro. Diz-se no transcript: «os servidores MCP não responderam — esta mensagem correu sem eles».
+  Ver `DaemonController.prompt`.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-15).
 
 ### 135. A lista de conversas: o `session/list` não traz título nem data, e as sessões estão em frames zstd encadeados

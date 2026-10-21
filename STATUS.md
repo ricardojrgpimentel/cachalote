@@ -2645,3 +2645,83 @@ autorização usa: título, a escolha actual em mono, e as opções com um visto
 | `doctor` nas duas bases | ✅ `tudo bem` |
 | Testes de JVM | ✅ 76 |
 | `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ |
+
+---
+
+## 76. Os últimos cinco: o ecrã virtual, o MCP, o microfone, os metadados e o bootstrap
+
+Com isto, a lista de «o que falta» ficou vazia. Cinco coisas, cada uma com a sua prova no S10+.
+
+### 76.1 As apps do ecrã virtual saltavam para o ecrã do dono (knowledge 133)
+
+Ao libertar um display virtual, o Android **move** as tasks que lá estavam para o ecrã principal em
+vez de as matar: o agente trabalhava numa app isolada e, ao tocar em «Parar», a calculadora
+aparecia-lhe à frente, a ecrã inteiro.
+
+A correcção fecha os stacks do display **antes** do `release()`. Duas coisas que o aparelho ensinou:
+
+| Tentativa | Resultado |
+|---|---|
+| `am task remove <taskId>` | **não existe** no Android 16 (`am task` só tem lock/resize/focus/moveToFront) |
+| `am stack remove <rootTaskId>` | funciona |
+
+O id sai do `am stack list` (linhas `RootTask id=N … displayId=D`), interpretado em Kotlin — sem
+`awk` nem aspas a atravessar `su -c`. Quando não há como fechar (sem `su`/Shizuku), a app **avisa** no
+transcript em vez de deixar a app aparecer de surpresa.
+
+**Prova:** calculadora lançada no display 6 (`am stack list` → 1 task), «Parar» na app →
+`am stack list | grep -c calculator` = **0**, e o foco fica no Cachalote (antes ficava na calculadora).
+
+### 76.2 Um MCP em baixo escondia o erro da sessão (knowledge 134)
+
+Com um MCP configurado e inalcançável, o motor responde `-32603 Internal error` a tudo — inclusive a
+um prompt numa sessão válida. A app mostrava «prompt: Internal error» e ficava parada; a recuperação
+de sessão (que procura «unknown session») nunca chegava a correr.
+
+`DaemonController.prompt` passou a reconhecer a falha (`FalhasDeLigacao.suspeitaDeMcp`: «internal
+error» **e** haver MCP), fecha e retoma a sessão **sem MCP** e repete o prompt uma vez — o turno não
+chegou a correr, por isso repetir é seguro. Diz-se no transcript: «os servidores MCP não responderam
+— esta mensagem correu sem eles». Três testes de JVM para a classificação.
+
+### 76.3 Um microfone que não podia funcionar
+
+O botão de voz aparecia sempre; neste telefone não há reconhecedor e o toque dava «não há reconhecedor
+de voz neste dispositivo» — vi-o duas vezes. Passou a ser desenhado só se
+`SpeechRecognizer.isRecognitionAvailable` for verdadeiro.
+**Prova:** no ecrã da conversa, `content-desc="Ditar"` = 0 e o botão de anexar continua lá.
+
+### 76.4 A lista de conversas no modo embutido
+
+Mostrava só `a884cdc6` e «sessão a884cdc6»: sem daemon não havia quem lesse os ficheiros. O Node da
+APK já lê as sessões (é o que passou a dar o histórico, §75.2); o mesmo mecanismo passou a servir os
+**metadados** (`meta.cjs` → `sessionMeta`).
+**Prova:** a lista no embutido mostra «Corrigir erro ao rodar no bash», a prévia «corre id no bash» e
+«21/10 14:55».
+
+### 76.5 O `bootstrap.sh` de ponta a ponta, com o kernel do npm
+
+Era o último «continua por fazer» do repositório: o daemon corria a árvore derivada do `app.asar` do
+desktop, e o caminho que um utilizador novo percorre (npm) nunca tinha sido corrido até ao fim no
+aparelho.
+
+**Feito:** `./tools/bootstrap.sh` de raiz — pré-requisitos, `npm install @deepseek-ai/dsh` 0.2.0-rc.2,
+patches, runtime do Termux, daemon em `/data/adb`, APK construída e instalada. Saída: **exit 0**.
+
+| Verificação | Resultado |
+|---|---|
+| Origem do kernel | `doctor` → **npm 0.2.0-rc.2** (antes: assets do app.asar) |
+| Tamanho da árvore | **45 030** ficheiros (a do desktop tinha 10 222) |
+| Daemon | a correr, porto 39731, socket 600, watchdog ✓ |
+| Turno real | `bash` → `id -u` → **0** → [`design/revisao/54-turno-com-kernel-do-npm.png`](design/revisao/54-turno-com-kernel-do-npm.png) |
+
+**Estado do telefone depois disto:** app em modo **root**, ligada ao daemon do npm. A base do Shizuku
+continua com a árvore anterior (é outro `$DSH_HOME`, com as conversas dela).
+
+### Verificação
+
+| Verificação | Resultado |
+|---|---|
+| Testes de JVM | ✅ **79** (3 novos de MCP), 0 falhas |
+| `app-ui-test.sh` / `app-capabilities-test.sh` | ✅ 9/9 e 5/5 (em Shizuku, antes da troca para root) |
+| `doctor` (root, npm) | ✅ 2 avisos (a app está noutro modo) — nenhum problema |
+| `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ |

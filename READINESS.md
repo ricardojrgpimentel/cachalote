@@ -114,6 +114,10 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 3 | O ensaio não estava nos scripts | ✅ `app-ui-test.sh` e `app-capabilities-test.sh` corridos **em modo Shizuku** e a passar (abaixo), sem intervenção manual |
 | 4 | Abrir uma conversa antiga no **modo embutido** dizia «não consigo ler» | ✅ a app lê o ficheiro da sessão com o **Node que já está na APK** (o mesmo leitor do daemon: `history.cjs` + `session-meta.cjs`); prova em [51](design/revisao/51-historico-no-embutido.png) |
 | 5 | O seletor de modelo/esforço era o único ecrã sem desenho | ✅ painel que sobe de baixo, com a escolha actual e o visto na escolhida — [52](design/revisao/52-escolha-do-modelo.png) |
+| 6 | O **`bootstrap.sh` de ponta a ponta** (o caminho de quem instala de novo) nunca tinha sido corrido no aparelho | ✅ corrido de raiz no S10+ com o kernel do **npm** (0.2.0-rc.2, 45 030 ficheiros), daemon, APK e um turno real — [`STATUS.md`](STATUS.md) §76.5 |
+| 7 | As apps do ecrã virtual saltavam para o ecrã do dono (knowledge 133) | ✅ fecham-se os stacks antes de libertar o display — §76.1 |
+| 8 | Um MCP em baixo escondia o erro da sessão (knowledge 134) | ✅ a app retoma sem MCP e repete o turno uma vez — §76.2 |
+| 9 | O microfone aparecia sem reconhecedor; a lista no embutido só mostrava ids | ✅ §76.3 e §76.4 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 
@@ -135,4 +139,4 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
   vez, e o redesenho não acrescentava nada ao uso.
 - **Watchdog no modo Shizuku**: não existe `service.d` sem root. O `doctor` já não avisa disso.
 
-**Números actualizados:** 76 testes de JVM, 484 chaves nos dois idiomas (449 usadas).
+**Números actualizados:** 79 testes de JVM, 485 chaves nos dois idiomas (450 usadas).
