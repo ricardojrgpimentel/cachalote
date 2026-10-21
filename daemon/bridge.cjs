@@ -163,6 +163,13 @@ function startEngine() {
   } catch {}
 
   log(`a arrancar motor: perfil=${PROFILE} node=${NODE}`);
+  // **Marca de arranque** no log do motor. O ficheiro é acrescentado e nunca é limpo, por isso um
+  // «1 entry did not activate» de há três dias continuava a contar como se fosse de agora — e o
+  // `doctor` mostrava um aviso que já não existe (S10+, 2026-10-21). Com a marca, quem lê conta só
+  // o que aconteceu **neste** arranque.
+  try {
+    fs.appendFileSync(ENGINE_LOG, `\n--- motor arrancado ${new Date().toISOString()} ---\n`);
+  } catch {}
   engine = spawn(NODE, ["--expose-internals", BINJS, "--profile", PROFILE], {
     env, cwd: path.join(BASE, "home"), stdio: ["pipe", "pipe", "pipe"],
   });

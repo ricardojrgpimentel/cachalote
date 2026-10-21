@@ -459,8 +459,9 @@ sempre — a base do Shizuku dizia «watchdog a vigiar» sem ter nenhum, e arras
 a procurar `$BASE/bin/cachalote watchdog` e a ler só a cauda (300 linhas).
 
 **Prova.** Com o daemon Shizuku parado e o root a correr, `status` na base do Shizuku diz «motor:
-parado»; com ele a correr, «motor: a correr»; e o `doctor` diz «1 entrada do motor não activou:
-plugin-exemplo» (era «8 entradas»).
+parado»; com ele a correr, «motor: a correr». O `doctor` passou de «8 entradas» a «1 entrada» — e a
+essa última foi ao sítio: era um *insert* de exemplo no perfil a apontar para um plugin que não vai na
+instalação (ver [`STATUS.md`](STATUS.md) §73), e hoje o `doctor` diz «motor sem entradas por activar».
 
 ### Verificação do Bloco G (S10+, 2026-10-21)
 

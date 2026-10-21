@@ -2515,6 +2515,7 @@ e os `ERRO` da ponte contam-se só na cauda do log.
 | Turno real | `id -u` → `0`, no motor que a app instalou |
 | Troca de modo | pára o daemon do modo que se deixa; nenhum bridge a mais |
 | `doctor` na base parada | «motor: parado» (antes: «a correr» — era o do root) |
+| `doctor` no fim | «tudo bem»: sem entradas por activar e sem ERRO na ponte (§73) |
 | Magisk a negar | cartão explicativo → [45](design/revisao/45-magisk-recusou.png) |
 | Passo 2 do assistente | Shizuku escolhido e RECOMENDADO → [48](design/revisao/48-passo2-shizuku-escolhido.png) |
 | Kernel a preparar | barra no topo + «Continuar» cinzento → [46](design/revisao/46-passo2-kernel-a-preparar.png) |
@@ -2528,3 +2529,33 @@ verdade; e a telemetria do turno continua bloqueada no motor (§64/§69.6).
 **Nota de operação:** actualizar a APK por `adb install` **retira a permissão do Shizuku**; a app mostra
 o botão «Autorizar no Shizuku» e volta ao normal com um toque. Não é código nosso, mas vale saber antes
 de concluir que «a app perdeu o motor».
+
+---
+
+## 73. O aviso do motor que vinha de um plugin que nunca existiu
+
+O `doctor` avisava «1 entrada do motor não activou: plugin-exemplo» e o log do motor escrevia o mesmo
+em **cada arranque**. O perfil (`config/cachalote.patch.yml`) trazia um *insert* fixo para
+`@exemplo/dsh-plugin-cachalote` — o exemplo que serviu para provar a camada de plugins (knowledge 130),
+mas que **não vai na instalação**. O loader tentava carregá-lo, falhava o import e escrevia:
+
+```
+dsh: warning: 1 entry did not activate
+plugin-exemplo (file:///…/@exemplo/dsh-plugin-cachalote/lib/index.js): failed to import
+```
+
+Um aviso que se repete a cada arranque e que ninguém pode resolver é pior do que ruído: ensina a
+ignorar a secção.
+
+| O que mudou | Onde |
+|---|---|
+| O *insert* de exemplo saiu do perfil (fica a explicação de como montar um plugin, e o exemplo continua em `kernel-plugins/exemplo`) | `config/cachalote.patch.yml` |
+| A ponte escreve **uma marca** no `engine.log` antes de cada arranque (`--- motor arrancado <data> ---`) | `bridge.cjs` |
+| O `doctor` conta as entradas **só do último arranque** (antes: as últimas 300 linhas, que incluíam arranques de ontem) | `cachalote` |
+| O aviso do watchdog deixou de aparecer fora do root — sem `service.d` não há watchdog para vigiar, e um aviso impossível também ensina a ignorar avisos | `cachalote` |
+| Um `start` que chega tarde já não sobe um segundo bridge: se o porto já responde, diz «já está a correr» | `cachalote` |
+
+**Prova (S10+, 2026-10-21).** Com o perfil corrigido, o motor arranca sem uma única linha «did not
+activate» (`grep -c` = 0 no log novo) e o `doctor` das **duas** bases termina em `resultado: tudo bem`
+— que é o que a app mostra no Resumo depois de «Verificar». Os `EADDRINUSE` de 12:31–12:36 (três em
+cinco minutos, de um `start` que chegava depois de outro) também desapareceram.

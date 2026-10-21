@@ -159,9 +159,14 @@ case "${1:-}" in
 # ---------------------------------------------------------------- motor ACP
 start)
   if ! lock_obter; then
-    # Não se esperou para sempre: se já há daemon, diz-se; se não, tenta-se à mesma (mais vale um
-    # `start` a mais do que uma app que não liga).
-    if alive; then echo "já está a correr (pid $(pid_of), porto $(porto_da_base))"; exit 0; fi
+    # Não se esperou para sempre. Antes de avançar, olha-se para o **porto**: se já há um daemon a
+    # ouvi-lo (o outro `start` acabou de subir, ou o pidfile ainda não foi escrito), este não tem
+    # nada a fazer — e um segundo bridge que perdesse o porto só deixava ruído no log (S10+,
+    # 2026-10-21: três `EADDRINUSE` em cinco minutos, todos de um `start` que chegou tarde).
+    if alive || port_open "$(porto_da_base)"; then
+      echo "já está a correr (porto $(porto_da_base))"
+      exit 0
+    fi
     echo "aviso: outro start/stop está a correr — a avançar à mesma"
   fi
   trap 'lock_largar' EXIT
@@ -303,7 +308,17 @@ doctor)
   fi
   # Pelo caminho **desta** base: o padrão global casava com o watchdog do daemon root e a base do
   # Shizuku dizia «watchdog a vigiar» sem ter nenhum (S10+, 2026-10-21).
-  if pgrep -f "$BASE/bin/cachalote watchdog" >/dev/null 2>&1; then ok "watchdog a vigiar"; else warn "watchdog não está a correr (service.d liga-o no arranque)"; fi
+  #
+  # Fora de /data/adb **não há** service.d (é do Magisk), logo não há watchdog para vigiar: avisar
+  # «não está a correr» era um aviso que ninguém podia resolver — e um aviso impossível ensina a
+  # ignorar avisos.
+  if [ "$BASE" != "/data/adb/cachalote" ]; then
+    ok "sem watchdog neste modo (o service.d é do root; aqui o daemon é arrancado pela app)"
+  elif pgrep -f "$BASE/bin/cachalote watchdog" >/dev/null 2>&1; then
+    ok "watchdog a vigiar"
+  else
+    warn "watchdog não está a correr (service.d liga-o no arranque)"
+  fi
   echo
   echo "-- canal e motor"
   # O porto vem do ficheiro da base — e, se faltar, da regra da base (39731 no root, 39733 fora
@@ -359,7 +374,11 @@ doctor)
     # As entradas contam-se por **nome**, não por linha: o motor avisa «1 entry did not activate»
     # de cada vez que arranca, portanto contar as ocorrências no log dava «8 entradas» para a
     # mesma (`plugin-exemplo`) que falha desde sempre (visto no S10+ em 2026-10-21).
-    ENTRADAS="$(tail -n 300 "$BASE/logs/engine.log" 2>/dev/null | grep 'failed to import' | sed 's/ (file:.*//' | sort -u)"
+    # Só o **último arranque** do motor (a marca `--- motor arrancado ... ---` que a ponte escreve
+    # antes de cada arranque): o log é acrescentado e nunca é limpo, e uma entrada que falhava
+    # ontem continuava a ser reportada hoje.
+    ENTRADAS="$(awk '/^--- motor arrancado/{buf=""} {buf=buf $0 "\n"} END{printf "%s", buf}' \
+      "$BASE/logs/engine.log" 2>/dev/null | grep 'failed to import' | sed 's/ (file:.*//' | sort -u)"
     if [ -z "$ENTRADAS" ]; then
       ok "motor sem entradas por activar"
     else

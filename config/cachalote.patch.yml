@@ -45,11 +45,14 @@
     # plugin a partir da localização do ficheiro.
     - id: tool-cachalote
       name: '/data/adb/cachalote/kernel/dsh/node_modules/@deepseek-ai/dsh-tool-cachalote/lib/index.js'
-    # Exemplo de plugin de terceiros montado pela nossa camada (ver kernel-plugins/exemplo).
-    # Para montar outro: põe o pacote em kernel/dsh/node_modules/<pacote> e acrescenta aqui um
-    # insert com o caminho absoluto do lib/index.js.
-    - id: plugin-exemplo
-      name: '/data/adb/cachalote/kernel/dsh/node_modules/@exemplo/dsh-plugin-cachalote/lib/index.js'
+    # Para montar um plugin de terceiros: põe o pacote em kernel/dsh/node_modules/<pacote> e
+    # acrescenta aqui um insert com o caminho absoluto do lib/index.js — o exemplo que corre
+    # está em kernel-plugins/exemplo (e é só isso: um exemplo, não vai na instalação).
+    #
+    # Havia aqui um insert fixo do `plugin-exemplo` a apontar para um pacote que **não** é
+    # instalado: o motor tentava carregá-lo em cada arranque, falhava o import e escrevia
+    # «1 entry did not activate» no log — o `doctor` mostrava-o como aviso e um problema a sério
+    # ficava escondido atrás do mesmo ruído (S10+, 2026-10-21).
 
 # Presets de permissão. O `sandboxMode` declarado pelo bash-local é
 # `workspace-write` (ver D10 do plano): no Android não há Landlock, portanto o
