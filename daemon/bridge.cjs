@@ -558,8 +558,15 @@ unixServer.listen(SOCK, () => {
 });
 
 const tcpServer = net.createServer((s) => attach(s, { requireAuth: true }));
-tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message));
-tcpServer.on("error", (e) => log("ERRO no servidor tcp: " + e.message + " (porta " + PORT + " já ocupada?)"));
+tcpServer.on("error", (e) => {
+  // Um daemon que não consegue servir o **seu** porto não pode ficar vivo: ficava com um motor a
+  // correr, nenhum cliente possível e o pidfile a apontá-lo — e a app ligava-se ao daemon *antigo*
+  // sem saber porquê. Acontece quando dois `start` correm ao mesmo tempo (a app pede-o no fim da
+  // instalação e no laço de reconexão): o segundo tomava o pidfile e o primeiro ficava com o
+  // porto. Visto no S10+ em 2026-10-21. Quem já está no porto é que manda; este sai.
+  log(`ERRO no servidor tcp: ${e.message} (porta ${PORT} ocupada por outro daemon?) — a sair`);
+  shutdown("porta ocupada");
+});
 tcpServer.listen(PORT, "127.0.0.1", () => {
   log(`TCP à escuta em 127.0.0.1:${PORT} (token obrigatório)`);
   bootEngine();

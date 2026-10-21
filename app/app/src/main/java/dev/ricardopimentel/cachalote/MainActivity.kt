@@ -605,6 +605,20 @@ private fun AjustesScreen(vm: MainViewModel) {
             when (secao) {
                 "motor" -> {
                     StatusScreen(vm)
+                    // O Magisk recusou o root: o cartão diz onde se autoriza e leva lá. Antes
+                    // disto, só aparecia «su saiu com 13: Permission denied» (READINESS, P0).
+                    if (vm.rootNegado && vm.modeKind == DaemonController.Mode.DAEMON) {
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        AvisoMagiskRecusou(
+                            onAbrir = if (RootShell.magiskInstalado(ctx)) {
+                                { RootShell.abrirMagisk(ctx) }
+                            } else {
+                                null
+                            },
+                            onTentar = { vm.refreshStatus(consultarSistema = true) },
+                            podeTentar = !vm.busy,
+                        )
+                    }
                     CartaoTesteExecucao(vm)
                     CartaoKernelDownload(vm)
                 }
@@ -1287,7 +1301,12 @@ private fun OnboardingCard(vm: MainViewModel) {
     val sDaemon = stringResource(R.string.passos_daemon_instalado)
     val sLigarDaemon = stringResource(R.string.passos_ligar_daemon)
     val sRoot = stringResource(R.string.passos_root_concedido)
-    val sObterToken = stringResource(R.string.passos_obter_token)
+    // O rótulo do botão segue o modo: «Obter token (root)» num telefone sem root manda o
+    // utilizador correr `su` sem lhe dizer nada (é a mesma incoerência que o Resumo já corrigiu).
+    val sObterToken = stringResource(
+        if (vm.modeKind == DaemonController.Mode.SHIZUKU) R.string.passos_obter_token_shizuku
+        else R.string.passos_obter_token,
+    )
     val sToken = stringResource(R.string.passos_token_canal)
     val abrirA11y: Pair<String, () -> Unit> = sAbrirA11y to {
         runCatching {
@@ -1301,6 +1320,14 @@ private fun OnboardingCard(vm: MainViewModel) {
     val checks = if (vm.embeddedMode) listOf(
         Triple(sKernel, vm.daemonInstalled != null && vm.embeddedInfo.contains("extraído"), sAutomatico to {}),
         Triple(sMotorEmbutido, vm.embeddedInfo.contains("a correr") || vm.embeddedInfo.contains("extraído"), sVerificar to {}),
+        Triple(sChave, vm.keyPresent, sNaAbaChave to {}),
+        Triple(sA11y, accessibility, abrirA11y),
+        Triple(sCapacidades, allowed > 0, sNaAbaPoderes to {}),
+    ) else if (vm.modeKind == DaemonController.Mode.SHIZUKU) listOf(
+        // Sem root neste modo: a linha do root não se mostra (mostrava ✗ para sempre e o botão
+        // «Obter token (root)» corria `su` a quem escolheu Shizuku).
+        Triple(sDaemon, vm.daemonInstalled == true, sLigarDaemon to { vm.startDaemon() }),
+        Triple(sToken, vm.tokenOk, sObterToken to { vm.obtainToken() }),
         Triple(sChave, vm.keyPresent, sNaAbaChave to {}),
         Triple(sA11y, accessibility, abrirA11y),
         Triple(sCapacidades, allowed > 0, sNaAbaPoderes to {}),
@@ -1383,6 +1410,15 @@ private fun StatusScreen(vm: MainViewModel) {
                 if (vm.shizukuState.isNotBlank()) {
                     Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
                 }
+                // **As conversas são por motor** e é aqui, no sítio onde se troca de modo, que se diz
+                // onde ficam as deste: sem isto a troca parecia perder o histórico (ROADMAP G6). A
+                // linha do transcript só se vê com uma conversa aberta; esta vê-se sempre.
+                Text(
+                    stringResource(R.string.conversas_deste_modo, vm.workspacePath),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = Mono,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
                 // Sem motor instalado, o cartão que o instala — a app já leva tudo o que precisa.
                 if (vm.daemonInstalled != true) {
                     CartaoInstalarMotor(
@@ -1758,6 +1794,7 @@ private fun KeyScreen(vm: MainViewModel) {
 private fun ConversaScreen(vm: MainViewModel) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
 
     // Levar a vista ao fim: o último item do transcript — ou o «A trabalhar…», que é o item
     // seguinte enquanto o turno corre. Sem contar com ele, o indicador nascia sempre abaixo da
@@ -1864,6 +1901,31 @@ private fun ConversaScreen(vm: MainViewModel) {
                 onRemover = { vm.removerDaFila(it) },
                 onLimpar = { vm.limparConcluidas() },
             )
+        }
+        // A acessibilidade caiu (o Android desliga o serviço quando a app é forçada a parar): a
+        // faixa fica **ao lado do campo de escrita**, onde o utilizador está — o único botão para
+        // a religar estava em Ajustes → Acessibilidade, três toques longe do erro (READINESS, P1).
+        if (vm.a11yAviso) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(R.string.faixa_acessibilidade),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = {
+                    runCatching {
+                        ctx.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }) { Text(stringResource(R.string.acessibilidade_ligar)) }
+            }
         }
         BarraDeInput(vm, input) { input = it }
     }

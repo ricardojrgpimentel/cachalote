@@ -1234,3 +1234,46 @@ fun CartaoInstalarMotor(
         }
     }
 }
+
+/**
+ * O Magisk **recusou** o root e não volta a perguntar.
+ *
+ * O diálogo do Magisk tem contagem decrescente: sem toque, o pedido fica negado (`policy=1`) e é
+ * guardado. A app mostrava o código de saída do `su` («su saiu com 13: Permission denied») e mais
+ * nada — quem escolheu root ficava sem saber que o problema é uma definição do Magisk (READINESS,
+ * P0). Este cartão diz onde está o interruptor e leva lá.
+ *
+ * [onAbrir] é nulo quando não se encontrou a app do Magisk (pacote escondido): nesse caso o texto
+ * diz para a abrir à mão, em vez de mostrar um botão que não faz nada.
+ */
+@Composable
+fun AvisoMagiskRecusou(onAbrir: (() -> Unit)?, onTentar: () -> Unit, podeTentar: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                stringResource(R.string.magisk_recusou_titulo),
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Text(stringResource(R.string.magisk_recusou_texto), style = MaterialTheme.typography.bodySmall)
+            if (onAbrir != null) {
+                Button(onClick = onAbrir, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.magisk_abrir))
+                }
+            } else {
+                Text(
+                    stringResource(R.string.magisk_sem_app),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(onClick = onTentar, enabled = podeTentar, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.magisk_tentar))
+            }
+        }
+    }
+}

@@ -35,7 +35,14 @@ PATH="$BASE/bin:$BASE/runtime/bin:$PATH"
 export PATH
 
 pid_of() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
-alive() { p="$(pid_of)"; [ -n "$p" ] && kill -0 "$p" 2>/dev/null; }
+# O daemon está vivo? O pidfile é a via rápida; **sem** pidfile válido (o `stop` pode tê-lo
+# apagado depois de outro `start`, ou o pid foi reaproveitado) um bridge desta base a correr conta
+# — senão o `status` dizia «PARADO» com ele à escuta no porto (visto no S10+ em 2026-10-21).
+alive() {
+  p="$(pid_of)"
+  if [ -n "$p" ] && kill -0 "$p" 2>/dev/null; then return 0; fi
+  [ -n "$(bridges_a_correr)" ]
+}
 
 # Pids de bridges nossos (pelo caminho do bridge na linha de comando), sem repetições.
 bridges_a_correr() {
@@ -79,16 +86,102 @@ matar_bridges_antigos() {
 }
 port_open() { "$NODE" -e 'require("node:net").connect(Number(process.argv[1]),"127.0.0.1").on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))' "$1" 2>/dev/null; }
 
+# ---------------------------------------------------------------- porto
+
+# O porto do canal vem de `home/port` — e a regra é uma só, a mesma do `install.sh`: a base root
+# (`/data/adb/cachalote`) usa 39731; **qualquer outra** (o Shizuku, em `/data/local/tmp/cachalote`)
+# usa 39733. É isso que deixa os dois daemons coexistirem no mesmo telefone.
+#
+# Porque é que isto vive aqui e não só no instalador: o `start` é a porta por onde passam todos os
+# caminhos (a app, o `service.d` do Magisk, o watchdog, o `install.sh`). Uma instalação antiga feita
+# pela app não tinha `home/port`, e o daemon ficava no porto do root — a app em modo Shizuku
+# ligava-se ao daemon errado e o sintoma era «token inválido» (S10+, 2026-10-21).
+porto_da_base() {
+  if [ -n "${CACHALOTE_PORT:-}" ]; then echo "$CACHALOTE_PORT"; return 0; fi
+  local p=""
+  [ -f "$BASE/home/port" ] && p="$(tr -d '[:space:]' < "$BASE/home/port" 2>/dev/null)"
+  if [ -n "$p" ]; then echo "$p"; return 0; fi
+  if [ "$BASE" = "/data/adb/cachalote" ]; then echo 39731; else echo 39733; fi
+}
+
+# Escreve `home/port` se faltar e devolve o porto. Idempotente: quem já o tem não vê diferença.
+garantir_porto() {
+  local p
+  p="$(porto_da_base)"
+  mkdir -p "$BASE/home" 2>/dev/null || true
+  printf '%s\n' "$p" > "$BASE/home/port" 2>/dev/null || true
+  chmod 644 "$BASE/home/port" 2>/dev/null || true
+  echo "$p"
+}
+
+# Para o daemon e todos os bridges desta base. **Não** mexe no cadeado: quem chama decide (o
+# `stop` pega-o; o `start` já o tem na mão e não pode voltar a pedi-lo).
+parar_de_facto() {
+  if ! alive && [ -z "$(bridges_a_correr)" ]; then
+    rm -f "$PIDFILE" "$SOCK"
+    return 1
+  fi
+  alive && kill "$(pid_of)" 2>/dev/null
+  matar_bridges_antigos
+  rm -f "$PIDFILE" "$SOCK"
+  return 0
+}
+
+# ---------------------------------------------------------------- cadeado do start/stop
+
+# Um `start` e um `stop` nunca podem correr ao mesmo tempo: o `stop` apagava o pidfile de um `start`
+# que acabara de subir, e dois `start` davam dois bridges (visto no S10+, 2026-10-21).
+#
+# Cadeado por `mkdir` com o **pid do dono** lá dentro: se o dono morrer (a app foi morta a meio, o
+# `su` foi cortado), o cadeado fica órfão e é retirado — senão o daemon nunca mais subia e cada
+# tentativa deixava um `sh` pendurado à espera. Espera-se no máximo ~8 s.
+LOCK="$BASE/run/start.lock"
+lock_obter() {
+  mkdir -p "$BASE/run" 2>/dev/null || true
+  i=0
+  while ! mkdir "$LOCK" 2>/dev/null; do
+    DONO="$(cat "$LOCK/pid" 2>/dev/null)"
+    if [ -n "$DONO" ] && ! kill -0 "$DONO" 2>/dev/null; then
+      rm -rf "$LOCK" 2>/dev/null || true
+      continue
+    fi
+    i=$((i + 1))
+    [ "$i" -le 8 ] || return 1
+    sleep 1
+  done
+  echo $$ > "$LOCK/pid" 2>/dev/null || true
+  return 0
+}
+lock_largar() { rm -rf "$LOCK" 2>/dev/null || true; }
+
 case "${1:-}" in
 
 # ---------------------------------------------------------------- motor ACP
 start)
-  if alive; then echo "já está a correr (pid $(pid_of))"; exit 0; fi
+  if ! lock_obter; then
+    # Não se esperou para sempre: se já há daemon, diz-se; se não, tenta-se à mesma (mais vale um
+    # `start` a mais do que uma app que não liga).
+    if alive; then echo "já está a correr (pid $(pid_of), porto $(porto_da_base))"; exit 0; fi
+    echo "aviso: outro start/stop está a correr — a avançar à mesma"
+  fi
+  trap 'lock_largar' EXIT
+  # O porto vem primeiro, e **antes** do `alive`: uma instalação antiga (feita pela app antes de
+  # `home/port` existir) tem o daemon vivo no porto do root. Escrever o porto e reiniciar é o que
+  # a migra para o porto do modo, em vez de a deixar a colidir com o daemon root.
+  ANTES="$(cat "$BASE/home/port" 2>/dev/null | tr -d '[:space:]')"
+  PORTO="$(garantir_porto)"
+  if alive; then
+    if [ "$ANTES" = "$PORTO" ]; then echo "já está a correr (pid $(pid_of), porto $PORTO)"; exit 0; fi
+    echo "a reiniciar o daemon: o porto passou de ${ANTES:-?} para $PORTO"
+    # Sem passar pelo `stop`: o cadeado já é nosso (o `stop` voltaria a pedi-lo e ficava à espera).
+    parar_de_facto >/dev/null 2>&1 || true
+  fi
   # Um daemon antigo sem pidfile válido (reinstalação, pid reaproveitado) ficava a ocupar o porto
   # e o novo não subia — chegou a haver **dois** bridges ao mesmo tempo. Antes de arrancar,
   # procura-os pelo caminho do bridge, mata-os e **espera** (ver `matar_bridges_antigos`).
   matar_bridges_antigos
   [ -x "$NODE" ] || { echo "ERRO: falta $NODE (corre daemon/install.sh)"; exit 1; }
+  export CACHALOTE_PORT="$PORTO"
   mkdir -p "$BASE/run" "$BASE/logs" "$BASE/tmp"
   export CACHALOTE_BASE="$BASE"
   nohup "$NODE" "$BASE/bridge.cjs" >>"$BASE/logs/daemon-console.log" 2>&1 &
@@ -98,7 +191,7 @@ start)
   # processos quase-críticos (o mínimo é -1000).
   echo -800 > "/proc/$!/oom_score_adj" 2>/dev/null || true
   sleep 2
-  if alive; then echo "arrancado (pid $(pid_of))"; else echo "FALHOU — ver $BASE/logs/daemon.log"; tail -n 20 "$BASE/logs/daemon.log" "$BASE/logs/daemon-console.log"; exit 1; fi
+  if alive; then echo "arrancado (pid $(pid_of), porto $PORTO)"; else echo "FALHOU — ver $BASE/logs/daemon.log"; tail -n 20 "$BASE/logs/daemon.log" "$BASE/logs/daemon-console.log"; exit 1; fi
   ;;
 watchdog)
   # Mantém o daemon vivo: arranca-o se estiver parado e volta a arrancar se morrer. É o que o
@@ -208,13 +301,14 @@ doctor)
   else
     bad "parado — arranca com: cachalote start (ou liga o watchdog)"
   fi
-  if pgrep -f "cachalote watchdog" >/dev/null 2>&1; then ok "watchdog a vigiar"; else warn "watchdog não está a correr (service.d liga-o no arranque)"; fi
+  # Pelo caminho **desta** base: o padrão global casava com o watchdog do daemon root e a base do
+  # Shizuku dizia «watchdog a vigiar» sem ter nenhum (S10+, 2026-10-21).
+  if pgrep -f "$BASE/bin/cachalote watchdog" >/dev/null 2>&1; then ok "watchdog a vigiar"; else warn "watchdog não está a correr (service.d liga-o no arranque)"; fi
   echo
   echo "-- canal e motor"
-  # O porto vem do ficheiro da base: no modo Shizuku é 39733, não 39731. Com o valor fixo, o
-  # doctor mentia sobre o canal (apanhado ao re-verificar o Shizuku).
-  PORTO="$(cat "$BASE/home/port" 2>/dev/null | tr -d '[:space:]')"
-  PORTO="${PORTO:-${CACHALOTE_PORT:-39731}}"
+  # O porto vem do ficheiro da base — e, se faltar, da regra da base (39731 no root, 39733 fora
+  # dele). Com o valor fixo, o doctor mentia sobre o canal (apanhado ao re-verificar o Shizuku).
+  PORTO="$(porto_da_base)"
   if port_open "$PORTO"; then ok "TCP $PORTO à escuta"; else bad "porto $PORTO sem resposta"; fi
   [ -S "$SOCK" ] && ok "socket unix" || warn "socket unix ausente (normal em /data/local/tmp — o SELinux recusa)"
   ST=""
@@ -222,7 +316,11 @@ doctor)
   case "$ST" in
     *'"engine":true'*) ok "motor (engine) a responder" ;;
     *'"engine":false'*) warn "motor em baixo — a ponte reinicia-o; vê logs/engine.log" ;;
-    *) pgrep -f "dsh/lib/bin.js" >/dev/null 2>&1 && ok "processo do motor presente" || warn "não consegui confirmar o motor" ;;
+    # O motor procura-se **pelo kernel desta base**: com `pgrep -f "dsh/lib/bin.js"` a base parada
+    # dizia «motor presente» por causa do motor da *outra* base (S10+, 2026-10-21: o daemon do
+    # Shizuku, parado, dizia «motor: a correr» porque o root estava de pé).
+    *) pgrep -f "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" >/dev/null 2>&1 &&
+         ok "processo do motor presente" || warn "não consegui confirmar o motor" ;;
   esac
   if [ -S "$SOCK" ]; then
     case "$ST" in
@@ -258,11 +356,25 @@ doctor)
   DF="$(df -h "$BASE" 2>/dev/null | tail -1 | awk '{print $4}')"
   [ -n "$DF" ] && ok "espaço livre em $BASE: $DF" || warn "não consegui ler o espaço em disco"
   if [ -f "$BASE/logs/engine.log" ]; then
-    E="$(tail -n 300 "$BASE/logs/engine.log" 2>/dev/null | grep -c "did not activate")"
-    [ "${E:-0}" = "0" ] && ok "motor sem 'did not activate'" || warn "$E entradas do motor não activaram (vê logs/engine.log)"
+    # As entradas contam-se por **nome**, não por linha: o motor avisa «1 entry did not activate»
+    # de cada vez que arranca, portanto contar as ocorrências no log dava «8 entradas» para a
+    # mesma (`plugin-exemplo`) que falha desde sempre (visto no S10+ em 2026-10-21).
+    ENTRADAS="$(tail -n 300 "$BASE/logs/engine.log" 2>/dev/null | grep 'failed to import' | sed 's/ (file:.*//' | sort -u)"
+    if [ -z "$ENTRADAS" ]; then
+      ok "motor sem entradas por activar"
+    else
+      N="$(printf '%s\n' "$ENTRADAS" | wc -l | tr -d ' ')"
+      if [ "$N" = "1" ]; then
+        warn "1 entrada do motor não activou: $(printf '%s' "$ENTRADAS" | tr '\n' ' ')"
+      else
+        warn "$N entradas do motor não activaram: $(printf '%s' "$ENTRADAS" | tr '\n' ' ')"
+      fi
+    fi
   fi
   if [ -f "$BASE/logs/daemon.log" ]; then
-    U="$(grep -c "ERRO" "$BASE/logs/daemon.log" 2>/dev/null)"
+    # Só a cauda: um ERRO de ontem não é um problema de hoje (e um log que nunca é limpo passava
+    # a mentir para sempre).
+    U="$(tail -n 300 "$BASE/logs/daemon.log" 2>/dev/null | grep -c "ERRO")"
     [ "${U:-0}" = "0" ] && ok "ponte sem ERRO no registo" || warn "$U ERRO no registo da ponte (vê logs/daemon.log)"
   fi
   echo
@@ -286,15 +398,12 @@ doctor)
   ;;
 
 stop)
-  # Pelo pidfile **e** pelo caminho do bridge: um duplicado que o pidfile não conhece também tem
-  # de sair (era o que deixava dois bridges a correr depois de um `restart`).
-  if ! alive && [ -z "$(bridges_a_correr)" ]; then
-    echo "não está a correr"; rm -f "$PIDFILE" "$SOCK"; exit 0
-  fi
-  alive && kill "$(pid_of)" 2>/dev/null
-  matar_bridges_antigos
-  rm -f "$PIDFILE" "$SOCK"
-  echo "parado"
+  # O `stop` entra no **mesmo** cadeado do `start`: sem isto, um `stop` lançado enquanto o laço de
+  # reconexão da app arrancava um daemon novo apagava o pidfile dele e o `status` passava a dizer
+  # «PARADO» com o daemon à escuta no porto (visto no S10+ em 2026-10-21).
+  lock_obter || true
+  trap 'lock_largar' EXIT
+  if parar_de_facto; then echo "parado"; else echo "não está a correr"; fi
   ;;
 restart) "$0" stop; "$0" start ;;
 status)
@@ -303,7 +412,8 @@ status)
   echo "perfil : ${CACHALOTE_PROFILE:-acp}"
   if alive; then echo "daemon : a correr (pid $(pid_of))"; else echo "daemon : PARADO"; fi
   if [ -S "$SOCK" ]; then echo "socket : $SOCK (modo $(stat -c %a "$SOCK" 2>/dev/null))"; else echo "socket : ausente"; fi
-  if pgrep -f "@deepseek-ai/dsh/lib/bin.js" >/dev/null 2>&1; then echo "motor  : a correr"; else echo "motor  : parado"; fi
+  if pgrep -f "$BASE/kernel/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js" >/dev/null 2>&1; then echo "motor  : a correr"; else echo "motor  : parado"; fi
+  echo "porto  : $(porto_da_base)"
   echo "sessões: $(ls "$BASE/home/sessions" 2>/dev/null | wc -l) (direcções de projecto)"
   if [ -x "$NODE" ] && [ -S "$SOCK" ]; then
     echo "handshake:"
@@ -334,7 +444,7 @@ app-token)
   ;;
 app-info)
   TOK="$("$0" app-token)"
-  printf '{"port":%s,"token":"%s","base":"%s","profile":"%s"}\n' "${CACHALOTE_PORT:-39731}" "$TOK" "$BASE" "${CACHALOTE_PROFILE:-acp}"
+  printf '{"port":%s,"token":"%s","base":"%s","profile":"%s"}\n' "$(porto_da_base)" "$TOK" "$BASE" "${CACHALOTE_PROFILE:-acp}"
   ;;
 
 # ---------------------------------------------------------------- interface web completa

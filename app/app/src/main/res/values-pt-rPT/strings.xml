@@ -13,6 +13,7 @@
     <string name="acessibilidade">Acessibilidade</string>
     <string name="acessibilidade_caiu">a acessibilidade desligou-se: o agente perdeu olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)</string>
     <string name="acessibilidade_detalhe">ver e tocar no ecrã</string>
+    <string name="acessibilidade_ligar">Ligar</string>
     <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
     <string name="acesso">Acesso</string>
     <string name="ajustes_modulos">%1$d módulos configurados</string>
@@ -71,6 +72,8 @@
     <string name="conversa_nova_longa">Nova conversa</string>
     <string name="conversa_vazia_texto">Escreve a primeira mensagem e o agente começa a trabalhar.</string>
     <string name="conversa_vazia_titulo">Ainda não há conversas</string>
+    <string name="conversas_deste_modo">as conversas deste modo: %1$s</string>
+    <string name="conversas_por_modo">cada motor tem as suas conversas: as deste modo ficam em %1$s (as do outro continuam onde estavam)</string>
     <string name="daemon_instalado">daemon instalado</string>
     <string name="descarregar_kernel">Descarregar kernel</string>
     <string name="diagnostico">diagnóstico: pid %1$d · a11y %2$s · ticks %3$d · direto %4$s</string>
@@ -79,9 +82,11 @@
     <string name="ditar_texto">Falar</string>
     <string name="em_direto">em direto</string>
     <string name="enviar">Enviar</string>
+    <string name="erro_daemon_parado">o daemon deste modo não está a correr — liga-o em Ajustes → Motor</string>
     <string name="esconder">Esconder</string>
     <string name="escreve_tarefa">Escreve uma tarefa para o agente</string>
     <string name="estado_titulo">Estado</string>
+    <string name="faixa_acessibilidade">a acessibilidade está desligada: o agente não vê nem toca no ecrã</string>
     <string name="fechar">Fechar</string>
     <string name="fechar_sessao_activa">Fechar a sessão activa</string>
     <string name="fechar_texto">Fechar</string>
@@ -111,6 +116,12 @@
     <string name="handshake_pendente">(handshake ainda não feito)</string>
     <string name="imagem_anexo">imagem: %1$s · %2$d KB</string>
     <string name="iniciar">Iniciar</string>
+    <string name="kernel_a_descarregar">a descarregar o kernel…</string>
+    <string name="kernel_a_descarregar_lido">a descarregar o kernel: %1$s MB</string>
+    <string name="kernel_a_descarregar_progresso">a descarregar o kernel: %1$s/%2$s MB</string>
+    <string name="kernel_a_preparar">a preparar o kernel (%1$s)…</string>
+    <string name="kernel_ja_pronto">o kernel já estava pronto</string>
+    <string name="kernel_pronto">kernel pronto (%1$d ficheiros)</string>
     <string name="kernel_texto">Sem asset na APK, a app vai buscar o kernel a este URL e verifica o sha256. Vazio = usa o URL gravado no build. Serve para hospedagem própria.</string>
     <string name="kernel_titulo">Kernel por download (modo embutido)</string>
     <string name="legenda_sessoes">✕ fecha a sessão activa · toca numa linha para retomar</string>
@@ -119,6 +130,11 @@
     <string name="licencas_titulo">Licenças de terceiros</string>
     <string name="ligar_daemon">Ligar daemon</string>
     <string name="limpar">Limpar</string>
+    <string name="magisk_abrir">Abrir o Magisk</string>
+    <string name="magisk_recusou_texto">O pedido foi negado e o Magisk guarda essa decisão: não volta a perguntar. Abre o Magisk → Superuser → Cachalote, muda para «Permitir» e tenta outra vez.</string>
+    <string name="magisk_recusou_titulo">O Magisk recusou o root</string>
+    <string name="magisk_sem_app">Não encontrei a app do Magisk — abre-a na gaveta de aplicações e autoriza o Cachalote em Superuser.</string>
+    <string name="magisk_tentar">Já autorizei — tentar outra vez</string>
     <string name="mcp_aviso">⚠ O comando tem de ser um caminho ABSOLUTO e, se usar o Node do daemon, precisa do LD_LIBRARY_PATH no env (senão morre no linker).</string>
     <string name="mcp_detalhe">ferramentas externas ligadas por JSON</string>
     <string name="mcp_exemplo">[{\"name\":\"ping\",\"command\":\"/data/adb/cachalote/runtime/bin/node\",\"args\":[\"/data/local/tmp/mcp-ping-server.mjs\"],\"env\":[{\"name\":\"LD_LIBRARY_PATH\",\"value\":\"/data/adb/cachalote/runtime/lib\"}]}]</string>
@@ -150,6 +166,7 @@
     <string name="obter_token">Obter token (root)</string>
     <string name="parar">Parar</string>
     <string name="parar_turno">Parar</string>
+    <string name="passos_obter_token_shizuku">Obter token (Shizuku)</string>
     <string name="perigo">Perigo</string>
     <string name="placeholder_areas">/sdcard/Download</string>
     <string name="placeholder_mcp">[{\"name\":\"…\",\"command\":\"/caminho/absoluto\"}]</string>
@@ -235,6 +252,7 @@
     <string name="wizard_comecar">Começar a conversar</string>
     <string name="wizard_continuar">Continuar</string>
     <string name="wizard_ja_configurado">Já tenho tudo configurado</string>
+    <string name="wizard_kernel_a_preparar_aviso">podes continuar quando isto acabar — não está pendurado</string>
     <string name="wizard_modo_detectado_nada">Não encontrei root nem Shizuku — o modo embutido é o que funciona já.</string>
     <string name="wizard_modo_detectado_root">Detectei root neste telemóvel — é a opção mais capaz.</string>
     <string name="wizard_modo_detectado_shizuku">Detectei o Shizuku a correr — dá para fazer quase tudo sem root.</string>

@@ -69,6 +69,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     var daemonInfo by mutableStateOf("")   // preenchido no arranque; ver init()
     var rootOk by mutableStateOf<Boolean?>(null)
+    /**
+     * O Magisk **negou** o pedido de root (política `policy=1`, que ele guarda e aplica em
+     * silêncio, sem voltar a perguntar). Não é o mesmo que «este telefone não tem root»: é uma
+     * definição no Magisk que o utilizador tem de mudar, e a app tem de o dizer (READINESS, P0).
+     */
+    var rootNegado by mutableStateOf(false)
     var daemonInstalled by mutableStateOf<Boolean?>(null)
     var tokenState by mutableStateOf("")
 
@@ -214,9 +220,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val vigia = VigiaAcessibilidade(CachaloteAccessibilityService.isEnabled())
     var a11yTicks by mutableStateOf(0)
 
+    /**
+     * Mostrar a faixa «a acessibilidade está desligada» por cima do campo de escrita?
+     *
+     * Só a quem **já a teve ligada** (ver `Prefs.a11yJaEsteveLigada`): quem nunca a ligou não
+     * perdeu nada, e uma faixa permanente seria ruído. É o caso do `force-stop`, em que o Android
+     * desliga o serviço e o agente fica sem olhos nem dedos (READINESS, P1).
+     */
+    var a11yAviso by mutableStateOf(false)
+
     /** Que motor está em uso: daemon com root, daemon via Shizuku, ou motor embutido. */
     var modeKind by mutableStateOf(controller.mode)
     val embeddedMode: Boolean get() = modeKind == DaemonController.Mode.EMBEDDED
+
+    /** Onde ficam as conversas **deste** modo (cada motor tem o seu `$DSH_HOME`). */
+    val workspacePath: String get() = controller.workspace
     var embeddedInfo by mutableStateOf("")
     var shizukuState by mutableStateOf("")
 
@@ -403,15 +421,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun switchMode(kind: DaemonController.Mode) = run("modo") {
         if (kind == modeKind) return@run
+        val anterior = modeKind
         // Guardar o estado deste modo antes de sair: cada modo tem a sua sessão e o seu
         // histórico (o cwd é diferente e o motor recusa retomar sessões de outro).
         runCatching { saveState() }
+        // O daemon do modo que se está a deixar **pára**. Sem isto ficavam dois daemons, dois
+        // motores e dois `$DSH_HOME` no mesmo telefone — e, até o porto ser por base (ROADMAP G1),
+        // a app chegava a ligar-se ao daemon errado. No root só se pára se o acesso já estiver
+        // concedido, para não fazer aparecer o diálogo do Magisk a quem escolheu Shizuku.
+        if (anterior == DaemonController.Mode.SHIZUKU || anterior == DaemonController.Mode.DAEMON) {
+            controller.pararDaemonDe(anterior, comRoot = rootOk == true)
+        }
         sessionId = null
         transcript.clear()
         controller.stopEmbedded()
         controller.mode = kind
         modeKind = kind
         shizukuState = ""
+        // As conversas são **por motor** (cada um tem o seu `$DSH_HOME`): dizer onde ficam as
+        // deste modo evita que a troca pareça uma perda de histórico (ROADMAP G6).
+        if (anterior != kind) {
+            transcript.add(
+                ChatLine(
+                    "system",
+                    getApplication<Application>().getString(
+                        R.string.conversas_por_modo,
+                        controller.workspace,
+                    ),
+                ),
+            )
+        }
         when (kind) {
             DaemonController.Mode.SHIZUKU -> {
                 if (!controller.shizukuAvailable()) error(getApplication<Application>().getString(R.string.shizuku_nao_corre))
@@ -438,7 +477,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // `agentInfo` é o que o passo 3 mostra em «motor a responder»; sem isto ficava ✗ mesmo
         // com o motor embutido de pé (visto no ensaio de instalação limpa de 2026-10-19).
         agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
-        refreshStatus()
+        // **Consultar o sistema**, e não só o estado guardado: o painel «Primeiros passos» lê
+        // `daemonInstalled`/`rootOk`/`tokenOk`, que sem isto ficavam com os valores do modo
+        // anterior — e a app pedia para instalar 600 MB de um motor que já estava instalado e a
+        // responder (visto no S10+ em 2026-10-21, ao trocar Shizuku → root).
+        refreshStatus(consultarSistema = true)
         runCatching { refreshKeyStatus() }
     }
 
@@ -452,18 +495,48 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             embeddedInfo = getApplication<Application>().getString(R.string.sem_kernel)
             return
         }
-        embeddedInfo = if (origem.startsWith("download")) "a descarregar o kernel…" else "a preparar o kernel ($origem)…"
-        val n = controller.prepareEmbedded { read, total ->
-            val mb = { v: Long -> "%.0f".format(v / 1048576.0) }
-            embeddedInfo = if (total > 0) "a descarregar o kernel: ${mb(read)}/${mb(total)} MB"
-                           else "a descarregar o kernel: ${mb(read)} MB"
+        if (kernelPreparando) return
+        kernelPreparando = true
+        kernelFracao = 0f
+        try {
+            val app = getApplication<Application>()
+            embeddedInfo = if (origem.startsWith("download")) {
+                app.getString(R.string.kernel_a_descarregar)
+            } else {
+                app.getString(R.string.kernel_a_preparar, origem)
+            }
+            val n = controller.prepareEmbedded { read, total ->
+                val mb = { v: Long -> "%.0f".format(v / 1048576.0) }
+                // 95% é o tecto do que a cópia controla: o resto (extrair, verificar) não reporta
+                // bytes, e uma barra que chega a 100% e fica lá parada é pior do que uma honesta.
+                if (total > 0) kernelFracao = (read.toFloat() / total.toFloat()).coerceIn(0f, 0.95f)
+                embeddedInfo = if (total > 0) {
+                    app.getString(R.string.kernel_a_descarregar_progresso, mb(read), mb(total))
+                } else {
+                    app.getString(R.string.kernel_a_descarregar_lido, mb(read))
+                }
+            }
+            embeddedInfo = if (n > 0) app.getString(R.string.kernel_pronto, n) else app.getString(R.string.kernel_ja_pronto)
+            kernelFracao = 1f
+        } finally {
+            // A barra e o bloqueio do «Continuar» têm de sair **sempre**, mesmo a falhar: senão o
+            // assistente fica preso num passo que já não está a fazer nada.
+            kernelPreparando = false
+            kernelFracao = null
         }
-        embeddedInfo = if (n > 0) "kernel pronto ($n ficheiros)" else "kernel já estava pronto"
     }
+
+    /** A preparar o kernel embutido neste instante? (barra no assistente e «Continuar» travado) */
+    var kernelPreparando by mutableStateOf(false)
+        private set
+
+    /** Fracção da cópia do kernel (0..1) enquanto `kernelPreparando`; null fora daí. */
+    var kernelFracao by mutableStateOf<Float?>(null)
+        private set
 
     /** Botão "Descarregar kernel" (modo embutido sem kernel). */
     fun downloadKernel() = run("kernel") {
-        if (controller.embeddedPrepared()) { embeddedInfo = "kernel já está pronto"; return@run }
+        if (controller.embeddedPrepared()) { embeddedInfo = getApplication<Application>().getString(R.string.kernel_ja_pronto); return@run }
         provisionKernel()
         controller.ensureConnected()
         agentInfo = controller.ensureAcp().optJSONObject("agentInfo")?.toString() ?: ""
@@ -674,9 +747,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // extraído na app.
             if (modeKind == DaemonController.Mode.EMBEDDED) {
                 rootOk = null
+                rootNegado = false
                 daemonInstalled = controller.embeddedPrepared()
             } else {
-                rootOk = controller.hasRoot()
+                // Três estados, não dois: «o Magisk negou» pede um cartão a explicar onde se
+                // autoriza; «não há root» só pede que se escolha outro modo.
+                val acesso = controller.estadoRoot()
+                rootOk = acesso == RootShell.Acesso.CONCEDIDO
+                rootNegado = acesso == RootShell.Acesso.NEGADO
                 daemonInstalled = controller.daemonInstalled()
             }
         }
@@ -1228,12 +1306,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun escolherModo(kind: DaemonController.Mode) {
         rootOk = null
+        rootNegado = false
+        // A partir daqui a escolha é do utilizador: a sugestão do assistente não a volta a mudar.
+        Prefs(getApplication()).modoEscolhido = true
         switchMode(kind)
         // Escolher root é o momento em que o diálogo do Magisk faz sentido: o utilizador acabou de
         // o pedir. Escolher Shizuku faz aparecer o aviso da permissão (o `switchMode` já lá chega).
         if (kind == DaemonController.Mode.DAEMON) refreshStatus(consultarSistema = true)
         else refreshStatus()
     }
+
+    /**
+     * Sugere o modo que este telefone já permite — **sem** pedir root a ninguém.
+     *
+     * O `Prefs.mode` nascia em `"daemon"` (root), e o passo 2 do assistente marca o Shizuku como
+     * RECOMENDADO sem o escolher: num telefone sem root, o primeiro «Continuar» levava ao caminho
+     * errado (READINESS, P1). A ordem é a do que não pede nada: Shizuku (se estiver a correr),
+     * root (se houver Magisk), embutido (sempre possível).
+     *
+     * Só corre uma vez e só enquanto o utilizador não escolheu — uma sugestão que se impõe a cada
+     * abertura do assistente seria pior do que nenhuma.
+     */
+    fun sugerirModo() {
+        val p = Prefs(getApplication())
+        if (p.modoEscolhido || p.wizardConcluido) return
+        if (modoSugerido) return
+        modoSugerido = true
+        val kind = when {
+            controller.shizukuAvailable() -> DaemonController.Mode.SHIZUKU
+            RootShell.magiskInstalado(getApplication()) -> DaemonController.Mode.DAEMON
+            else -> DaemonController.Mode.EMBEDDED
+        }
+        if (kind != modeKind) switchMode(kind)
+    }
+
+    /** A sugestão do modo já correu nesta sessão (não se repete a cada recomposição). */
+    private var modoSugerido = false
 
     /** Pede a permissão de notificações — só quando o utilizador liga a capacidade. */
     fun pedirNotificacoes(activity: android.app.Activity) {
@@ -1458,6 +1566,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return when {
             m.contains("no api key") || m.contains("api key") && m.contains("store") ->
                 getApplication<Application>().getString(R.string.erro_sem_chave)
+            // **Primeiro** o canal local: um `ConnectException` do socket diz «failed to connect
+            // to /127.0.0.1:39733» e caía na regra da rede — a app dizia «o telefone está sem
+            // ligação à internet» com o daemon parado (visto no S10+ em 2026-10-21). O `127.0.0.1`
+            // é o que separa «a minha porta está fechada» de «a rede do telefone caiu».
+            m.contains("127.0.0.1") || m.contains("econnrefused") ||
+                m.contains("connection refused") || m.contains("ligação recusada") ->
+                getApplication<Application>().getString(R.string.erro_daemon_parado)
             m.contains("network is unreachable") || m.contains("unknownhost") ||
                 m.contains("transport failed") || m.contains("failed to connect") ->
                 getApplication<Application>().getString(R.string.erro_sem_rede)
@@ -1541,6 +1656,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 kotlinx.coroutines.delay(5000)
                 val agora = CachaloteAccessibilityService.isEnabled()
                 accessibilityOn = agora
+                // A faixa do campo de escrita (ROADMAP G5): só para quem já a teve ligada — os
+                // outros fizeram uma escolha, não perderam nada.
+                val p = Prefs(getApplication())
+                if (agora) p.a11yJaEsteveLigada = true
+                a11yAviso = !agora && p.a11yJaEsteveLigada
                 if (vigia.observar(agora) != null) {
                     val app = getApplication<Application>()
                     transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.acessibilidade_caiu)))

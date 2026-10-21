@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -67,6 +68,11 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val passos = 6
     val ultimo = passo == passos - 1
+
+    // O modo que este telefone já permite, escolhido **antes** de o utilizador ver os cartões:
+    // Shizuku se estiver a correr, root se houver Magisk, embutido caso contrário. Não pede root a
+    // ninguém (perguntar só quando ele escolher root é a regra desde 2026-10-16).
+    LaunchedEffect(Unit) { vm.sugerirModo() }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -123,6 +129,10 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
             }
             Button(
                 onClick = { if (ultimo) onConcluir() else passo++ },
+                // «Continuar» travado enquanto o kernel se prepara: no modo embutido a extracção
+                // começa no passo 2 e leva 1–2 min no S10+ — sem isto o passo parecia pendurado e
+                // o botão levava a um passo que ainda não tinha nada para mostrar (ROADMAP G4).
+                enabled = !vm.kernelPreparando,
                 modifier = Modifier.weight(if (passo > 0) 1.6f else 1f),
             ) {
                 Text(
@@ -206,17 +216,50 @@ private fun EscolhaDoModo(vm: MainViewModel) {
     val temRoot = vm.rootOk == true
     val rootDesconhecido = vm.rootOk == null
     val temShizuku = ShizukuBridge.available()
+    // O cartão RECOMENDADO e o modo escolhido têm de dizer a **mesma** coisa, senão o primeiro
+    // «Continuar» leva ao caminho errado (READINESS, P1: root escolhido com o Shizuku marcado
+    // recomendado). A ordem é a mesma de `MainViewModel.sugerirModo`: o que não pede nada primeiro.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sugerido = when {
+        temShizuku -> DaemonController.Mode.SHIZUKU
+        temRoot || RootShell.magiskInstalado(ctx) -> DaemonController.Mode.DAEMON
+        else -> DaemonController.Mode.EMBEDDED
+    }
     Passo(
         titulo = stringResource(R.string.wizard_modo_titulo),
         texto = stringResource(R.string.wizard_modo_texto),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // A preparação do kernel começa **aqui** (é escolher o embutido que a dispara), por isso
+            // o progresso aparece no topo — à vista, sem ter de rolar os três cartões. Antes estava
+            // por baixo deles e quem escolhia «Sem nada» só via o «Continuar» cinzento (ROADMAP G4).
+            if (vm.kernelPreparando) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val f = vm.kernelFracao
+                    if (f != null) {
+                        LinearProgressIndicator(progress = { f }, modifier = Modifier.fillMaxWidth())
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                    Text(
+                        vm.embeddedInfo,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                    Text(
+                        stringResource(R.string.wizard_kernel_a_preparar_aviso),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
             OpcaoDeModo(
                 titulo = stringResource(R.string.wizard_modo_root),
                 detalhe = stringResource(R.string.wizard_modo_root_detalhe),
                 risco = stringResource(R.string.wizard_modo_root_risco),
                 disponivel = temRoot || rootDesconhecido,
-                recomendado = temRoot,
+                recomendado = sugerido == DaemonController.Mode.DAEMON,
                 escolhido = vm.modeKind == DaemonController.Mode.DAEMON,
                 onEscolher = { vm.escolherModo(DaemonController.Mode.DAEMON) },
             )
@@ -227,7 +270,7 @@ private fun EscolhaDoModo(vm: MainViewModel) {
                 // Escolhível mesmo com o Shizuku parado: o passo seguinte explica como o ligar,
                 // e é isso que falta a quem instala a app de fresco.
                 disponivel = true,
-                recomendado = !temRoot && temShizuku,
+                recomendado = sugerido == DaemonController.Mode.SHIZUKU,
                 escolhido = vm.modeKind == DaemonController.Mode.SHIZUKU,
                 onEscolher = { vm.escolherModo(DaemonController.Mode.SHIZUKU) },
             )
@@ -236,7 +279,7 @@ private fun EscolhaDoModo(vm: MainViewModel) {
                 detalhe = stringResource(R.string.wizard_modo_embutido_detalhe),
                 risco = stringResource(R.string.wizard_modo_embutido_risco),
                 disponivel = true,
-                recomendado = !temRoot && !temShizuku,
+                recomendado = sugerido == DaemonController.Mode.EMBEDDED,
                 escolhido = vm.modeKind == DaemonController.Mode.EMBEDDED,
                 onEscolher = { vm.escolherModo(DaemonController.Mode.EMBEDDED) },
             )
@@ -387,6 +430,21 @@ private fun LigarMotor(vm: MainViewModel) {
                         )
                     }
                 }
+            }
+
+            // O Magisk recusou o pedido e não volta a perguntar: dizer onde se autoriza, com um
+            // botão que abre a app. Antes daqui, o utilizador só via «su saiu com 13: Permission
+            // denied» (READINESS, P0).
+            if (vm.rootNegado && !shizuku && !embutido) {
+                AvisoMagiskRecusou(
+                    onAbrir = if (RootShell.magiskInstalado(ctx)) {
+                        { RootShell.abrirMagisk(ctx) }
+                    } else {
+                        null
+                    },
+                    onTentar = { vm.refreshStatus(consultarSistema = true) },
+                    podeTentar = !vm.busy,
+                )
             }
 
             // O aviso do Shizuku, com o botão que **pede** a permissão. Era isto que faltava por

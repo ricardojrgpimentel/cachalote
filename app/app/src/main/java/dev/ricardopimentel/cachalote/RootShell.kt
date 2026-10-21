@@ -115,8 +115,60 @@ object RootShell {
         return runCatching { proc.exitValue() }.isSuccess
     }
 
-    suspend fun hasRoot(): Boolean = run("id -u").map { it.trim() == "0" }.getOrDefault(false)
+    /**
+     * Há root? Sim, não, ou Não Sei — os três estados que a app precisa de distinguir.
+     *
+     * Porque não basta um booleano: o Magisk mostra o pedido com **contagem decrescente** e, se
+     * ninguém tocar, grava `policy=1` (negar) e **não volta a perguntar**. Com um booleano, «negado
+     * para sempre» e «este telefone não tem root» davam a mesma resposta («sem root») e o
+     * utilizador ficava sem saber que o problema é uma definição do Magisk (READINESS, P0).
+     */
+    enum class Acesso { CONCEDIDO, NEGADO, AUSENTE }
+
+    suspend fun estado(): Acesso {
+        val r = run("id -u")
+        if (r.isSuccess && r.getOrNull()?.trim() == "0") return Acesso.CONCEDIDO
+        val msg = r.exceptionOrNull()?.message.orEmpty().lowercase()
+        val negado = msg.contains("permission denied") || msg.contains("request rejected") ||
+            msg.contains("denied") || msg.contains("su saiu com 13") ||
+            msg.contains("su saiu com 1:")
+        if (negado) return Acesso.NEGADO
+        return Acesso.AUSENTE
+    }
+
+    suspend fun hasRoot(): Boolean = estado() == Acesso.CONCEDIDO
+
+    /**
+     * O telefone tem Magisk (ou um `su`) — **sem** pedir root a ninguém.
+     *
+     * Serve para o assistente poder sugerir o modo root sem correr `su` (o que faria aparecer o
+     * diálogo do Magisk a quem ainda não escolheu nada). O `su` no PATH é a pista que resiste ao
+     * Magisk escondido atrás de outro nome de pacote.
+     */
+    fun magiskInstalado(context: android.content.Context): Boolean {
+        val porPacote = runCatching {
+            context.packageManager.getPackageInfo("com.topjohnwu.magisk", 0)
+            true
+        }.getOrDefault(false)
+        if (porPacote) return true
+        return listOf("/system/bin/su", "/debug_ramdisk/su", "/sbin/su").any { java.io.File(it).exists() }
+    }
+
+    /**
+     * Abre a app do Magisk (o sítio onde se autoriza o Cachalote), se ela estiver instalada com o
+     * nome normal. Devolve `false` quando não há para onde ir — o cartão diz então o caminho à mão.
+     */
+    fun abrirMagisk(context: android.content.Context): Boolean {
+        val intent = runCatching {
+            context.packageManager.getLaunchIntentForPackage("com.topjohnwu.magisk")
+        }.getOrNull() ?: return false
+        return runCatching {
+            context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        }.getOrDefault(false)
+    }
 
     suspend fun daemonInstalled(): Boolean = run("test -x $BASE/bin/cachalote && echo ok")
         .map { it.contains("ok") }.getOrDefault(false)
 }
+

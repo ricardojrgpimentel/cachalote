@@ -100,6 +100,14 @@ object MotorSelfInstall {
                 "$base/home/ws $base/run $base/logs $base/tmp",
         )
 
+        // **O porto.** O daemon root ouve no 39731 e o do Shizuku no 39733 — os dois podem
+        // coexistir no mesmo telefone, e é `home/port` que o diz (o `install.sh` do PC já o
+        // escrevia; o instalador da app não, e por isso o daemon que a app instalava ficava no
+        // porto do root). Apanhado no S10+ em 2026-10-21: app em Shizuku a dizer «token inválido»
+        // porque se ligava ao daemon root, que subira no boot.
+        val porto = Portos.paraBase(base)
+        lado.enviar("cat > $base/home/port", "$porto\n".byteInputStream(), 0) {}
+
         // ---- 1. O kernel (o peso todo: 212 MB comprimidos, 216 MB extraídos, 24 000 ficheiros)
         val zip = ctx.assets.open("kernel.zip")
         val tamanhoZip = zip.available().toLong()
@@ -209,7 +217,7 @@ object MotorSelfInstall {
         lado.run(
             "chmod 755 $base/bin/cachalote $base/bin/bash $base/runtime/bin/node && " +
                 "chmod 644 $base/bridge.cjs $base/session-meta.cjs $base/cachalote.patch.yml " +
-                "$base/home/cordis.patch.yml $base/kernel/.cachalote-origem && " +
+                "$base/home/port $base/home/cordis.patch.yml $base/kernel/.cachalote-origem && " +
                 "touch $base/$MARCA",
         )
         // Confirmação a sério: o `cachalote doctor` é quem sabe se a árvore está sã. Não se falha

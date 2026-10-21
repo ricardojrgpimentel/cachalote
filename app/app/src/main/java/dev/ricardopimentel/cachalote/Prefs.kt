@@ -62,6 +62,27 @@ class Prefs(context: Context) {
         get() = sp.getString("mode", "daemon")!!
         set(v) = sp.edit().putString("mode", v).apply()
 
+    /**
+     * O utilizador já escolheu um modo (no assistente ou em Ajustes → Motor).
+     *
+     * Sem isto, a sugestão do assistente (Shizuku se estiver a correr, root se houver Magisk,
+     * embutido caso contrário) voltaria a impor-se sempre que o assistente reabrisse.
+     */
+    var modoEscolhido: Boolean
+        get() = sp.getBoolean("modoEscolhido", false)
+        set(v) = sp.edit().putBoolean("modoEscolhido", v).apply()
+
+    /**
+     * A acessibilidade já esteve ligada alguma vez.
+     *
+     * Serve para a faixa de aviso não incomodar quem nunca a ligou (e não quer o serviço): ela só
+     * aparece a quem **perdeu** a acessibilidade a meio — o caso do `force-stop`, em que o Android
+     * desliga o serviço e a app fica sem olhos nem dedos até o dono voltar às Definições.
+     */
+    var a11yJaEsteveLigada: Boolean
+        get() = sp.getBoolean("a11yJaEsteveLigada", false)
+        set(v) = sp.edit().putBoolean("a11yJaEsteveLigada", v).apply()
+
     var workspace: String
         get() = sp.getString("workspace", RootShell.BASE + "/home/ws")!!
         set(v) = sp.edit().putString("workspace", v).apply()

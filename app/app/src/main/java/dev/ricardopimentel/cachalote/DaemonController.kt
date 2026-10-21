@@ -44,14 +44,23 @@ class DaemonController(private val context: Context) {
 
     /** Porto efectivo do canal: o daemon shell usa o dele (ficheiro `home/port`). */
     private suspend fun effectivePort(): Int =
-        if (mode == Mode.SHIZUKU) ShizukuBridge.daemonPort(prefs.port) else prefs.port
+        if (mode == Mode.SHIZUKU) ShizukuBridge.daemonPort(Portos.SHELL) else prefs.port
 
     /**
      * Directório de trabalho das sessões. No modo embutido tem de ser um caminho que a app
      * consegue ler/escrever (o motor corre com o uid da app); o do daemon é root-only.
+     *
+     * **Por modo**, e não um valor fixo: no Shizuku o motor corre como shell (uid 2000), que não
+     * entra em `/data/adb` — com o cwd do root, `session/new` falhava num telefone sem root (o
+     * ensaio de 2026-10-19 não o apanhou porque ali o Shizuku corria como root). O diálogo da
+     * troca de modo passa a dizer o caminho verdadeiro (ROADMAP G6).
      */
     val workspace: String
-        get() = if (mode == Mode.EMBEDDED) File(engine.home, "ws").absolutePath else prefs.workspace
+        get() = when (mode) {
+            Mode.EMBEDDED -> File(engine.home, "ws").absolutePath
+            Mode.SHIZUKU -> ShizukuBridge.DAEMON_BASE + "/home/ws"
+            Mode.DAEMON -> prefs.workspace
+        }
 
     var mode: Mode
         get() = when (prefs.mode) {
@@ -147,15 +156,30 @@ class DaemonController(private val context: Context) {
         try {
             ligar()
         } catch (t: Throwable) {
+            val msg = t.message.orEmpty()
+            // **O daemon deste modo pode estar simplesmente parado.** O do Shizuku não arranca no
+            // boot (por desenho) e o do root só sobe com o Magisk; quando o porto é de outro
+            // daemon, o erro que chega é «token inválido» — que não aponta para nada disto.
+            // O `start` é idempotente e garante `home/port` (a regra do porto), por isso vale a
+            // pena tentá-lo aqui, antes de desistir: é isto que faz a app passar a ligar-se sozinha
+            // depois de um reboot (S10+, 2026-10-21).
+            if (mode == Mode.SHIZUKU && parecePortaSemDaemon(msg)) {                val saida = runCatching { startDaemon() }.getOrDefault("")
+                if (saida.contains("arrancado") || saida.contains("já está a correr")) {
+                    prefs.tokenShizuku = null
+                    return@withLock ligar()
+                }
+            }
             // "token inválido" acontece depois de o daemon ser reinstalado (o token dele muda, o
             // que a app guardou fica velho). Relê o token do ficheiro e tenta uma vez mais, em vez
             // de deixar o utilizador preso num erro que ele não sabe resolver.
-            val msg = t.message.orEmpty()
             if (!msg.contains("token inválido", ignoreCase = true) && !msg.contains("autenticação", ignoreCase = true)) throw t
             if (mode == Mode.SHIZUKU) prefs.tokenShizuku = null else prefs.token = null
             ligar()
         }
     }
+
+    /** Ver [FalhasDeLigacao.portaSemDaemon] — a lógica (e os testes) vivem lá. */
+    private fun parecePortaSemDaemon(msg: String): Boolean = FalhasDeLigacao.portaSemDaemon(msg)
 
     private suspend fun ligar(): JSONObject = when (mode) {
             Mode.DAEMON -> client.connectTcp(prefs.port, ensureToken())
@@ -509,15 +533,49 @@ class DaemonController(private val context: Context) {
 
     // ---------------------------------------------------------------- daemon (root/Shizuku)
 
-    suspend fun startDaemon(): String = when (mode) {
-        Mode.SHIZUKU -> ShizukuBridge.startDaemon()
-        else -> RootShell.run("$daemonBase/bin/cachalote start", 45).getOrThrow()
+    /**
+     * Um só arranque de cada vez.
+     *
+     * A app pede o `start` no fim da instalação do motor **e** no laço de reconexão. Dois em
+     * paralelo davam dois bridges (um com o porto, outro com um motor a mais e o pidfile) — o CLI
+     * também tem um cadeado, mas não vale a pena pôr a app a apostar nisso (S10+, 2026-10-21).
+     */
+    private val arranque = Mutex()
+
+    suspend fun startDaemon(): String = arranque.withLock {
+        when (mode) {
+            Mode.SHIZUKU -> ShizukuBridge.startDaemon()
+            else -> RootShell.run("$daemonBase/bin/cachalote start", 45).getOrThrow()
+        }
     }
 
     suspend fun stopDaemon(): String = when (mode) {
         Mode.SHIZUKU -> ShizukuBridge.stopDaemon()
         else -> RootShell.run("$daemonBase/bin/cachalote stop").getOrThrow()
     }
+
+    /**
+     * Pára o daemon do modo que se está a **deixar**, ao trocar de motor.
+     *
+     * Sem isto, trocar root ↔ Shizuku deixava os dois daemons (e os dois motores) a correr: dois
+     * bridges, dois `libnode`, dois `$DSH_HOME`. É best-effort — um `su` negado ou um Shizuku sem
+     * permissão não podem impedir a troca; e no root só se tenta quando o acesso **já** está
+     * concedido (`comRoot`), para não fazer aparecer o diálogo do Magisk a quem escolheu Shizuku.
+     */
+    suspend fun pararDaemonDe(anterior: Mode, comRoot: Boolean) {
+        runCatching {
+            when (anterior) {
+                Mode.SHIZUKU ->
+                    if (shizukuAvailable() && shizukuHasPermission()) ShizukuBridge.stopDaemon()
+                Mode.DAEMON ->
+                    if (comRoot) RootShell.run("${Portos.BASE_ROOT}/bin/cachalote stop").getOrThrow()
+                Mode.EMBEDDED -> stopEmbedded()
+            }
+        }
+    }
+
+    /** Concedido / negado / ausente — o que o Magisk fez, e não só «há root?». */
+    suspend fun estadoRoot(): RootShell.Acesso = RootShell.estado()
 
     suspend fun daemonInstalled(): Boolean = when (mode) {
         Mode.SHIZUKU -> ShizukuBridge.daemonInstalled()

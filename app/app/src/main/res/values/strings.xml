@@ -13,6 +13,7 @@
     <string name="acessibilidade">Accessibility</string>
     <string name="acessibilidade_caiu">accessibility turned off: the agent lost its eyes and fingers on the screen (Settings → Accessibility → Cachalote)</string>
     <string name="acessibilidade_detalhe">see and touch the screen</string>
+    <string name="acessibilidade_ligar">Turn on</string>
     <string name="acessibilidade_voltou">accessibility is back on</string>
     <string name="acesso">Access</string>
     <string name="ajustes_modulos">%1$d modules configured</string>
@@ -71,6 +72,8 @@
     <string name="conversa_nova_longa">New conversation</string>
     <string name="conversa_vazia_texto">Write the first message and the agent starts working.</string>
     <string name="conversa_vazia_titulo">No conversations yet</string>
+    <string name="conversas_deste_modo">this mode\'s conversations: %1$s</string>
+    <string name="conversas_por_modo">each engine has its own conversations: the ones in this mode live in %1$s (the other mode\'s stay where they were)</string>
     <string name="daemon_instalado">daemon installed</string>
     <string name="descarregar_kernel">Download kernel</string>
     <string name="diagnostico">diagnostics: pid %1$d · a11y %2$s · ticks %3$d · direct %4$s</string>
@@ -79,9 +82,11 @@
     <string name="ditar_texto">Speak</string>
     <string name="em_direto">live</string>
     <string name="enviar">Send</string>
+    <string name="erro_daemon_parado">this mode\'s daemon is not running — start it in Settings → Engine</string>
     <string name="esconder">Hide</string>
     <string name="escreve_tarefa">Write a task for the agent</string>
     <string name="estado_titulo">Status</string>
+    <string name="faixa_acessibilidade">accessibility is off: the agent cannot see or touch the screen</string>
     <string name="fechar">Close</string>
     <string name="fechar_sessao_activa">Close the active session</string>
     <string name="fechar_texto">Close</string>
@@ -111,6 +116,12 @@
     <string name="handshake_pendente">(handshake not done yet)</string>
     <string name="imagem_anexo">image: %1$s · %2$d KB</string>
     <string name="iniciar">Start</string>
+    <string name="kernel_a_descarregar">downloading the kernel…</string>
+    <string name="kernel_a_descarregar_lido">downloading the kernel: %1$s MB</string>
+    <string name="kernel_a_descarregar_progresso">downloading the kernel: %1$s/%2$s MB</string>
+    <string name="kernel_a_preparar">preparing the kernel (%1$s)…</string>
+    <string name="kernel_ja_pronto">the kernel was already in place</string>
+    <string name="kernel_pronto">kernel ready (%1$d files)</string>
     <string name="kernel_texto">With no asset in the APK, the app fetches the kernel from this URL and checks its sha256. Empty = use the URL baked into the build. Useful for self-hosting.</string>
     <string name="kernel_titulo">Kernel by download (embedded mode)</string>
     <string name="legenda_sessoes">✕ closes the active session · tap a row to resume</string>
@@ -119,6 +130,11 @@
     <string name="licencas_titulo">Third-party licences</string>
     <string name="ligar_daemon">Start daemon</string>
     <string name="limpar">Clear</string>
+    <string name="magisk_abrir">Open Magisk</string>
+    <string name="magisk_recusou_texto">The request was denied and Magisk keeps that decision: it does not ask again. Open Magisk → Superuser → Cachalote, switch it to Allow, then try again.</string>
+    <string name="magisk_recusou_titulo">Magisk refused root</string>
+    <string name="magisk_sem_app">I could not find the Magisk app — open it from the app drawer and allow Cachalote under Superuser.</string>
+    <string name="magisk_tentar">I allowed it — try again</string>
     <string name="mcp_aviso">⚠ The command must be an ABSOLUTE path and, if it uses the daemon\'s Node, it needs LD_LIBRARY_PATH in its env (otherwise it dies in the linker).</string>
     <string name="mcp_detalhe">external tools wired up by JSON</string>
     <string name="mcp_exemplo">[{\"name\":\"ping\",\"command\":\"/absolute/path/to/node\",\"args\":[\"/absolute/path/to/server.mjs\"],\"env\":[{\"name\":\"LD_LIBRARY_PATH\",\"value\":\"/absolute/path/to/lib\"}]}]</string>
@@ -150,6 +166,7 @@
     <string name="obter_token">Get token (root)</string>
     <string name="parar">Stop</string>
     <string name="parar_turno">Stop</string>
+    <string name="passos_obter_token_shizuku">Get token (Shizuku)</string>
     <string name="perigo">Danger</string>
     <string name="placeholder_areas">/sdcard/Download</string>
     <string name="placeholder_mcp">[{\"name\":\"…\",\"command\":\"/absolute/path\"}]</string>
@@ -235,6 +252,7 @@
     <string name="wizard_comecar">Start chatting</string>
     <string name="wizard_continuar">Continue</string>
     <string name="wizard_ja_configurado">I already have everything set up</string>
+    <string name="wizard_kernel_a_preparar_aviso">you can carry on when this finishes — it is not stuck</string>
     <string name="wizard_modo_detectado_nada">I found neither root nor Shizuku — the embedded mode works right away.</string>
     <string name="wizard_modo_detectado_root">I found root on this phone — it is the most capable option.</string>
     <string name="wizard_modo_detectado_shizuku">I found Shizuku running — you can do almost everything without root.</string>
