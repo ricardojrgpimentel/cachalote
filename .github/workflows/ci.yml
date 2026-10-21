@@ -138,10 +138,15 @@ jobs:
         working-directory: app
         run: gradle --no-daemon --console=plain testDebugUnitTest
 
+      # A APK são 50 MB e o repositório recebe vários pushes por dia: a sete dias de
+      # retenção o depósito enchia-se (~2,4 GB) e o upload passou a falhar com
+      # "Artifact storage quota has been hit" — o que deitava abaixo o job inteiro,
+      # depois de sete minutos a compilar. A um dia fica em ~350 MB, dentro dos
+      # 500 MB que a conta tem para artefactos em repositórios privados.
       - name: Guardar a APK como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: cachalote-debug-apk
           path: app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
