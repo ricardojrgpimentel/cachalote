@@ -2726,3 +2726,53 @@ continua com a árvore anterior (é outro `$DSH_HOME`, com as conversas dela).
 | `app-ui-test.sh` / `app-capabilities-test.sh` | ✅ 9/9 e 5/5 (em Shizuku, antes da troca para root) |
 | `doctor` (root, npm) | ✅ 2 avisos (a app está noutro modo) — nenhum problema |
 | `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ |
+
+---
+
+## 77. O telefone quente: um `tr` a 100 % de CPU durante uma hora
+
+O autor notou o S10+ **super quente** e perguntou se era o Cachalote. Era.
+
+### O que se viu
+
+```
+Load: 13.07 / 13.1 / 13.09
+100% 23669/tr: 23% user + 76% kernel
+ 12207     1  01:27:29  sh /data/adb/cachalote/bin/cachalote watchdog 30
+ 23304 12207  01:00:02  sh /data/adb/cachalote/bin/cachalote watchdog 30
+ 23305 23304  01:00:02  sh /data/adb/cachalote/bin/cachalote watchdog 30
+ 23669 23305     59:59  tr \0
+```
+
+Um `tr` a 100 % de um núcleo há **59 minutos**, com o load average em 13, e **três watchdogs
+encadeados**. Não era o motor: o `node` dos dois daemons estava a 0,9–1,3 %.
+
+### A causa
+
+O `bridges_a_correr()` do CLI varria `/proc` **inteiro** e corria
+`tr '\0' ' ' < /proc/<pid>/cmdline | grep -q …` **por cada processo** — mil e tal por chamada. O
+`alive()` usa-o, e o `alive()` é chamado pelo `watchdog` a cada 30 s. Um desses `tr` não voltou (lia
+um cmdline que nunca dava EOF) e ficou a arder; os watchdogs encadeados (não havia guarda de
+instância única) multiplicavam a varredura.
+
+### A correcção
+
+| Antes | Depois |
+|---|---|
+| `for p in $(ls /proc); do tr '\0' ' ' < /proc/$p/cmdline …` | `pgrep -f "^$NODE $BASE/bridge.cjs"` — **um** processo, ancorado no caminho exacto |
+| N watchdogs, cada um a varrer | guarda de instância única por base: o segundo sai com «já há um watchdog a vigiar» |
+| `cachalote status` = varrer mil processos | **0,56 s** |
+
+### Prova (S10+, 2026-10-21)
+
+- `tr` morto → `dumpsys cpuinfo` deixa de o mostrar; 6 chamadas a `status` (as duas bases) **não
+  voltam a criar** nenhum `tr`
+- `bridges_a_correr` devolve 2287 / 14037 (os bridges certos, um por base)
+- o guarda do watchdog responde: «já há um watchdog a vigiar (pid 9425)»
+
+**Nota:** o watchdog foi morto para pôr o CLI novo e **volta no próximo arranque** pelo
+`service.d/cachalote.sh` (do `adb` não se consegue deixar um processo filho do `su` vivo). Até lá o
+daemon está de pé — o watchdog só repõe se ele morrer.
+
+**Lição para o README de armadilhas:** varrer `/proc` com um processo por PID é caro; e um comando
+que lê de um `cmdline` pode não voltar. `pgrep -f` ancorado resolve os dois.

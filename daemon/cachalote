@@ -44,14 +44,15 @@ alive() {
   [ -n "$(bridges_a_correr)" ]
 }
 
-# Pids de bridges nossos (pelo caminho do bridge na linha de comando), sem repetições.
+# Pids de bridges nossos, pelo caminho **exacto** do bridge.
+#
+# Antes isto varria `/proc` inteiro e corria `tr '\0' ' ' < /proc/<pid>/cmdline` **por cada
+# processo** — mil e tal por chamada, e o `alive()` chama-o a partir do watchdog. No S10+, em
+# 2026-10-21, um desses `tr` ficou a 100 % de CPU durante uma hora (e o load average em 13, o
+# telefone quente na mão do autor). O `pgrep -f` ancora no início da linha de comando: é um
+# processo, instantâneo, e não apanha o próprio `su -c 'pgrep …'` que faz a pergunta.
 bridges_a_correr() {
-  for p in $(ls /proc 2>/dev/null | grep -E '^[0-9]+$'); do
-    [ "$p" = "$$" ] && continue
-    if [ -r "/proc/$p/cmdline" ] && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q "$BASE/bridge.cjs"; then
-      echo "$p"
-    fi
-  done | sort -u
+  pgrep -f "^$NODE $BASE/bridge.cjs" 2>/dev/null | sort -u
 }
 
 # Mata os bridges antigos e **espera** por eles.
@@ -202,6 +203,12 @@ watchdog)
   # Mantém o daemon vivo: arranca-o se estiver parado e volta a arrancar se morrer. É o que o
   # service.d do Magisk corre no arranque (ver daemon/cachalote.service.sh). Sem isto, um daemon
   # morto (LMK, kernel, crash) ficava morto até alguém reparar.
+  #
+  # **Um só por base.** Já houve três encadeados (`watchdog` a arrancar `watchdog`), cada um a
+  # varrer /proc a cada 30 s — e um deles ficou com um `tr` a 100 % de CPU (S10+, 2026-10-21).
+  # Quem chega depois sai: o que está a vigiar já vigia por todos.
+  OUTRO="$(pgrep -f "$BASE/bin/cachalote watchdog" 2>/dev/null | grep -v "^$$\$" | head -1)"
+  if [ -n "$OUTRO" ]; then echo "já há um watchdog a vigiar (pid $OUTRO)"; exit 0; fi
   INTERVAL="${2:-30}"
   LOG="$BASE/logs/watchdog.log"
   mkdir -p "$BASE/logs"
