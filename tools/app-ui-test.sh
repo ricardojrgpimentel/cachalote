@@ -1,10 +1,14 @@
 #!/bin/bash
 # app-ui-test.sh — testa a app instalada por adb (uiautomator + input), sem tocar no ecrã.
 #
-# Valida o percurso completo: estado do daemon → obter token (root) → colar a chave
-# no ecrã da app → guardar no daemon → conferir no ficheiro → remover → conversa.
+# Valida o percurso completo: estado do daemon → obter token → colar a chave no ecrã da app →
+# guardar no daemon → conferir no ficheiro → remover → conversa.
 #
 #   ./tools/app-ui-test.sh [--keep-key] [--device SERIAL]
+#
+# Corre contra o daemon **do modo em que a app está** (root em /data/adb ou Shizuku em
+# /data/local/tmp — ver lib-device.sh). Antes assumia /data/adb e, com a app em Shizuku, dizia «não
+# há daemon instalado» com o motor a correr (READINESS, 2026-10-19).
 #
 # Usa uma chave de TESTE (sk-dummy-…) e limpa-a no fim, salvo --keep-key.
 set -uo pipefail
@@ -15,7 +19,6 @@ WS="$(cd "$(dirname "$0")/.." && pwd)"
 DEV="$(cachalote_escolher_dispositivo)" || exit 1
 PKG="dev.ricardopimentel.cachalote"
 ACT="$PKG/.MainActivity"
-BASE="/data/adb/cachalote"
 DUMMY="sk-dummy-app-ui-1234567890"
 KEEP=0
 VAR="DEEPSEEK_API_KEY"
@@ -29,6 +32,15 @@ while [ $# -gt 0 ]; do
   esac
 done
 ADB=(adb -s "$DEV")
+
+# O daemon **em uso**: a app pode estar em root (/data/adb) ou Shizuku (/data/local/tmp). Sem isto
+# o teste media o outro daemon — ou dizia que não havia nenhum. `sh_do` corre como root quando há
+# `su` (a base é root:600) e como shell quando não há, para o teste não mentir sobre o que vê.
+BASE="$(cachalote_base "$DEV")"
+MODO="$(cachalote_modo "$DEV")"
+SE_ROOT=0
+cachalote_tem_root "$DEV" && SE_ROOT=1
+sh_do() { if [ "$SE_ROOT" = 1 ]; then "${ADB[@]}" shell "su -c '$1'"; else "${ADB[@]}" shell "$1"; fi; }
 ok=0; falhas=()
 
 pass() { echo "   OK    $1"; ok=$((ok+1)); }
@@ -127,16 +139,16 @@ ir_para_secao() {
 # ⚠ SEGURANÇA: este teste grava (e remove) uma chave de teste no daemon. Se já existir
 # uma chave real, guardamo-la e repomo-la no fim — nunca deixar o utilizador sem chave.
 HAD_KEY=0
-if "${ADB[@]}" shell "su -c 'grep -q \"^$VAR=\" $BASE/home/.env'" 2>/dev/null; then
+if [ "$SE_ROOT" = 1 ] && sh_do "grep -q \"^$VAR=\" $BASE/home/.env" 2>/dev/null; then
   HAD_KEY=1
-  "${ADB[@]}" shell "su -c 'cp -f $BASE/home/.env $BASE/home/.env.bak && chmod 600 $BASE/home/.env.bak'"
+  sh_do "cp -f $BASE/home/.env $BASE/home/.env.bak && chmod 600 $BASE/home/.env.bak"
   echo "(chave existente guardada em $BASE/home/.env.bak — será reposta no fim)"
 fi
 restore_key() {
   if [ "$HAD_KEY" = 1 ]; then
     echo "== a repor a chave que já existia =="
-    "${ADB[@]}" shell "su -c 'cp -f $BASE/home/.env.bak $BASE/home/.env; chmod 600 $BASE/home/.env; rm -f $BASE/home/.env.bak; $BASE/bin/cachalote restart >/dev/null 2>&1'"
-    N=$("${ADB[@]}" shell "su -c 'grep -c \"^$VAR=\" $BASE/home/.env'" 2>/dev/null | tr -d '\r\n ')
+    sh_do "cp -f $BASE/home/.env.bak $BASE/home/.env; chmod 600 $BASE/home/.env; rm -f $BASE/home/.env.bak; $BASE/bin/cachalote restart >/dev/null 2>&1"
+    N=$(sh_do "grep -c \"^$VAR=\" $BASE/home/.env" 2>/dev/null | tr -d '\r\n ')
     [ "${N:-0}" = "1" ] && echo "   OK  chave reposta e motor reiniciado" || echo "   FALHA  não consegui repor a chave (ver $BASE/home/.env.bak)"
   fi
 }
@@ -145,10 +157,21 @@ trap restore_key EXIT
 # Este teste precisa do **daemon instalado** (é ele que traz o motor, o token e o .env). Numa
 # instalação só com a app — o caso de quem quer ver o percurso de um utilizador — não há daemon, e
 # falhar em cascata não diz nada a ninguém. Diz-se o que falta e sai-se.
-if ! "${ADB[@]}" shell "su -c 'test -x $BASE/bin/cachalote && echo sim'" 2>/dev/null | grep -q sim; then
-  echo "SALTADO: não há daemon instalado em $BASE."
-  echo "         Este teste corre contra o motor; instala-o com daemon/install.sh e repete."
-  echo "         (A app em si — o assistente, as secções e as capacidades — verifica-se à mão.)"
+if [ "$MODO" = "embedded" ] || [ -z "$BASE" ]; then
+  echo "SALTADO: a app está no modo embutido — este teste é do daemon (root ou Shizuku)."
+  echo "         No embutido não há daemon, token nem .env: usa tools/app-capabilities-test.sh."
+  exit 0
+fi
+if ! sh_do "test -x $BASE/bin/cachalote && echo sim" 2>/dev/null | grep -q sim; then
+  echo "SALTADO: não há daemon instalado em $BASE (modo $MODO)."
+  echo "         Este teste corre contra o motor; instala-o na app (Assistente → Ligar o motor)."
+  exit 0
+fi
+if [ "$SE_ROOT" = 0 ]; then
+  # O .env é root:600. Sem root conseguimos testar a app, mas não o ficheiro — e este teste
+  # **escreve** chaves nele. Mais vale dizer que não dá do que falhar a meio.
+  echo "SALTADO: sem \`su\` neste telefone, não consigo ler nem guardar $BASE/home/.env."
+  echo "         Este teste escreve e repõe a chave no .env do daemon; precisa de root."
   exit 0
 fi
 
@@ -225,7 +248,7 @@ sleep 1; dump
 # O campo é um OutlinedTextField com password visual: o texto aparece como pontos. Como o
 # teclado e o layout mudam, verificamos o estado e repetimos se necessário.
 env_has_dummy() {
-  "${ADB[@]}" shell "su -c 'grep -q \"^DEEPSEEK_API_KEY=$DUMMY\" $BASE/home/.env'" >/dev/null 2>&1
+  sh_do "grep -q \"^DEEPSEEK_API_KEY=$DUMMY\" $BASE/home/.env" >/dev/null 2>&1
 }
 typed_ok() {
   dump
@@ -255,7 +278,7 @@ done
 dump
 echo "   (o daemon reinicia o motor ao gravar a chave; a dar-lhe tempo)"
 for i in $(seq 1 12); do
-  OKH="$("${ADB[@]}" shell "su -c '$BASE/bin/cachalote status'" 2>/dev/null | grep -c 'OK deepseek-harness-acp' || true)"
+  OKH="$(sh_do "$BASE/bin/cachalote status" 2>/dev/null | grep -c 'OK deepseek-harness-acp' || true)"
   [ "${OKH:-0}" -ge 1 ] && break
   sleep 3
 done
@@ -266,7 +289,7 @@ if env_has_dummy; then
 else
   check 1 "o daemon gravou a chave de teste no .env (obtido: ${ENV_OUT:0:40}…)"
 fi
-PERM="$("${ADB[@]}" shell "su -c 'stat -c %a $BASE/home/.env'" 2>/dev/null | tr -d '\r')"
+PERM="$(sh_do "stat -c %a $BASE/home/.env" 2>/dev/null | tr -d '\r')"
 [ "$PERM" = "600" ] && check 0 "modo do .env é 600" || check 1 "modo do .env é 600 (obtido: $PERM)"
 dump; has "presente" && check 0 "a app mostra a chave como presente" || check 1 "a app mostra a chave como presente"
 
@@ -308,7 +331,7 @@ if [ "$KEEP" = 0 ]; then
     tap_text "Remover chave" || true
     for i in $(seq 1 6); do
       sleep 2
-      RESTA="$("${ADB[@]}" shell "su -c 'grep -c DEEPSEEK_API_KEY $BASE/home/.env 2>/dev/null'" 2>/dev/null | tr -d '\r\n ')"
+      RESTA="$(sh_do "grep -c DEEPSEEK_API_KEY $BASE/home/.env 2>/dev/null" 2>/dev/null | tr -d '\r\n ')"
       RESTA="${RESTA:-0}"
       [ "$RESTA" = "0" ] && break 2
     done

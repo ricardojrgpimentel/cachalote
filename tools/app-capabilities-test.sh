@@ -4,7 +4,9 @@
 #   ./tools/app-capabilities-test.sh            # rápido: acessibilidade + status + notificação
 #   ./tools/app-capabilities-test.sh --full     # + interacção real (abre a calculadora e toca)
 #
-# Requer o daemon instalado e a chave já configurada (o agente tem de responder).
+# Requer o daemon instalado e a chave já configurada (o agente tem de responder). Corre contra o
+# daemon **do modo em que a app está** (root em /data/adb ou Shizuku em /data/local/tmp — ver
+# lib-device.sh); no modo embutido não há daemon, e o teste di-lo em vez de falhar.
 set -uo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,12 +16,23 @@ DEV="$(cachalote_escolher_dispositivo)" || exit 1
 PKG="dev.ricardopimentel.cachalote"
 ACT="$PKG/.MainActivity"
 SVC="$PKG/$PKG.CachaloteAccessibilityService"
-BASE="/data/adb/cachalote"
 UI="$WS/.work/ui.xml"
 FULL=0
 [ "${1:-}" = "--full" ] && FULL=1
 
 ADB=(adb -s "$DEV")
+
+# Ver lib-device.sh: a base depende do modo em que a app está.
+BASE="$(cachalote_base "$DEV")"
+MODO="$(cachalote_modo "$DEV")"
+SE_ROOT=0
+cachalote_tem_root "$DEV" && SE_ROOT=1
+# Corre um comando no telefone como root quando há `su` (a base é root:600), senão como shell.
+sh_do() { if [ "$SE_ROOT" = 1 ]; then "${ADB[@]}" shell "su -c '$1'"; else "${ADB[@]}" shell "$1"; fi; }
+if [ "$MODO" = "embedded" ] || [ -z "$BASE" ]; then
+  echo "nota: a app está no modo embutido — não há daemon para inspeccionar (os passos de ficheiro"
+  echo "      da sessão ficam de fora); as capacidades testam-se na mesma."
+fi
 ok=0; falhas=()
 pass() { echo "   OK    $1"; ok=$((ok+1)); }
 fail() { echo "   FALHA $1"; falhas+=("$1"); }
@@ -72,6 +85,16 @@ echo "== 1. autorizar todas as capacidades na app (Ajustes -> Capacidades) =="
 FOUND=1
 ir_para_capacidades() {
   "${ADB[@]}" shell "am start -n $PKG/.MainActivity" >/dev/null 2>&1; sleep 2
+  # A conversa aberta **não tem barra de abas** (é o desenho): sem sair dela, o toque em «Ajustes»
+  # caía no vazio e o passo «interruptores visíveis» falhava (visto no S10+ em 2026-10-21, logo a
+  # seguir ao passo 3, que deixa a conversa aberta). Sai-se até a barra voltar.
+  local i
+  for i in 1 2 3 4; do
+    L
+    if python3 "$WS/tools/ui.py" "$UI" find-exact "Conversa" >/dev/null 2>&1; then break; fi
+    "${ADB[@]}" shell input keyevent 4 >/dev/null 2>&1
+    sleep 1
+  done
   T "Ajustes" || true; sleep 1
   local i
   for i in 1 2 3; do
@@ -91,7 +114,9 @@ for _ in 1 2 3; do
   T "Autorizar todas" || true
   sleep 1
   L
-  if python3 "$WS/tools/ui.py" "$UI" find "screenshot" >/dev/null 2>&1; then FOUND=0; break; fi
+  # O rótulo da capacidade na UI é «Ver o ecrã» (o id `screenshot` não aparece no ecrã), por isso
+  # o teste procura o botão da secção — que é o que diz «estamos nas Capacidades» (2026-10-21).
+  if python3 "$WS/tools/ui.py" "$UI" find "Autorizar todas" >/dev/null 2>&1; then FOUND=0; break; fi
   "${ADB[@]}" shell input swipe 720 2000 720 1100 200 >/dev/null 2>&1
   sleep 1
 done
@@ -189,9 +214,17 @@ PY
   sleep 50
 
   # Verificação no registo da sessão do motor: é autoritativo e não depende do stream da app.
-  SFILE="$("${ADB[@]}" shell "su -c 'ls -t /data/adb/cachalote/home/sessions/*/*/session.v4.jsonl.zstd 2>/dev/null | head -1'" | tr -d '\r')"
-  "${ADB[@]}" exec-out "su -c 'cat ${SFILE:-/nonexistent}'" > "$WS/.work/see-session.zst" 2>/dev/null
-  if zstd -dc "$WS/.work/see-session.zst" > "$WS/.work/see-session.jsonl" 2>/dev/null; then
+  SFILE=""
+  [ -n "$BASE" ] && SFILE="$(sh_do "ls -t $BASE/home/sessions/*/*/session.v4.jsonl.zstd 2>/dev/null | head -1" | tr -d '\r')"
+  if [ -n "$SFILE" ] && [ "$SE_ROOT" = 1 ]; then
+    "${ADB[@]}" exec-out "su -c 'cat $SFILE'" > "$WS/.work/see-session.zst" 2>/dev/null
+  else
+    : > "$WS/.work/see-session.zst"
+  fi
+  if [ -z "$SFILE" ] || [ "$SE_ROOT" = 0 ]; then
+    # Não é falha: no embutido não há daemon, e sem root não se lê o ficheiro da sessão.
+    echo "   SALTADO registo da sessão (modo $MODO, sem ficheiro a ler)"
+  elif zstd -dc "$WS/.work/see-session.zst" > "$WS/.work/see-session.jsonl" 2>/dev/null; then
     if python3 - "$WS/.work/see-session.jsonl" "$SEE_NUM" <<'PY'
 import json, sys
 path, want = sys.argv[1], sys.argv[2]

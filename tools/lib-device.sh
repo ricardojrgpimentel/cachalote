@@ -35,3 +35,37 @@ cachalote_escolher_dispositivo() {
   printf '  %s\n' $lista >&2
   return 1
 }
+
+# ---------------------------------------------------------------- o daemon em uso
+#
+# A app pode estar em **root** (base `/data/adb/cachalote`) ou em **Shizuku**
+# (`/data/local/tmp/cachalote`). Os testes de dispositivo têm de olhar para a base **do modo em que
+# a app está**: assumir `/data/adb` media (ou falhava contra) o outro daemon, e numa app em Shizuku
+# o teste dizia «não há daemon instalado» com o motor a correr — foi o que ficou aberto no READINESS
+# de 2026-10-19 e se fechou em 2026-10-21.
+#
+#   BASE="$(cachalote_base "$DEV")"
+#   MODO="$(cachalote_modo "$DEV")"          # daemon | shizuku | embedded
+#   cachalote_tem_root "$DEV" && ...         # há `su` utilizável (a base é root:600)
+#
+CACHALOTE_PKG="${CACHALOTE_PKG:-dev.ricardopimentel.cachalote}"
+
+cachalote_modo() { # $1 = serial
+  adb -s "${1:?serial}" shell "run-as $CACHALOTE_PKG cat shared_prefs/cachalote.xml" 2>/dev/null \
+    | tr -d '\r' \
+    | sed -n 's/.*<string name="mode">\([a-z]*\)<\/string>.*/\1/p' \
+    | head -1
+}
+
+cachalote_base() { # $1 = serial; vazio quando o modo é embutido (não há daemon)
+  case "$(cachalote_modo "$1")" in
+    shizuku) echo "/data/local/tmp/cachalote" ;;
+    embedded) echo "" ;;
+    *) echo "/data/adb/cachalote" ;;
+  esac
+}
+
+cachalote_tem_root() { # $1 = serial
+  adb -s "${1:?serial}" shell "su -c 'id -u'" 2>/dev/null | tr -d '\r' | grep -qx 0
+}
+
