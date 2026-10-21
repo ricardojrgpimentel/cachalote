@@ -23,6 +23,12 @@ export ANDROID_USER_HOME="$WS/.work/android-home"
 # O JDK: respeitar o que vier do ambiente (o bootstrap detecta-o e passa-o) e só procurar
 # sozinho se não vier nada. O caminho do Android Studio é o **do macOS** e estava fixo aqui —
 # no Linux sobrepunha-se ao JAVA_HOME do bootstrap e o build morria sem explicação.
+# Um JDK 21 posto à mão em .work/jdk21 ganha: o Kotlin que vem no AGP **não sabe ler a versão**
+# de um JDK >= 24 e o build morre com «IllegalArgumentException: 25.0.3», que não aponta para nada
+# (aconteceu em 2026-10-21, com o JBR do Android Studio já no 25).
+if [ -x "$WS/.work/jdk21/Contents/Home/bin/java" ]; then
+  JAVA_HOME="$WS/.work/jdk21/Contents/Home"
+fi
 # Os JDKs que os SDKs trazem vêm primeiro: um JDK do sistema demasiado novo (26) faz o AGP
 # falhar com um erro que não aponta para a causa.
 if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME:-}/bin/java" ]; then
@@ -33,6 +39,13 @@ if [ -z "${JAVA_HOME:-}" ] || [ ! -x "${JAVA_HOME:-}/bin/java" ]; then
   done
 fi
 export JAVA_HOME
+# A versão do JDK, em número: o Kotlin do AGP não suporta >= 24 e falha de forma ilegível.
+JDK_MAJOR="$(sed -n 's/.*JAVA_VERSION="\([0-9]*\).*/\1/p' "$JAVA_HOME/release" 2>/dev/null | head -1)"
+if [ -n "$JDK_MAJOR" ] && [ "$JDK_MAJOR" -ge 24 ] 2>/dev/null; then
+  echo "ERRO: $JAVA_HOME é JDK $JDK_MAJOR — o Kotlin do AGP não o suporta (falha com «IllegalArgumentException: $JDK_MAJOR…»)." >&2
+  echo "      Usa JDK 17-21: export JAVA_HOME=/caminho/para/jdk-21, ou põe um em .work/jdk21." >&2
+  exit 1
+fi
 ADB=(adb -s "$DEV")
 BUILD=1; ROOT=1; VARIANT="debug"
 

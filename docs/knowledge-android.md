@@ -1820,3 +1820,32 @@ todos invisíveis no dia-a-dia do modo root:
 - **Lição:** a mesma condição de erro tratada num caminho e não noutro é o padrão de bug mais fácil
   de repetir neste código (aconteceu com o MCP em baixo, §68.4, e com o `unknown session`, §66).
 - **Origem:** **[LOCAL]** (S10+, 2026-10-15).
+
+### 138. O build da app morre com «What went wrong: 25.0.3» — é o JDK demasiado novo
+
+- **Sintoma:** `gradle` falha na configuração com uma linha só: `* What went wrong: 25.0.3`, sem mais
+  nada. Nada mudou no código.
+- **Causa:** o Kotlin que vem no AGP usa uma cópia da `JavaVersion` do IntelliJ que não sabe ler a
+  versão de um JDK >= 24. Com o JBR do Android Studio já no 25, `JavaVersion.parse("25.0.3")` atira
+  `IllegalArgumentException` — e o Gradle mostra só a mensagem da excepção.
+- **Diagnóstico:** `./gradlew help --stacktrace` e procurar `JavaVersion.parse`.
+- **Correcção:** usar um JDK **17–21**. Neste repositório, um JDK 21 posto em `.work/jdk21` é usado
+  primeiro por `tools/install-app.sh` e `tools/bootstrap.sh`, e os dois **recusam** um JDK >= 24 com
+  uma mensagem que diz o que fazer. (2026-10-21: o JBR passou ao 25 e o build só voltou com o
+  Temurin 21 em `.work/jdk21`.)
+- **Origem:** **[LOCAL]** (macOS, 2026-10-21).
+
+### 139. O Cachalote corre fora da app — e «fechar a app» não pára nada
+
+- **Sintoma:** o autor fechou todas as apps, o telefone continuou **super quente**, e não havia sítio
+  nenhum para desligar o que estava a correr.
+- **Causa:** por desenho, o motor vive **fora** da app — daemon root (`/data/adb`, arranca no boot
+  pelo `service.d` do Magisk) e daemon do Shizuku (`/data/local/tmp`). Fechar a app não os toca.
+- **O que faltava:** visibilidade e um botão. Agora há três: a notificação do serviço em primeiro
+  plano tem a acção **«Parar o motor»** (funciona sem abrir a app), o ecrã **Motor** tem **«Parar
+  tudo»** (daemons root **e** Shizuku, motor embutido e serviço) e um interruptor **«Arrancar com o
+  telefone»** que liga/desliga o `service.d` — sem ele, «parar» era mentira, porque o reboot trazia
+  tudo de volta.
+- **E a app não desobedece:** com «Parar tudo» dado, o laço de reconexão **não** ressuscita o daemon
+  (a auto-reparação do G1 fazia isso em segundos, e parecia que a app ignorava o dono).
+- **Origem:** **[LOCAL]** (S10+, 2026-10-21).

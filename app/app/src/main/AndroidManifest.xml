@@ -39,6 +39,15 @@
             android:exported="false"
             android:label="Cachalote completo" />
 
+        <!-- O botão «Parar» da notificação: pára os daemons sem abrir a app. -->
+        <receiver
+            android:name=".AcaoPararReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="dev.ricardopimentel.cachalote.PARAR_TUDO" />
+            </intent-filter>
+        </receiver>
+
         <!-- Mantém a app (e o socket) vivos enquanto o agente trabalha. -->
         <service
             android:name=".CachaloteAgentService"

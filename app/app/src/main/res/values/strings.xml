@@ -27,6 +27,11 @@
     <string name="areas_bash">Allowed bash areas</string>
     <string name="areas_bash_texto">Outside these folders the agent must ask for permission on the phone. One per line; the session workspace is always allowed.</string>
     <string name="areas_detalhe">where the agent runs without asking</string>
+    <string name="arranque_boot">Start with the phone</string>
+    <string name="arranque_boot_desligado">the engine will no longer start with the phone</string>
+    <string name="arranque_boot_falhou">could not change the boot start (needs root)</string>
+    <string name="arranque_boot_ligado">the engine will start with the phone again</string>
+    <string name="arranque_boot_texto">root only: the Magisk service.d brings the engine up at boot</string>
     <string name="atualizar">Refresh</string>
     <string name="autorizacao_agente_quer">The agent wants to run:</string>
     <string name="autorizacao_confirmar">Authorise</string>
@@ -158,6 +163,8 @@
     <string name="notif_autorizacao_texto">waiting for a decision: %1$s</string>
     <string name="notif_autorizacao_titulo">The agent needs your approval</string>
     <string name="notif_canal_descricao">Tells you when the agent finishes a turn while the app is in the background.</string>
+    <string name="notif_canal_motor">Engine running</string>
+    <string name="notif_canal_motor_desc">Shows that Cachalote keeps an engine running on the phone</string>
     <string name="notif_canal_nome">Turn finished</string>
     <string name="notif_sem_texto">(no text in the reply)</string>
     <string name="notif_turno_falhou">the turn failed: %1$s</string>
@@ -165,6 +172,14 @@
     <string name="nova_sessao">New session</string>
     <string name="obter_token">Get token (root)</string>
     <string name="parar">Stop</string>
+    <string name="parar_motor">Stop the engine</string>
+    <string name="parar_tudo">Stop everything</string>
+    <string name="parar_tudo_confirmar">Stop everything?</string>
+    <string name="parar_tudo_confirmar_texto">The root and Shizuku engines stop, and the boot start is turned off so they do not come back when the phone restarts. You can turn it back on in Settings → Engine.</string>
+    <string name="parar_tudo_explicacao">stops the root and Shizuku daemons, the in-app engine and the agent service</string>
+    <string name="parar_tudo_feito_texto">the engines and the daemons are stopped</string>
+    <string name="parar_tudo_feito_titulo">Cachalote stopped</string>
+    <string name="parar_tudo_parcial">stopped, but not everything worked: %1$s</string>
     <string name="parar_turno">Stop</string>
     <string name="passos_obter_token_shizuku">Get token (Shizuku)</string>
     <string name="perigo">Danger</string>

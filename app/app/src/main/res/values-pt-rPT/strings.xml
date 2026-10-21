@@ -27,6 +27,11 @@
     <string name="areas_bash">Áreas permitidas do bash</string>
     <string name="areas_bash_texto">Fora destas pastas o agente tem de pedir autorização no telefone. Uma por linha; o workspace da sessão é sempre permitido.</string>
     <string name="areas_detalhe">onde o agente corre sem pedir autorização</string>
+    <string name="arranque_boot">Arrancar com o telefone</string>
+    <string name="arranque_boot_desligado">o motor deixa de arrancar com o telefone</string>
+    <string name="arranque_boot_falhou">não consegui mudar o arranque no boot (precisa de root)</string>
+    <string name="arranque_boot_ligado">o motor volta a arrancar com o telefone</string>
+    <string name="arranque_boot_texto">só root: o service.d do Magisk levanta o motor no arranque</string>
     <string name="atualizar">Atualizar</string>
     <string name="autorizacao_agente_quer">O agente quer correr:</string>
     <string name="autorizacao_confirmar">Autorizar</string>
@@ -158,6 +163,8 @@
     <string name="notif_autorizacao_texto">está à espera de decisão: %1$s</string>
     <string name="notif_autorizacao_titulo">O agente precisa da tua autorização</string>
     <string name="notif_canal_descricao">Avisa quando o agente acaba um turno com a app em segundo plano.</string>
+    <string name="notif_canal_motor">Motor a correr</string>
+    <string name="notif_canal_motor_desc">Mostra que o Cachalote tem um motor a correr no telefone</string>
     <string name="notif_canal_nome">Fim de turno</string>
     <string name="notif_sem_texto">(sem texto na resposta)</string>
     <string name="notif_turno_falhou">o turno falhou: %1$s</string>
@@ -165,6 +172,14 @@
     <string name="nova_sessao">Nova sessão</string>
     <string name="obter_token">Obter token (root)</string>
     <string name="parar">Parar</string>
+    <string name="parar_motor">Parar o motor</string>
+    <string name="parar_tudo">Parar tudo</string>
+    <string name="parar_tudo_confirmar">Parar tudo?</string>
+    <string name="parar_tudo_confirmar_texto">Os motores root e Shizuku param e o arranque no boot fica desligado, para não voltarem quando o telefone reiniciar. Podes voltar a ligá-lo em Ajustes → Motor.</string>
+    <string name="parar_tudo_explicacao">pára os daemons root e Shizuku, o motor embutido e o serviço de agente</string>
+    <string name="parar_tudo_feito_texto">os motores e os daemons estão parados</string>
+    <string name="parar_tudo_feito_titulo">Cachalote parado</string>
+    <string name="parar_tudo_parcial">parado, mas nem tudo funcionou: %1$s</string>
     <string name="parar_turno">Parar</string>
     <string name="passos_obter_token_shizuku">Obter token (Shizuku)</string>
     <string name="perigo">Perigo</string>

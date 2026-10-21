@@ -81,6 +81,8 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "ERRO: falta '$1' ($2)"; exit
 # ---------------------------------------------------------------- JDK e SDK
 detect_java() {
   local sdk="${1:-${ANDROID_HOME:-}}" c
+  # Um JDK 21 posto à mão em .work/jdk21 ganha (ver install-app.sh: o AGP quebra com >= 24).
+  if [ -x "$WS/.work/jdk21/Contents/Home/bin/java" ]; then echo "$WS/.work/jdk21/Contents/Home"; return; fi
   if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then echo "$JAVA_HOME"; return; fi
   # Os JDKs que os SDKs de Android trazem (Android Studio, montra) são os que o AGP espera —
   # vêm PRIMEIRO. Um `/usr/lib/jvm/*/bin/java` genérico apanha o JDK do sistema, que numa

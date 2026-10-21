@@ -292,6 +292,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     kotlinx.coroutines.delay(1_000)
                     continue
                 }
+                // O dono mandou «Parar tudo»: o laço não ressuscita nada (era o que fazia a app
+                // parecer não obedecer — a auto-reparação do G1 arrancava o daemon de novo).
+                if (Prefs(getApplication()).motorParado && modeKind != DaemonController.Mode.EMBEDDED) {
+                    kotlinx.coroutines.delay(3_000)
+                    continue
+                }
                 if (controller.client.connected.value) {
                     waitMs = 1_000L
                     kotlinx.coroutines.delay(2_000)
@@ -421,6 +427,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun switchMode(kind: DaemonController.Mode) = run("modo") {
         if (kind == modeKind) return@run
+        // Escolher um modo é dizer «quero isto a correr»: limpa o «Parar tudo».
+        Prefs(getApplication()).motorParado = false
         val anterior = modeKind
         // Guardar o estado deste modo antes de sair: cada modo tem a sua sessão e o seu
         // histórico (o cwd é diferente e o motor recusa retomar sessões de outro).
@@ -870,7 +878,62 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (controller.shizukuAvailable()) ShizukuBridge.requestPermission(activity)
     }
 
+    /** O `service.d` do Magisk está ativo? (só faz sentido no modo root) */
+    var arranqueBoot by mutableStateOf<Boolean?>(null)
+    var arranqueBootAInda by mutableStateOf(false)
+
+    fun refreshArranqueBoot() = run("arranque") {
+        arranqueBootAInda = true
+        arranqueBoot = PararTudo.arranqueInstalado()
+        arranqueBootAInda = false
+    }
+
+    fun definirArranqueBoot(ligar: Boolean) = run("arranque no boot") {
+        val ok = PararTudo.definirArranque(ligar)
+        arranqueBoot = PararTudo.arranqueInstalado()
+        transcript.add(
+            ChatLine(
+                "system",
+                getApplication<Application>().getString(
+                    if (ok) (if (ligar) R.string.arranque_boot_ligado else R.string.arranque_boot_desligado)
+                    else R.string.arranque_boot_falhou,
+                ),
+            ),
+        )
+    }
+
+    /**
+     * **Parar tudo**: os daemons (root e Shizuku), o motor embutido, o serviço de agente — e o
+     * arranque no boot, senão o próximo reboot traz tudo de volta.
+     *
+     * Existe porque o Cachalote corre fora da app: fechar a app não pára nada, e sem um botão o
+     * dono não tinha como desligar o que consome bateria (visto em 2026-10-21, com o telefone
+     * quente na mão).
+     */
+    fun pararTudo() = run("parar tudo") {
+        Prefs(getApplication()).motorParado = true
+        val app = getApplication<Application>()
+        val r = PararTudo.parar(app)
+        // O arranque no boot também sai — mas só se houver root para o fazer.
+        val bootOk = PararTudo.definirArranque(false)
+        arranqueBoot = if (bootOk) false else arranqueBoot
+        sessionId = null
+        transcript.add(
+            ChatLine(
+                "system",
+                if (r.tudoParado) app.getString(R.string.parar_tudo_feito_texto)
+                else app.getString(R.string.parar_tudo_parcial, r.falhas.joinToString(", ")),
+            ),
+        )
+        if (!bootOk && modeKind == DaemonController.Mode.DAEMON) {
+            transcript.add(ChatLine("system", app.getString(R.string.arranque_boot_falhou)))
+        }
+        refreshStatus()
+    }
+
     fun startDaemon() = run("arrancar daemon") {
+        // Ligar de propósito limpa o «Parar tudo».
+        Prefs(getApplication()).motorParado = false
         daemonInfo = controller.startDaemon()
         refreshStatus()
     }

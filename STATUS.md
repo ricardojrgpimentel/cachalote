@@ -2776,3 +2776,52 @@ daemon está de pé — o watchdog só repõe se ele morrer.
 
 **Lição para o README de armadilhas:** varrer `/proc` com um processo por PID é caro; e um comando
 que lê de um `cmdline` pode não voltar. `pgrep -f` ancorado resolve os dois.
+
+---
+
+## 78. «Parar tudo»: o botão que faltava, e a notificação que o acompanha
+
+O autor fechou todas as apps e o telefone continuou quente — e não havia sítio nenhum para desligar
+o que corria. Tinha razão: por desenho, o motor vive **fora** da app (daemon root no `/data/adb`,
+arranca no boot pelo `service.d` do Magisk; daemon do Shizuku no `/data/local/tmp`). Fechar a app não
+os toca. Faltava **visibilidade** e um **botão**.
+
+### 78.1 O que ficou
+
+| Onde | O que faz |
+|---|---|
+| **Notificação** do serviço em primeiro plano | acção **«Parar o motor»** — pára os daemons sem abrir a app (o `PendingIntent` é um broadcast para `AcaoPararReceiver`), e a notificação diz «Cachalote ligado ao motor» |
+| **Motor → «Parar tudo»** | pára o daemon root, o do Shizuku, o motor embutido e o serviço — com confirmação e uma linha a dizer o que se parou |
+| **Motor → «Arrancar com o telefone»** | liga/desliga o `service.d` do Magisk (renomeia para `.off`); sem isto «parar» era mentira, porque o reboot trazia tudo de volta |
+| **`Prefs.motorParado`** | depois de «Parar tudo», o laço de reconexão **não ressuscita** o daemon — a auto-reparação do G1 arrancava-o segundos depois e a app parecia não obedecer |
+
+**Provado no S10+ (2026-10-21):** «Parar tudo» → os dois daemons **desaparecem** do `ps` (root 2287 e
+Shizuku 14037) e não voltam; a notificação existe com `actions=[0] "Parar o motor"` (visto no
+`dumpsys notification`, id 42, ONGOING).
+
+**Por verificar (o telefone caiu do adb a meio):** o interruptor do arranque no boot deixou o
+`cachalote.sh` no `service.d` (a renomeação falhou — provavelmente o `su` recusado depois da
+reinstalação da APK). Fica para a próxima sessão com o telefone ligado; a app já diz no transcript
+«não consegui mudar o arranque no boot (precisa de root)» quando falha, por isso não mente.
+
+### 78.2 O build parou de compilar — e não era código
+
+Depois de uma actualização, o `gradle` passou a falhar com uma linha só: `What went wrong: 25.0.3`.
+É o Kotlin que vem no AGP: não sabe ler a versão de um JDK >= 24, e o JBR do Android Studio já vinha
+com o **25**. Diagnóstico (`--stacktrace` → `JavaVersion.parse`), correcção (JDK 21 em `.work/jdk21`)
+e uma guarda nos dois scripts: `install-app.sh` e `bootstrap.sh` usam o 21 se estiver lá e **recusam**
+um JDK >= 24 com uma mensagem que diz o que fazer. Knowledge 138.
+
+### 78.3 Os testes de instrumentação, finalmente
+
+Nunca tinham corrido. Num emulador (`Medium_Phone_API_36.0`, arm64, API 36):
+
+```
+9 tests on Medium_Phone_API_36.0(AVD) — 9/9 completed, 0 failed
+```
+
+(`I18nTest` e `RecursosTest`: as strings dos dois idiomas e as licenças/recursos na APK.)
+
+**Nota de método:** `connectedDebugAndroidTest` precisa de `ANDROID_USER_HOME` num sítio gravável
+(o keystore de debug ia para `~/.android`, que a política de ficheiros daqui não deixa escrever) e de
+um JDK 17–21.

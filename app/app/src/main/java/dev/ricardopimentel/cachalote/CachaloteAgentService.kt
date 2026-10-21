@@ -58,7 +58,19 @@ class CachaloteAgentService : Service() {
             this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notif: Notification = (if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this))
+        PararTudo.canal(this)
+        val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID) else Notification.Builder(this)
+        // O botão que faltava: **parar o motor daqui**, sem abrir a app. Fechar a app não pára o
+        // daemon (ele é outro processo) — e sem este botão o dono não tinha como o desligar
+        // (2026-10-21: telefone quente e nenhum sítio para parar).
+        b.addAction(
+            Notification.Action.Builder(
+                android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                getString(R.string.parar_motor),
+                PararTudo.intentParar(this),
+            ).build(),
+        )
+        val notif: Notification = b
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle(getString(R.string.notif_titulo_servico))
             .setContentText(getString(R.string.notif_texto_servico))

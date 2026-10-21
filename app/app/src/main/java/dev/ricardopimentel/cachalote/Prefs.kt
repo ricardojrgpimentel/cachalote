@@ -63,6 +63,17 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("mode", v).apply()
 
     /**
+     * O utilizador pediu **«Parar tudo»**.
+     *
+     * Enquanto isto for verdade, a app não volta a arrancar nem a religar o daemon sozinha (o
+     * laço de reconexão tem a auto-reparação do G1, que sem esta bandeira ressuscitava o motor
+     * segundos depois de o dono o mandar parar). Limpa-se quando ele volta a ligar.
+     */
+    var motorParado: Boolean
+        get() = sp.getBoolean("motorParado", false)
+        set(v) = sp.edit().putBoolean("motorParado", v).apply()
+
+    /**
      * O utilizador já escolheu um modo (no assistente ou em Ajustes → Motor).
      *
      * Sem isto, a sugestão do assistente (Shizuku se estiver a correr, root se houver Magisk,

@@ -152,6 +152,12 @@ class DaemonController(private val context: Context) {
 
     suspend fun connect(): JSONObject = ligacao.withLock {
         if (client.connected.value) return@withLock JSONObject()
+        // O dono mandou «Parar tudo»: não se arranca nada por baixo dele. Sem esta guarda, a
+        // auto-reparação abaixo ressuscitava o daemon segundos depois de ele o parar — e a app
+        // parecia não obedecer.
+        if (prefs.motorParado && mode != Mode.EMBEDDED) {
+            error("o motor está parado — liga-o em Ajustes → Motor")
+        }
         acpReady = false
         try {
             ligar()

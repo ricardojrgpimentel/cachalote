@@ -96,6 +96,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -1407,7 +1408,11 @@ private fun StatusScreen(vm: MainViewModel) {
     // Relê o estado **ao entrar**: o painel guarda o que a última consulta disse, e um «Autorizar
     // no Shizuku» que já foi autorizado (ou um «daemon instalado ✗» depois de uma instalação) ficavam
     // no ecrã até alguém carregar em «Verificar» (visto no S10+ em 2026-10-21).
-    LaunchedEffect(vm.modeKind) { vm.refreshStatus(consultarSistema = true) }
+    LaunchedEffect(vm.modeKind) {
+        vm.refreshStatus(consultarSistema = true)
+        // O interruptor «arrancar com o telefone» lê o service.d do Magisk (precisa de root).
+        if (vm.modeKind == DaemonController.Mode.DAEMON) vm.refreshArranqueBoot()
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1616,6 +1621,56 @@ private fun StatusScreen(vm: MainViewModel) {
             vm.busy = true
             ctx.startActivity(android.content.Intent(ctx, WebModeActivity::class.java))
         }, enabled = !vm.busy) { Text(stringResource(R.string.modo_completo)) }
+
+        // **Arrancar com o telefone** (só root): o que faz o daemon voltar sozinho no boot.
+        // Sem este interruptor, «parar» não era uma decisão: o próximo reboot trazia o motor.
+        if (vm.modeKind == DaemonController.Mode.DAEMON && vm.arranqueBoot != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.arranque_boot), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(R.string.arranque_boot_texto),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                Switch(
+                    checked = vm.arranqueBoot == true,
+                    enabled = !vm.busy && vm.arranqueBootAInda == false,
+                    onCheckedChange = { vm.definirArranqueBoot(it) },
+                )
+            }
+        }
+
+        // **Parar tudo** — o botão que faltava. Está no fim e com o contorno de perigo: é a saída
+        // de emergência de quem sente o telefone quente e não sabe o que está a correr.
+        var confirmarParar by remember { mutableStateOf(false) }
+        if (confirmarParar) {
+            AlertDialog(
+                onDismissRequest = { confirmarParar = false },
+                title = { Text(stringResource(R.string.parar_tudo_confirmar)) },
+                text = { Text(stringResource(R.string.parar_tudo_confirmar_texto)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmarParar = false
+                        vm.pararTudo()
+                    }) { Text(stringResource(R.string.parar_tudo)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmarParar = false }) { Text(stringResource(R.string.cancelar)) }
+                },
+            )
+        }
+        OutlinedButton(
+            onClick = { confirmarParar = true },
+            enabled = !vm.busy,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) { Text(stringResource(R.string.parar_tudo)) }
+        Text(
+            stringResource(R.string.parar_tudo_explicacao),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary,
+        )
     }
 }
 
