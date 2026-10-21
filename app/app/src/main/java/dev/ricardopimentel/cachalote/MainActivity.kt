@@ -1377,6 +1377,10 @@ private fun StatusScreen(vm: MainViewModel) {
     val shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU
     val embutido = vm.modeKind == DaemonController.Mode.EMBEDDED
     // Sem scroll próprio: quem rola é o contentor da secção (ver AjustesScreen).
+    // Relê o estado **ao entrar**: o painel guarda o que a última consulta disse, e um «Autorizar
+    // no Shizuku» que já foi autorizado (ou um «daemon instalado ✗» depois de uma instalação) ficavam
+    // no ecrã até alguém carregar em «Verificar» (visto no S10+ em 2026-10-21).
+    LaunchedEffect(vm.modeKind) { vm.refreshStatus(consultarSistema = true) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
