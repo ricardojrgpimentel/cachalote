@@ -395,7 +395,7 @@ A tabela anterior (de §11) tinha linhas que o trabalho seguinte resolveu. Fica 
 
 ---|---|
 | ~~**Confinamento do bash**~~ | ✅ **feito** (ver §12): guarda de caminhos + aprovação no telefone, verificada A/B (aprovar → corre; recusar → bloqueado). |
-| **Flavors** | O núcleo do flavor "in-app" está **provado** (`libnode.so` executa com targetSdk 35, ver §12); falta empacotar a árvore do kernel na APK e o modo de arranque em processo. O flavor Shizuku continua por fazer. |
+| **Flavors** | ✅ **feito**: o flavor "in-app" (motor dentro da app) está empacotado e a correr (§70 em diante), e o flavor Shizuku existe desde §66 — os três modos estão implementados e ensaiados no aparelho ([`READINESS.md`](READINESS.md)). |
 | **Onboarding** | A app já guia token/acessibilidade/capacidades, mas não tem um fluxo de primeira execução (9 passos de permissões, como faz o projecto de referência). |
 | **Anexos e voz** | Sem imagens no prompt (o ACP anuncia `promptCapabilities.image: false`) e sem entrada por voz. |
 | **SEA + snapshot** | Arranque do motor já é raro (daemon quente), mas o SEA com snapshot (`--build-snapshot`) daria 5,9× no arranque a frio (D6b). |
@@ -651,12 +651,10 @@ repositório está em `main`, empurrado, sem alterações pendentes.
 1. ~~**`android_see` pelo agente, ponta a ponta.**~~ ✅ **feito em §21**: o agente chama a
    ferramenta, a captura vira anexo e o modelo lê o número da imagem (com o prompt a não o
    dizer). Passou a ser o passo 5 do `app-capabilities-test.sh --full`.
-2. **`bootstrap.sh` completo** (passos 4 e 5: daemon + app). O teste real foi feito com
-   `--skip-daemon --skip-app`; a árvore do kernel veio do npm com todos os patches e o runtime
-   do Termux saiu com o `sha256` idêntico ao do telemóvel. **Continua por fazer.**
-3. **Árvore nova no dispositivo.** O daemon ainda corre a árvore derivada do `app.asar` do
-   desktop (21 066 ficheiros na do npm, 10 222 na do desktop) — mesmos patches, mas vale a pena
-   reinstalar a partir do npm para provar o caminho que o bootstrap usa. **Continua por fazer.**
+2. ~~**`bootstrap.sh` completo** (passos 4 e 5: daemon + app)~~ ✅ **feito em §76.5**: corrido de
+   raiz no S10+, do npm ao turno real, com exit 0.
+3. ~~**Árvore nova no dispositivo**~~ ✅ **feito em §76.5**: o daemon root passou a correr a árvore do
+   npm (0.2.0-rc.2, **45 030 ficheiros**), e o `doctor` diz `origem do kernel: npm`.
    Nota de §21: o plugin instalado era **byte a byte** igual ao do repositório, o que permitiu
    corrigir só o ficheiro do plugin sem reinstalar a árvore.
 4. ~~**Teste de UI, passo "token obtido"**~~ ✅ **feito em §21** (garantir o separador Estado +
@@ -887,7 +885,7 @@ O laço de reconexão tinha três problemas, todos visíveis a olho nu no emulad
 Medido no emulador, matando o motor pelo `run-as`: **antes** 30 s "desligado" e sem processo
 novo; **depois** motor novo em menos de 3 s e a app outra vez "ligado".
 
-### 23.2 Item 3 — anexar imagem ao prompt (feito; voz por fazer)
+### 23.2 Item 3 — anexar imagem ao prompt (feito; voz feita, sem ensaio num telefone com reconhecedor)
 
 O motor já aceitava imagens (o `android_see` prova-o desde §18), mas **a app não deixava
 anexar**. Agora deixa: botão **Anexar** no chat, o picker do sistema, uma linha a dizer
@@ -912,7 +910,9 @@ Pelo caminho apareceram dois problemas, ambos reais:
 origem, o registo da sessão tem o bloco de imagem no turno, e o turno chegou ao modelo —
 falhando apenas em `no API key`, que é o esperado num emulador sem chave.
 
-**Voz: por fazer.** Fica como a outra metade do item 3.
+**Voz: feita.** O botão usa o `RecognizerIntent` do sistema e só é desenhado se
+`SpeechRecognizer.isRecognitionAvailable` for verdadeiro — no S10+ (sem reconhecedor) deixou de
+aparecer e de dar erro (§76.3). Num telefone **com** reconhecedor não foi ensaiado: não há um à mão.
 
 ### 23.3 Item 4 — SEA + snapshot V8: o que é preciso, e porque não foi feito
 
@@ -2143,11 +2143,11 @@ se lançam apps lá dentro).
 
 | Item | Nota |
 |---|---|
-| Fechar as tasks antes de libertar o ecrã virtual | knowledge 133; é o que evita a app do agente saltar para o ecrã do dono |
-| Recuperação de sessão olhar para o código de erro | knowledge 134; hoje um MCP em baixo esconde o erro e a app só diz «Internal error» |
-| Linha de telemetria do turno do desenho | já anotada em §64: precisa de contagem de passos e tempo do turno, que o motor não manda |
-| Fontes do design (Space Grotesk, Geist, JetBrains Mono) | continuam por empacotar (são OFL, dá para as trazer); hoje usa-se a escala com as famílias do sistema |
-| Testes de dispositivo que precisam de um turno | `app-ui-test` passo 6 e `app-capabilities-test --full` passo 2 continuam à espera de rede/chave |
+| ~~Fechar as tasks antes de libertar o ecrã virtual~~ | ✅ **feito em §76.1** (knowledge 133): `am stack remove` antes do `release()` |
+| ~~Recuperação de sessão olhar para o código de erro~~ | ✅ **feito em §76.2** (knowledge 134): a app retoma sem MCP e repete o turno |
+| Linha de telemetria do turno do desenho | **bloqueada no motor** (§64): precisa de contagem de passos e tempo do turno, que ele não manda |
+| ~~Fontes do design (Space Grotesk, Geist, JetBrains Mono)~~ | ✅ empacotadas em `res/font` e usadas no `Tema.kt` |
+| ~~Testes de dispositivo que precisam de um turno~~ | ✅ `app-ui-test` 9/9 e `app-capabilities-test` 5/5 (modo Shizuku, 2026-10-21) |
 
 ---
 
@@ -2242,10 +2242,10 @@ responderam — esta sessão corre sem eles»). É o que se vê na captura da co
 
 | Item | Nota |
 |---|---|
-| Prévia das conversas que não estão abertas | É a única linha do desenho que não tem dados: o conteúdo das outras sessões está no motor e o `session-meta` lê o **título**, não o histórico. Fica `sessão <id curto>` em vez de um resumo inventado |
-| Metadados no modo embutido | Sem daemon não há quem leia os ficheiros (o Kotlin não tem zstd). A lista fica com os títulos que a app conhece |
-| Filtros da lista | Ficaram de fora de propósito (ver 68.1); se o motor vier a expor sessões «arquivadas», passam a fazer sentido |
-| Testes de dispositivo com turno | Continuam à espera de rede (§59) |
+| ~~Prévia das conversas que não estão abertas~~ | ✅ o `session-meta` passou a ler a última mensagem (`preview`) |
+| ~~Metadados no modo embutido~~ | ✅ **feito em §76.4**: o Node da APK lê título, data e prévia |
+| Filtros da lista | Ficaram de fora **de propósito** (ver 68.1); se o motor vier a expor sessões «arquivadas», passam a fazer sentido |
+| ~~Testes de dispositivo com turno~~ | ✅ feitos (9/9 e 5/5), com o modo em uso |
 
 ---
 
@@ -2326,9 +2326,10 @@ testes do `session-meta` cobrem os dois casos (com e sem resposta do agente).
 
 | Item | Nota |
 |---|---|
-| **Histórico das conversas antigas** | ✅ **feito em §70**: o daemon lê o ficheiro da sessão e a app enche o transcript ao retomar — os eventos entram na mesma forma em que chegaram em direto |
-| Linha de telemetria do turno | continua à espera do motor (§64) |
-| Escolha de modelo/esforço e Licenças (diálogos) | são os dois únicos ecrãs **sem desenho** — ainda são `AlertDialog` de Material puro |
+| **Histórico das conversas antigas** | ✅ **feito em §70** (e, no embutido, em §75.2) |
+| Linha de telemetria do turno | **bloqueada no motor** (§64) |
+| Escolha de modelo/esforço | ✅ **feito em §75.3**: painel que sobe de baixo |
+| Licenças | continua diálogo de leitura — é uma lista de referência que se abre uma vez, e o redesenho não acrescentava nada |
 | Filtros da lista | ficaram de fora de propósito (§68.1) |
 
 ---
