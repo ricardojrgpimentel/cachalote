@@ -53,15 +53,19 @@ boot** (`service.d/cachalote.sh`, que o `sendFile(..., 0)` impedia de escrever).
 
 ## O que fica aberto (por prioridade)
 
-| Prioridade | Problema | Porque importa |
-|---|---|---|
-| **P0** | **O Magisk nega em silêncio ao fim de 9 s.** O diálogo «Solicitação de SuperUsuário» tem contagem decrescente; se ninguém tocar, o uid fica `policy=1` (negar) e o install falha com «su saiu com 13: Permission denied» — a app não explica que é preciso ir ao Magisk | É o primeiro obstáculo de quem escolhe root e não está à espera do diálogo. A app devia detectar a negação e mostrar um cartão «autoriza o Cachalote no Magisk → Superuser» (ou abrir essa página) |
-| **P0** | **Os dois daemons usam o mesmo porto (39731).** Ao trocar root ↔ Shizuku sem parar o outro, a app liga-se ao daemon errado e o sintoma é «token inválido» | A troca de modo é uma função da app; hoje exige parar o daemon antigo à mão. Ou se usa o 39733 para o Shizuku (como a documentação já diz), ou o `switchMode` pára o outro |
-| **P1** | **O modo escolhido por omissão é root**, mesmo quando o Shizuku está disponível e marcado RECOMENDADO; num telefone sem root o utilizador tem de mudar | Incoerência entre o cartão recomendado e o escolhido; um toque em «Continuar» leva ao caminho errado |
-| **P1** | **A extracção do kernel embutido começa ao escolher o modo no passo 2**, mas o progresso só se vê no passo 3; o «Continuar» não fica desactivado | Em telemóveis lentos, o passo 2 parece pendurado durante 1–2 min |
-| **P1** | **`force-stop` desliga a acessibilidade.** O Android desactiva o serviço quando a app é forçada a parar; a app avisa no transcript («a acessibilidade desligou-se»), mas não oferece um botão para religar | Acontece a quem «fecha» a app pelas definições; o agente perde olhos e dedos até o dono voltar às Definições |
-| **P2** | **Conversas por modo.** Ao trocar de modo, a lista muda (cada motor tem o seu `$DSH_HOME`); quem tinha conversas no Shizuku não as vê no root | É por desenho, mas não está explicado no momento da troca; um aviso «as conversas deste modo são as que estão em …» evitava sustos |
-| **P2** | **Reinstalar a app muda o uid** e o Magisk perde a política; o primeiro pedido de root volta a aparecer (e ao fim de 9 s pode ser negado) | É consequência do P0; a app podia detectar e explicar |
+> **Fechados em 2026-10-21** — os sete pontos abaixo passaram ao [Bloco G do ROADMAP](ROADMAP.md),
+> com a causa encontrada, a correção e a prova no S10+. A tabela fica como estava (é o registo do
+> ensaio); o que mudou está na coluna «Como ficou». Ver também [`STATUS.md`](STATUS.md) §72.
+
+| Prioridade | Problema | Porque importa | Como ficou |
+|---|---|---|---|
+| **P0** | **O Magisk nega em silêncio ao fim de 9 s.** O diálogo «Solicitação de SuperUsuário» tem contagem decrescente; se ninguém tocar, o uid fica `policy=1` (negar) e o install falha com «su saiu com 13: Permission denied» — a app não explica que é preciso ir ao Magisk | É o primeiro obstáculo de quem escolhe root e não está à espera do diálogo. A app devia detectar a negação e mostrar um cartão «autoriza o Cachalote no Magisk → Superuser» (ou abrir essa página) | ✅ **G2** — cartão «O Magisk recusou o root» com «Abrir o Magisk» e «tentar outra vez»; `RootShell` distingue concedido/negado/ausente |
+| **P0** | **Os dois daemons usam o mesmo porto (39731).** Ao trocar root ↔ Shizuku sem parar o outro, a app liga-se ao daemon errado e o sintoma é «token inválido» | A troca de modo é uma função da app; hoje exige parar o daemon antigo à mão. Ou se usa o 39733 para o Shizuku (como a documentação já diz), ou o `switchMode` pára o outro | ✅ **G1** — o porto vem da base (39731 root / 39733 Shizuku), escrito pelo instalador e garantido pelo `start`; o `switchMode` pára o outro e a app arranca o daemon certo |
+| **P1** | **O modo escolhido por omissão é root**, mesmo quando o Shizuku está disponível e marcado RECOMENDADO; num telefone sem root o utilizador tem de mudar | Incoerência entre o cartão recomendado e o escolhido; um toque em «Continuar» leva ao caminho errado | ✅ **G3** — sugestão ao abrir o assistente (Shizuku se estiver a correr, senão root com Magisk, senão embutido), sem pedir root |
+| **P1** | **A extracção do kernel embutido começa ao escolher o modo no passo 2**, mas o progresso só se vê no passo 3; o «Continuar» não fica desactivado | Em telemóveis lentos, o passo 2 parece pendurado durante 1–2 min | ✅ **G4** — barra no topo do passo 2 e «Continuar» desactivado enquanto decorre |
+| **P1** | **`force-stop` desliga a acessibilidade.** O Android desactiva o serviço quando a app é forçada a parar; a app avisa no transcript («a acessibilidade desligou-se»), mas não oferece um botão para religar | Acontece a quem «fecha» a app pelas definições; o agente perde olhos e dedos até o dono voltar às Definições | ✅ **G5** — faixa por cima do campo de escrita com o botão que abre Definições → Acessibilidade |
+| **P2** | **Conversas por modo.** Ao trocar de modo, a lista muda (cada motor tem o seu `$DSH_HOME`); quem tinha conversas no Shizuku não as vê no root | É por desenho, mas não está explicado no momento da troca; um aviso «as conversas deste modo são as que estão em …» evitava sustos | ✅ **G6** — «as conversas deste modo: …» no ecrã onde se troca (e no transcript) |
+| **P2** | **Reinstalar a app muda o uid** e o Magisk perde a política; o primeiro pedido de root volta a aparecer (e ao fim de 9 s pode ser negado) | É consequência do P0; a app podia detectar e explicar | ✅ **G2** cobre o caso do Magisk; e a permissão do **Shizuku** também se perde ao actualizar a APK — a app mostra «Autorizar no Shizuku» (ver §72.4 do STATUS) |
 
 ## Notas de método (para se poder repetir)
 

@@ -2455,3 +2455,76 @@ Os dois daemons (root e Shizuku) usam o **mesmo porto por omissão** (39731). Ao
 antigo tem de ser parado — fizemo-lo aqui com `cachalote stop` antes de arrancar o root. Se não for
 parado, a app liga-se ao daemon errado e o sintoma é «token inválido», que não aponta para a causa.
 O `start` já mata bridges do **mesmo** `BASE`; falta-o fazer para o outro modo. Fica registado.
+
+---
+
+## 72. O Bloco G: o que a instalação limpa deixou aberto — e a app a ligar-se ao motor errado
+
+O ensaio de instalação limpa (§71 e [`READINESS.md`](READINESS.md)) fechou o E1 nos três modos, mas
+deixou sete defeitos que só aparecem a quem vem de fora. Ficaram no READINESS e nunca passaram ao
+roadmap; o [Bloco G](ROADMAP.md) existe para os fechar, um a um, com prova.
+
+O G1 estava a acontecer **ao vivo** quando o bloco foi aberto: 14 minutos depois de um reboot, o daemon
+root subira pelo `service.d` do Magisk e ficara com o **39731**; o daemon do Shizuku não sobe no boot
+(por desenho) — e a app, em modo Shizuku, ligava-se ao daemon root e dizia «token inválido». A faixa
+completa era «o motor (Shizuku) não está a responder: o motor devolveu um erro: token inválido», que não
+aponta para nada disto.
+
+### 72.1 A regra do porto, num sítio só
+
+O porto passou a vir **da base**: `/data/adb/cachalote` → 39731; qualquer outra → 39733. E fica escrito
+em `$BASE/home/port`, que é o que o `bridge.cjs` lê:
+
+| Onde | O que passou a fazer |
+|---|---|
+| `MotorSelfInstall` | escreve `home/port` na instalação (o `install.sh` do PC já o fazia; a app não) |
+| `cachalote start` | **garante** o ficheiro (migra bases antigas) e reinicia o daemon se o porto mudou |
+| `Portos.kt` (novo) | a regra em Kotlin, testável sem aparelho (5 testes) |
+| `DaemonController` | lê o porto do ficheiro; se a ligação falha, **arranca o daemon deste modo** e repete |
+| `MainViewModel.switchMode` | pára o daemon do modo que se está a deixar |
+
+### 72.2 Quatro defeitos que só apareceram a pôr isto a andar
+
+| Defeito | Sintoma no S10+ | Correção |
+|---|---|---|
+| Dois `start` ao mesmo tempo (fim da instalação + laço de reconexão) | dois bridges: um com o porto, outro com um motor a mais e o pidfile — a app ligava-se ao antigo | cadeado `run/start.lock` (com o pid do dono e remoção de órfãos) + `Mutex` no controlador |
+| O bridge que perdia o porto (`EADDRINUSE`) ficava **vivo** | um motor a mais por cada `start` perdido | o bridge faz `shutdown` e sai: quem já está no porto é que manda |
+| Um `stop` a meio de um `start` apagava o pidfile do recém-chegado | `status` dizia «PARADO» com o daemon à escuta | `stop` entra no mesmo cadeado; `alive()` reconhece um bridge da base sem pidfile |
+| `workspace` era o do root em todos os modos | no Shizuku, `session/new` com `cwd=/data/adb/...` — falhava num telefone **sem root** (o ensaio de 2026-10-19 não o apanhou porque ali o Shizuku corria como root) | `workspace` depende do modo |
+
+E o diagnóstico deixou de mentir: o motor procura-se pelo caminho do kernel **desta** base, as entradas
+contam-se por nome («1 entrada: plugin-exemplo», não «8 entradas»), o watchdog procura-se em `$BASE/bin`
+e os `ERRO` da ponte contam-se só na cauda do log.
+
+### 72.3 Os outros cinco
+
+| # | O que era | Como ficou |
+|---|---|---|
+| G2 | «su saiu com 13: Permission denied» não dizia o que fazer | `RootShell` distingue concedido/negado/ausente; cartão «O Magisk recusou o root» com «Abrir o Magisk» e «tentar outra vez» |
+| G3 | o modo por omissão era root mesmo com o Shizuku RECOMENDADO | sugestão ao abrir o assistente (Shizuku se estiver a correr; senão root com Magisk; senão embutido), sem pedir root; a escolha do utilizador fica marcada |
+| G4 | a extracção do kernel começava no passo 2 e o progresso só se via no 3 | barra **no topo** do passo 2, com «podes continuar quando isto acabar», e «Continuar» desactivado |
+| G5 | a acessibilidade caía e o botão para religar só existia em Ajustes | faixa por cima do campo de escrita, só para quem já a teve ligada, com botão que abre Definições → Acessibilidade |
+| G6 | trocar de modo parecia perder as conversas | linha «as conversas deste modo: …» no ecrã onde se troca (e no transcript) |
+
+### 72.4 Verificação (S10+, 2026-10-21)
+
+| Verificação | Resultado |
+|---|---|
+| Dois daemons, dois portos | root no 39731 e Shizuku no 39733, um motor por base |
+| Instalação pela app, de raiz | base apagada → «Instalar o motor agora» → `home/port` = 39733, token ✓, motor ✓ → [44](design/revisao/44-turno-shizuku-39733.png) |
+| Turno real | `id -u` → `0`, no motor que a app instalou |
+| Troca de modo | pára o daemon do modo que se deixa; nenhum bridge a mais |
+| `doctor` na base parada | «motor: parado» (antes: «a correr» — era o do root) |
+| Magisk a negar | cartão explicativo → [45](design/revisao/45-magisk-recusou.png) |
+| Passo 2 do assistente | Shizuku escolhido e RECOMENDADO → [48](design/revisao/48-passo2-shizuku-escolhido.png) |
+| Kernel a preparar | barra no topo + «Continuar» cinzento → [46](design/revisao/46-passo2-kernel-a-preparar.png) |
+| Acessibilidade caída | faixa com «Ligar» → [47](design/revisao/47-faixa-acessibilidade.png) |
+| Conversas por modo | «as conversas deste modo: …» → [49](design/revisao/49-conversas-deste-modo.png) |
+| Testes | ✅ 76 de JVM (9 novos), `session-meta-test`, `i18n-check`, `plugin-schema-test`, `secret-scan` |
+
+**O que fica fora:** no modo Shizuku não há watchdog (não há `service.d` sem root) — o `doctor` avisa e é
+verdade; e a telemetria do turno continua bloqueada no motor (§64/§69.6).
+
+**Nota de operação:** actualizar a APK por `adb install` **retira a permissão do Shizuku**; a app mostra
+o botão «Autorizar no Shizuku» e volta ao normal com um toque. Não é código nosso, mas vale saber antes
+de concluir que «a app perdeu o motor».
