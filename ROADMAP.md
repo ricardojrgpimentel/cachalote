@@ -479,7 +479,12 @@ instalação (ver [`STATUS.md`](STATUS.md) §73), e hoje o `doctor` diz «motor 
 | `tools/session-meta-test.cjs` / `plugin-schema-test.sh` / `secret-scan.sh` | ✅ tudo bem (8 ferramentas; nada na árvore nem no histórico) |
 
 **O que fica fora, e porquê:** no modo Shizuku o **watchdog** não corre (não há `service.d` sem root) — o
-`doctor` avisa e é a verdade; a linha de telemetria do turno continua bloqueada no motor (§69.6).
+`doctor` já não avisa disso (seria um aviso impossível) e a linha de telemetria do turno continua
+bloqueada no motor (§69.6).
+
+**Depois do Bloco G, dois acabamentos que o uso revelou** (ver [`STATUS.md`](STATUS.md) §73 e §74): o
+perfil deixou de pedir um plugin que não vai na instalação, e o ecrã Motor deixou de pedir autorização
+do Shizuku a quem já a tinha dado.
 
 ---
 

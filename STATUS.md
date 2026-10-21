@@ -2559,3 +2559,28 @@ ignorar a secção.
 activate» (`grep -c` = 0 no log novo) e o `doctor` das **duas** bases termina em `resultado: tudo bem`
 — que é o que a app mostra no Resumo depois de «Verificar». Os `EADDRINUSE` de 12:31–12:36 (três em
 cinco minutos, de um `start` que chegava depois de outro) também desapareceram.
+
+---
+
+## 74. «Autorizar no Shizuku» a quem já tinha autorizado
+
+O ecrã **Motor** mostrava um botão «Autorizar no Shizuku» **sempre** que o modo era Shizuku — com a
+permissão dada ou não. Ficava ao lado de «Detalhes técnicos», sem contexto, e parecia que a app estava
+a pedir outra vez o que já tinha. Quem o via ia ao Shizuku confirmar e encontrava o Cachalote autorizado
+(S10+, 2026-10-21) — e com razão: o botão não olhava para o estado.
+
+A causa era simples: era um `OutlinedButton` **incondicional** dentro do bloco do modo Shizuku. Quem
+precisa de autorizar já tem um cartão próprio, com o porquê e o passo a passo (`shizuku_falta`), e a app
+**pede sozinha** a permissão quando sabe que falta (o diálogo do Shizuku precisa de uma Activity).
+
+**Como ficou:** o botão saiu. Falta a permissão → cartão vermelho com «Autorizar» e o pedido automático;
+já está dada → nada.
+
+**Prova (S10+, 2026-10-21).** Com a permissão retirada no Shizuku, entrar em Motor faz aparecer o cartão
+e o diálogo «Permitir Cachalote a Acessar Shizuku?»; ao aceitar, o cartão desaparece e o painel passa a
+`daemon instalado ✓` → [`design/revisao/50-motor-sem-pedido-repetido.png`](design/revisao/50-motor-sem-pedido-repetido.png).
+
+**Nota de operação (confirmada):** **actualizar a APK revoga a permissão do Shizuku e desliga a
+acessibilidade**. O Shizuku passa a mostrar o Cachalote com o interruptor desligado; a app mostra o
+cartão de autorização no sítio do costume e resolve-se com um toque. Não é nosso — mas é a razão pela
+qual «a app pediu outra vez» depois de uma instalação.

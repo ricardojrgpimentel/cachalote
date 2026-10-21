@@ -33,7 +33,6 @@
     <string name="autorizacao_explicacao">Fora das áreas permitidas, nada corre sem tu aprovares. Este pedido fica no registo do dispositivo.</string>
     <string name="autorizacao_fora_sandbox">Fora do sandbox</string>
     <string name="autorizacao_rodape">PID: %1$d · modo %2$s</string>
-    <string name="autorizar_no_shizuku">Autorizar no Shizuku</string>
     <string name="autorizar_todas">Autorizar todas</string>
     <string name="aviso_root">Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.</string>
     <string name="backup_detalhe">exportar definições e ver o software de terceiros</string>

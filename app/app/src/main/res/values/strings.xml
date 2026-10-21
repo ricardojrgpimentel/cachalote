@@ -33,7 +33,6 @@
     <string name="autorizacao_explicacao">Outside the allowed areas nothing runs without your approval. This request goes into the device log.</string>
     <string name="autorizacao_fora_sandbox">Outside the sandbox</string>
     <string name="autorizacao_rodape">PID: %1$d · mode %2$s</string>
-    <string name="autorizar_no_shizuku">Authorise in Shizuku</string>
     <string name="autorizar_todas">Allow all</string>
     <string name="aviso_root">Warning: the engine runs as root and Android does not enforce the DSH sandbox. What stops a command outside the workspace is the authorisation you approve here — and everything is logged.</string>
     <string name="backup_detalhe">export settings and see third-party software</string>

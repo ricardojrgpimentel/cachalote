@@ -1472,10 +1472,12 @@ private fun StatusScreen(vm: MainViewModel) {
                             }
                         }
                     }
-                    OutlinedButton(
-                        onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
-                        enabled = !vm.busy,
-                    ) { Text(stringResource(R.string.autorizar_no_shizuku)) }
+                    // **Não** há aqui um botão «Autorizar no Shizuku» permanente: ele aparecia
+                    // sempre que o modo era Shizuku — mesmo com a permissão dada, como se a app
+                    // estivesse a pedir outra vez. Quem falta é avisado pelo cartão acima (com o
+                    // porquê e o passo a passo); quem já autorizou não tem nada a fazer.
+                    // Visto no S10+ em 2026-10-21: Shizuku listava o Cachalote como autorizado e a
+                    // app continuava a pedir.
                 }
                 if (vm.modeKind == DaemonController.Mode.EMBEDDED) {
                     OutlinedButton(onClick = { vm.downloadKernel() }, enabled = !vm.busy) {
