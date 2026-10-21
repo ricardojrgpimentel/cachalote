@@ -128,6 +128,7 @@ cp -f "$WS/daemon/session-meta.cjs"    "$A/motor-session-meta.cjs"
 # Leitor de sessões para o modo embutido (corre com o Node da APK): o registo é zstd
 # de frames concatenados e o Kotlin não o descomprime (STATUS §70.4/§75).
 cp -f "$WS/config/session-history.cjs"  "$A/motor-session-history.cjs"
+cp -f "$WS/config/session-meta-run.cjs" "$A/motor-session-meta-run.cjs"
 cp -f "$WS/daemon/cachalote"           "$A/motor-cachalote"
 cp -f "$WS/daemon/cachalote.service.sh" "$A/motor-service.sh"
 cp -f "$WS/config/cachalote.patch.yml" "$A/motor-cachalote.patch.yml"

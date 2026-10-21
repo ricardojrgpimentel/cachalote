@@ -230,6 +230,7 @@
     <string name="vscreen_isolamento_nota">Zero visual overlap</string>
     <string name="vscreen_isolamento_titulo">Screen isolation without intruders</string>
     <string name="vscreen_latencia">latency: %1$d ms</string>
+    <string name="vscreen_nao_fechou">I could not close the apps that were in the virtual screen — they may appear on your screen</string>
     <string name="vscreen_parado">stopped</string>
     <string name="vscreen_registo_nota">Events injected without touch focus on the main physical screen.</string>
     <string name="vscreen_render">local render</string>

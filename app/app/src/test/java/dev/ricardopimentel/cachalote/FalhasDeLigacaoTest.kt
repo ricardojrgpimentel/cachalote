@@ -40,4 +40,27 @@ class FalhasDeLigacaoTest {
         val causa = "sem DEEPSEEK_API_KEY em home/.env"
         assertTrue(FalhasDeLigacao.explicar("root", causa) == causa)
     }
+
+    @Test
+    fun um_mcp_em_baixo_e_reconhecido_pelo_erro_generico() {
+        // knowledge 134: com MCP configurado, o motor responde isto a tudo.
+        assertTrue(
+            FalhasDeLigacao.suspeitaDeMcp(
+                "Internal error: mcp-client(stitch): initial connection or tool synchronization failed",
+                temMcp = true,
+            ),
+        )
+        assertTrue(FalhasDeLigacao.suspeitaDeMcp("-32603 Internal error", temMcp = true))
+    }
+
+    @Test
+    fun sem_mcp_configurado_um_internal_error_nao_e_mcp() {
+        assertFalse(FalhasDeLigacao.suspeitaDeMcp("Internal error", temMcp = false))
+    }
+
+    @Test
+    fun um_erro_que_nao_e_do_mcp_nao_dispara_a_recuperacao() {
+        assertFalse(FalhasDeLigacao.suspeitaDeMcp("sem DEEPSEEK_API_KEY em home/.env", temMcp = true))
+        assertFalse(FalhasDeLigacao.suspeitaDeMcp(null, temMcp = true))
+    }
 }

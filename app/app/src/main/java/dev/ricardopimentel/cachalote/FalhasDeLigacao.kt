@@ -26,6 +26,20 @@ object FalhasDeLigacao {
     }
 
     /**
+     * A falha pode ser um **MCP configurado que não responde**? (knowledge 134)
+     *
+     * Com um MCP inalcançável, o motor devolve `-32603 Internal error` a *tudo* — inclusive a um
+     * prompt numa sessão válida — porque a montagem dos MCP rebenta na validação da sessão. O turno
+     * não chega a correr, por isso vale a pena repetir sem eles. Sem MCP configurado, um
+     * `Internal error` é outra coisa qualquer e não se mexe.
+     */
+    fun suspeitaDeMcp(mensagem: String?, temMcp: Boolean): Boolean {
+        if (!temMcp) return false
+        val m = mensagem.orEmpty().lowercase()
+        return m.contains("internal error") || m.contains("mcp")
+    }
+
+    /**
      * A mensagem que o utilizador vê quando o daemon **deste** modo não arranca.
      *
      * Diz o que fazer, não o que falhou por dentro: «o motor (Shizuku) não está a responder: o motor

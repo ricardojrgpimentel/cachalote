@@ -313,23 +313,41 @@ class EmbeddedEngine(private val ctx: Context) {
      * embutido e lê-se o JSON. Era o que faltava para abrir uma conversa antiga neste modo
      * (STATUS §70.4): antes a app dizia que não dava.
      */
-    suspend fun sessionHistory(id: String, timeoutSeconds: Long = 25): String = withContext(Dispatchers.IO) {
+    suspend fun sessionHistory(id: String, timeoutSeconds: Long = 25): String =
+        correrScript("history.cjs", listOf(home.absolutePath, id), timeoutSeconds, "a ler a sessão (zstd)")
+
+    /**
+     * Os metadados de todas as sessões (título, data, prévia) — lidos do disco pelo Node embutido.
+     *
+     * Sem isto, a lista no modo embutido mostrava só os ids que o ACP devolve (`session/list`):
+     * sem título, sem data e sem prévia (`STATUS` §68.6).
+     */
+    suspend fun sessionMeta(timeoutSeconds: Long = 25): String =
+        correrScript("meta.cjs", listOf(home.absolutePath), timeoutSeconds, "a ler os metadados das sessões")
+
+    /**
+     * Corre um dos scripts auxiliares (em `files/bin`) com o **runtime embutido** e devolve o stdout.
+     *
+     * É o que permite ao modo embutido ler os ficheiros das sessões: são zstd de frames
+     * concatenados, o Kotlin não os descomprime, mas o Node da APK descomprime — e os scripts são
+     * os mesmos do daemon (`session-meta.cjs`).
+     */
+    private suspend fun correrScript(
+        script: String,
+        argumentos: List<String>,
+        timeoutSeconds: Long,
+        oQue: String,
+    ): String = withContext(Dispatchers.IO) {
         require(isPrepared()) { "kernel não extraído" }
         val node = File(ctx.applicationInfo.nativeLibraryDir, "libnode.so")
         require(node.isFile) { "libnode.so não está na APK" }
         val scripts = scriptsDir().apply { mkdirs() }
-        garantirScriptsDeHistorico(scripts)
-        val tmp = File(ctx.cacheDir, "tmp").apply { mkdirs() }
-        val pb = ProcessBuilder(
-            node.absolutePath,
-            File(scripts, "history.cjs").absolutePath,
-            home.absolutePath,
-            id,
-        )
+        garantirScripts(scripts)
+        val pb = ProcessBuilder(listOf(node.absolutePath, File(scripts, script).absolutePath) + argumentos)
         val env = pb.environment()
         env["LD_LIBRARY_PATH"] = libraryFarm().absolutePath
         env["HOME"] = ctx.filesDir.absolutePath
-        env["TMPDIR"] = tmp.absolutePath
+        env["TMPDIR"] = File(ctx.cacheDir, "tmp").apply { mkdirs() }.absolutePath
         env["TERM"] = "dumb"
         env["NODE_OPTIONS"] = ""
         val p = pb.start()
@@ -337,10 +355,10 @@ class EmbeddedEngine(private val ctx: Context) {
         val erro = p.errorStream.bufferedReader().use { it.readText() }
         if (!p.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
             p.destroyForcibly()
-            error("tempo esgotado a ler a sessão (zstd)")
+            error("tempo esgotado $oQue")
         }
         if (p.exitValue() != 0) {
-            error(erro.lineSequence().lastOrNull { it.isNotBlank() }?.take(300) ?: "o leitor de sessões falhou")
+            error(erro.lineSequence().lastOrNull { it.isNotBlank() }?.take(300) ?: "falhou $oQue")
         }
         saida
     }
@@ -349,17 +367,20 @@ class EmbeddedEngine(private val ctx: Context) {
     private fun scriptsDir(): File = File(ctx.filesDir, "bin")
 
     /**
-     * O leitor de sessões e o seu atalho, copiados dos assets.
+     * Os scripts auxiliares, copiados dos assets a cada chamada.
      *
-     * Copiam-se a cada chamada (são ~20 KB): assim uma actualização da app nunca deixa um script
-     * velho a ler um formato novo — e não há estado a limpar quando o formato muda.
+     * São ~30 KB: assim uma actualização da app nunca deixa um script velho a ler um formato novo —
+     * e não há estado a limpar quando o formato muda.
      */
-    private fun garantirScriptsDeHistorico(destino: File) {
-        ctx.assets.open("motor-session-meta.cjs").use { entrada ->
-            File(destino, "session-meta.cjs").outputStream().use { entrada.copyTo(it) }
-        }
-        ctx.assets.open("motor-session-history.cjs").use { entrada ->
-            File(destino, "history.cjs").outputStream().use { entrada.copyTo(it) }
+    private fun garantirScripts(destino: File) {
+        listOf(
+            "motor-session-meta.cjs" to "session-meta.cjs",
+            "motor-session-history.cjs" to "history.cjs",
+            "motor-session-meta-run.cjs" to "meta.cjs",
+        ).forEach { (asset, nome) ->
+            ctx.assets.open(asset).use { entrada ->
+                File(destino, nome).outputStream().use { entrada.copyTo(it) }
+            }
         }
     }
 

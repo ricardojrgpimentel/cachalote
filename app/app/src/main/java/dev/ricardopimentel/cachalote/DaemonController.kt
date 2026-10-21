@@ -311,7 +311,9 @@ class DaemonController(private val context: Context) {
      * inventar títulos nem datas.
      */
     suspend fun sessionMeta(): JSONObject {
-        if (mode == Mode.EMBEDDED) return JSONObject()
+        // No embutido não há daemon, mas há o Node da APK: lê os mesmos ficheiros e devolve os
+        // mesmos metadados (título, data, prévia) — sem isto a lista ficava só com os ids do ACP.
+        if (mode == Mode.EMBEDDED) return JSONObject(engine.sessionMeta())
         ensureAcp()
         return client.callForResult("cachalote.sessions.meta", JSONObject(), timeoutMs = 20_000)
     }
@@ -416,12 +418,36 @@ class DaemonController(private val context: Context) {
                     .put("mimeType", imageMime),
             )
         }
-        return client.callForResult(
-            "session/prompt",
-            JSONObject().put("sessionId", sessionId).put("prompt", blocks),
-            timeoutMs = 15 * 60 * 1000,
-        )
+        val params = JSONObject().put("sessionId", sessionId).put("prompt", blocks)
+        return try {
+            client.callForResult("session/prompt", params, timeoutMs = 15 * 60 * 1000)
+        } catch (t: Throwable) {
+            if (!falhaSuspeitaDeMcp(t)) throw t
+            // **Knowledge 134.** Com um MCP configurado e inalcançável, o motor responde «Internal
+            // error» a tudo — inclusive a um prompt numa sessão válida — porque a montagem dos MCP
+            // rebenta na validação. O turno **não chegou a correr** (o erro vem antes dele), por
+            // isso repetir é seguro: fecha-se e retoma-se a sessão **sem MCP** e tenta-se uma vez.
+            // Sem isto, a app ficava com «prompt: Internal error» e a conversa parada, e a
+            // recuperação de sessão (que procura «unknown session») nunca chegava a correr.
+            runCatching {
+                client.callForResult("session/close", JSONObject().put("sessionId", sessionId))
+            }
+            val retomou = runCatching {
+                client.callForResult(
+                    "session/resume",
+                    JSONObject().put("sessionId", sessionId).put("cwd", workspace)
+                        .put("mcpServers", org.json.JSONArray()),
+                )
+            }.isSuccess
+            if (!retomou) throw t
+            avisoMcp = "os servidores MCP não responderam — esta mensagem correu sem eles"
+            client.callForResult("session/prompt", params, timeoutMs = 15 * 60 * 1000)
+        }
     }
+
+    /** Ver [FalhasDeLigacao.suspeitaDeMcp] — a lógica (e os testes) vivem lá. */
+    private fun falhaSuspeitaDeMcp(t: Throwable): Boolean =
+        FalhasDeLigacao.suspeitaDeMcp(t.message, mcpServers().length() > 0)
 
     // ---------------------------------------------------------------- estado / credenciais
 

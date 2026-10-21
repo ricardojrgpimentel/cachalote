@@ -230,6 +230,7 @@
     <string name="vscreen_isolamento_nota">Zero sobreposição visual</string>
     <string name="vscreen_isolamento_titulo">Isolamento de ecrã sem intruso</string>
     <string name="vscreen_latencia">latência: %1$d ms</string>
+    <string name="vscreen_nao_fechou">não consegui fechar as apps que estavam no ecrã virtual — podem aparecer no teu ecrã</string>
     <string name="vscreen_parado">parado</string>
     <string name="vscreen_registo_nota">Eventos injectados sem foco de toque no ecrã físico principal.</string>
     <string name="vscreen_render">render local</string>

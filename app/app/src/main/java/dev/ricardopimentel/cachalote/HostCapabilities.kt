@@ -63,17 +63,73 @@ class HostCapabilities(private val context: Context, private val prefs: Prefs) {
             "type" -> type(params)
             "key" -> key(params)
             "screenshot" -> screenshot(params)
-            "vscreen_start" -> VirtualScreen.start(
-                context,
-                params.optInt("width", 720),
-                params.optInt("height", 1280),
-                params.optInt("density", 320),
-            )
+            "vscreen_start" -> {
+                // Um ecrã virtual que já esteja de pé é fechado em condições (ver `vscreen_stop`).
+                fecharTasksDoDisplay(VirtualScreen.displayId)
+                VirtualScreen.start(
+                    context,
+                    params.optInt("width", 720),
+                    params.optInt("height", 1280),
+                    params.optInt("density", 320),
+                )
+            }
             "vscreen_status" -> VirtualScreen.status()
             "vscreen_frame" -> VirtualScreen.frame(params.optInt("maxWidth", 720))
-            "vscreen_stop" -> VirtualScreen.stop()
+            "vscreen_stop" -> {
+                // **Antes** de libertar o display: fechar as tasks que lá estão. Ao remover um
+                // display, o Android **move** as tasks para o ecrã do dono em vez de as matar — e o
+                // agente via a app dele (a calculadora) aparecer à frente, a ecrã inteiro, ao tocar
+                // em «Parar» (knowledge 133; S10+, 2026-10-15). O id tem de ser lido antes do
+                // `stop()`, que o põe a -1.
+                val id = VirtualScreen.displayId
+                val antes = tasksNoDisplay(id)
+                val fechadas = fecharTasksDoDisplay(id)
+                VirtualScreen.stop()
+                    .put("tasksFechadas", fechadas)
+                    .put("tinhaTasks", antes > 0)
+            }
             else -> throw IllegalArgumentException("capacidade desconhecida: $capability")
         }
+    }
+
+    /**
+     * Fecha as tasks que vivem no ecrã virtual, pelo daemon (root ou Shizuku), e devolve quantas.
+     *
+     * O Android não oferece API pública para isto a uma app normal: `am task remove` exige o shell.
+     * No modo embutido não há nada a fechar — sem root/shell não se lançam apps no ecrã virtual.
+     */
+    private suspend fun fecharTasksDoDisplay(displayId: Int): Int {
+        if (displayId < 0) return 0
+        if (prefs.mode == "embedded") return 0 // sem root/shell não há apps no ecrã virtual
+        val listar = correrNoDispositivo("am stack list") ?: return 0
+        // `am stack list` mostra um `RootTask id=N ... displayId=D` por cada stack do display.
+        // No Android 16 **não há** `am task remove`: fecha-se o stack (`am stack remove N`).
+        val ids = listar.lineSequence()
+            .map { it.trim() }
+            .filter { it.startsWith("RootTask id=") && it.contains("displayId=$displayId ") }
+            .mapNotNull { Regex("RootTask id=(\\d+)").find(it)?.groupValues?.get(1) }
+            .toList()
+        var fechadas = 0
+        for (id in ids) {
+            if (correrNoDispositivo("am stack remove $id") != null) fechadas++
+        }
+        return fechadas
+    }
+
+    /** Quantas tasks viviam no display (para se poder avisar quando não se fechou nenhuma). */
+    suspend fun tasksNoDisplay(displayId: Int): Int {
+        if (displayId < 0 || prefs.mode == "embedded") return 0
+        val listar = correrNoDispositivo("am stack list") ?: return 0
+        return listar.lineSequence()
+            .map { it.trim() }
+            .count { it.startsWith("RootTask id=") && it.contains("displayId=$displayId ") }
+    }
+
+    /** Corre um comando como root (modo daemon) ou como shell (Shizuku); null se não deu. */
+    private suspend fun correrNoDispositivo(cmd: String): String? = when (prefs.mode) {
+        "embedded" -> null
+        "shizuku" -> runCatching { ShizukuBridge.run(cmd, 40) }.getOrNull()
+        else -> RootShell.run(cmd, 40).getOrNull()
     }
 
     // ---------------------------------------------------------------- capacidades

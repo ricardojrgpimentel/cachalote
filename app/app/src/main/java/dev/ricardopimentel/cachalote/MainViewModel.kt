@@ -583,7 +583,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun vscreenStop() = run("ecrã virtual") {
-        capsExecute("vscreen_stop", org.json.JSONObject())
+        val res = capsExecute("vscreen_stop", org.json.JSONObject())
+        // Knowledge 133: se não se conseguiu fechar o que lá estava (sem `su`/Shizuku), o Android
+        // move as apps para o ecrã do dono ao libertar o display. Diz-se, em vez de o deixar
+        // aparecer de surpresa.
+        if (res.optBoolean("tinhaTasks") && res.optInt("tasksFechadas") == 0) {
+            transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.vscreen_nao_fechou)))
+        }
         vscreenRunning = false
         vscreenBitmap = null
         // O `displayId` fica: é o último que existiu, e os comandos de exemplo do registo
@@ -974,6 +980,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // de erro), para se perceber o que aconteceu ao turno.
         try {
             controller.prompt(sid!!, text, img?.bytes, img?.mime ?: "image/png")
+            // Se os MCP tiveram de ficar de fora para o turno correr, diz-se (ver knowledge 134).
+            anotarAvisoMcp()
             // Turno acabado. Com a app em segundo plano, avisa-se por notificação (é o que
             // permite lançar trabalho e ir fazer outra coisa).
             val resposta = transcript.lastOrNull { it.role == "assistant" }?.text.orEmpty()

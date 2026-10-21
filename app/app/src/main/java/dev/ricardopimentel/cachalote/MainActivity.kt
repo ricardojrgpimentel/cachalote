@@ -2244,6 +2244,8 @@ private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
 @Composable
 private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Uma leitura por composição do ecrã: `isRecognitionAvailable` consulta o PackageManager.
+    val temReconhecedor = remember { android.speech.SpeechRecognizer.isRecognitionAvailable(ctx) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vm.attachImage(uri)
     }
@@ -2304,22 +2306,27 @@ private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> 
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { enviar() }),
                 )
-                IconButton(
-                    onClick = {
-                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_PROMPT, ctx.getString(R.string.voz_prompt))
-                        }
-                        runCatching { voice.launch(intent) }
-                            .onFailure { vm.error = ctx.getString(R.string.voz_sem_reconhecedor) }
-                    },
-                    enabled = !vm.busy,
-                ) {
-                    Icon(
-                        Icons.Filled.Mic,
-                        contentDescription = stringResource(R.string.ditar_texto),
-                        tint = MaterialTheme.colorScheme.secondary,
-                    )
+                // O microfone só aparece se o telefone **tem** reconhecedor de voz. Sem isto, o
+                // botão existia sempre e o toque dava «não há reconhecedor de voz neste dispositivo»
+                // — um erro que o utilizador não pode resolver (visto no S10+ em 2026-10-21).
+                if (temReconhecedor) {
+                    IconButton(
+                        onClick = {
+                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, ctx.getString(R.string.voz_prompt))
+                            }
+                            runCatching { voice.launch(intent) }
+                                .onFailure { vm.error = ctx.getString(R.string.voz_sem_reconhecedor) }
+                        },
+                        enabled = !vm.busy,
+                    ) {
+                        Icon(
+                            Icons.Filled.Mic,
+                            contentDescription = stringResource(R.string.ditar_texto),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
                 }
             }
         }
