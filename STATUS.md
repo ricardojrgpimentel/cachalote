@@ -3012,3 +3012,15 @@ Ou seja: o watchdog faz o que promete (levanta o daemon morto), e é exactamente
 **O que continua igual, e é de propósito:** um daemon arrancado pela app ou pela CLI **não** tem
 watchdog (só o `service.d` o cria). É o que o `doctor` diz — «watchdog não está a correr (service.d
 liga-o no arranque)» —, e é um aviso, não um problema; a app volta a ligar-se sozinha quando abre.
+
+### 81.3 Estado final, no telefone desbloqueado (22/10, 10:38)
+
+Depois de tudo instalado e com o telefone desbloqueado: a app abre com «motor DSH no telefone ·
+ligado», uma conversa; o `doctor` diz «app ligada ao daemon» e **1 aviso** (o watchdog, porque o
+daemon foi arrancado pela CLI e não pelo `service.d`); o interruptor «Arrancar com o telefone» está
+**ligado** e o `service.d/cachalote.sh` lá está para o próximo arranque
+([63](design/revisao/63-motor-arranque-ligado.png)). Os dois ensaios correram nesta mesma janela:
+`10/10` e `6/6`, com as conversas de teste apagadas no fim.
+
+A carga do sistema foi verificada outra vez: **636 % de 800 % idle**, 15 processos em `D` e 2 a correr
+— o `loadavg` alto é de espera de I/O, não de CPU queimada.
