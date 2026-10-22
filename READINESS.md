@@ -118,6 +118,8 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 7 | As apps do ecrã virtual saltavam para o ecrã do dono (knowledge 133) | ✅ fecham-se os stacks antes de libertar o display — §76.1 |
 | 8 | Um MCP em baixo escondia o erro da sessão (knowledge 134) | ✅ a app retoma sem MCP e repete o turno uma vez — §76.2 |
 | 9 | O microfone aparecia sem reconhecedor; a lista no embutido só mostrava ids | ✅ §76.3 e §76.4 |
+| 10 | **«Fechei todas as apps e o telefone continua quente»**: o motor vive fora da app e não havia como o desligar | ✅ a notificação do serviço tem a acção **«Parar o motor»**, o ecrã **Motor** tem **«Parar tudo»** e há um interruptor **«Arrancar com o telefone»** que tira o script do `service.d` (renomear para `.off` **não** desligava — o Magisk corre tudo o que lá está, §79) |
+| 11 | O interruptor do arranque no boot nunca tinha sido provado nos dois sentidos | ✅ desligado + reboot → **nenhum** processo do Cachalote e a app a dizer o que fazer; ligado → daemon no ar e um turno real — [`STATUS.md`](STATUS.md) §79.2 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 
@@ -127,6 +129,7 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | `./tools/app-capabilities-test.sh` | ✅ **5 passos, 0 falhas** |
 | Conversa antiga no modo embutido | ✅ abre com o histórico (não só «sessão X retomada») |
 | `doctor` nas duas bases | ✅ `resultado: tudo bem` |
+| Interruptor do arranque no boot (S10+, 2026-10-22) | ✅ desligado → reboot → `pgrep` vazio e `service.d` vazio; ligado → daemon + turno real (§79.2) |
 | Testes de JVM | ✅ 76, 0 falhas |
 | `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ todos verdes |
 

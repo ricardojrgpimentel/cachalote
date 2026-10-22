@@ -2792,17 +2792,15 @@ os toca. Faltava **visibilidade** e um **botão**.
 |---|---|
 | **Notificação** do serviço em primeiro plano | acção **«Parar o motor»** — pára os daemons sem abrir a app (o `PendingIntent` é um broadcast para `AcaoPararReceiver`), e a notificação diz «Cachalote ligado ao motor» |
 | **Motor → «Parar tudo»** | pára o daemon root, o do Shizuku, o motor embutido e o serviço — com confirmação e uma linha a dizer o que se parou |
-| **Motor → «Arrancar com o telefone»** | liga/desliga o `service.d` do Magisk (renomeia para `.off`); sem isto «parar» era mentira, porque o reboot trazia tudo de volta |
+| **Motor → «Arrancar com o telefone»** | liga/desliga o arranque no boot: **ligado** = o script fica em `/data/adb/service.d/cachalote.sh`; **desligado** = sai de lá para `/data/adb/cachalote/arranque/cachalote.sh`. Renomear para `.off` **não** chegava — o Magisk corre todos os ficheiros do `service.d` (§79) |
 | **`Prefs.motorParado`** | depois de «Parar tudo», o laço de reconexão **não ressuscita** o daemon — a auto-reparação do G1 arrancava-o segundos depois e a app parecia não obedecer |
 
 **Provado no S10+ (2026-10-21):** «Parar tudo» → os dois daemons **desaparecem** do `ps` (root 2287 e
 Shizuku 14037) e não voltam; a notificação existe com `actions=[0] "Parar o motor"` (visto no
 `dumpsys notification`, id 42, ONGOING).
 
-**Por verificar (o telefone caiu do adb a meio):** o interruptor do arranque no boot deixou o
-`cachalote.sh` no `service.d` (a renomeação falhou — provavelmente o `su` recusado depois da
-reinstalação da APK). Fica para a próxima sessão com o telefone ligado; a app já diz no transcript
-«não consegui mudar o arranque no boot (precisa de root)» quando falha, por isso não mente.
+**Verificado a 2026-10-22** (a seguir não ficou nada pendente): o interruptor do arranque no boot, nos
+dois sentidos, com reboot à mistura — §79.
 
 ### 78.2 O build parou de compilar — e não era código
 
@@ -2825,3 +2823,68 @@ Nunca tinham corrido. Num emulador (`Medium_Phone_API_36.0`, arm64, API 36):
 **Nota de método:** `connectedDebugAndroidTest` precisa de `ANDROID_USER_HOME` num sítio gravável
 (o keystore de debug ia para `~/.android`, que a política de ficheiros daqui não deixa escrever) e de
 um JDK 17–21.
+
+## 79. O `.off` que o Magisk ignorava — o interruptor do arranque, provado com um reboot
+
+O §78 deixou uma dúvida em aberto: o interruptor «Arrancar com o telefone» renomeava
+`/data/adb/service.d/cachalote.sh` para `cachalote.sh.off` e o `service.d` parecia vazio. No arranque
+seguinte o `boot.log` provou o contrário: **o Magisk corre todos os ficheiros do `service.d`, com
+qualquer nome** — o `.off` arrancou o daemon. Renomear não desliga nada; só **sair da pasta** desliga.
+
+### 79.1 Como ficou
+
+`PararTudo.definirArranque(ligar)` passou a **mover** o script, em vez de o renomear:
+
+| Estado | Onde está o script | `service.d/` |
+|---|---|---|
+| ligado | `/data/adb/service.d/cachalote.sh` (755) | com o script |
+| desligado | `/data/adb/cachalote/arranque/cachalote.sh` (755) | **vazio** |
+
+O interruptor lê o estado do **disco** (`PararTudo.arranqueInstalado()`), não de uma preferência: assim
+não pode mentir sobre o que o Magisk vai fazer no próximo arranque.
+
+### 79.2 A prova (S10+, 2026-10-22)
+
+| Hora | Passo | Resultado |
+|---|---|---|
+| 09:14 | interruptor **desligado** | `service.d/` vazio; `arranque/cachalote.sh` 637 B | [56](design/revisao/56-arranque-desligado.png) |
+| 09:16 | `adb reboot` e espera pelo `boot_completed` | — | — |
+| 09:19 | `pgrep -af cachalote` | **nenhum** processo (só o próprio `pgrep`); `service.d/` vazio | [57](design/revisao/57-pos-reboot-sem-arranque.png) |
+| 09:19 | carga do sistema | 630 % de 800 % idle, nada a 100 % — o reboot não deixou lixo a correr | — |
+| 09:20 | abrir a app | home screen; a app diz «o daemon deste modo não está a correr — liga-o em Ajustes → Motor» | — |
+| 09:25 | interruptor **ligado** | `service.d/cachalote.sh` 755; `arranque/` vazio | — |
+| 09:26 | «Ligar daemon» | `bridge.cjs` pid 16343; `status`: daemon a correr, motor a correr, porto 39731 | — |
+| 09:28 | turno real | «responde textualmente: ola» → **«ola»** | [58](design/revisao/58-pos-reboot-turno.png) |
+
+Os dois sentidos do interruptor funcionam, e o reboot com ele em baixo prova que «parar» é definitivo
+— não é só até ao próximo arranque.
+
+### 79.3 Duas coisas que o reboot mostrou
+
+- **A acessibilidade desligou-se** com a reinstalação da APK (o Android tira o serviço quando o pacote
+  muda). A app di-lo no transcript, nas duas transições: «a acessibilidade desligou-se: o agente perdeu
+  olhos e dedos no ecrã (Definições → Acessibilidade → Cachalote)» e, quando volta, «a acessibilidade
+  voltou a estar ligada». Voltou a ligar-se com um `settings put` e ficou *bound*
+  (`dumpsys accessibility` mostra o serviço do Cachalote em *Enabled* e *Bound services*).
+- **As três árvores estão coerentes**: `bin/cachalote` e `bridge.cjs` de `/data/local/tmp/cachalote`
+  têm o **mesmo sha256** dos do repositório — logo o `bridges_a_correr` do §77 também vale em Shizuku —
+  e as três bases (`/data/adb`, `/data/local/tmp`, `files/kernel` da app) têm a mesma forma
+  (`kernel/dsh/node_modules`, 175 entradas). Não era preciso reinstalar nada.
+
+### 79.4 O que ficou limpo pelo caminho
+
+Uma fila de tarefas com um resto de teste (`1. injuu`, de um `input text` que se baralhou) foi removida
+pelo botão da própria fila — `files/fila.json` ficou `{"itens":[]}` ([59](design/revisao/59-sem-fila.png)).
+
+### 79.5 Mais uma volta de parafuso: o `.off` antigo não se apaga
+
+A primeira versão do `definirArranque` **apagava** um `cachalote.sh.off` que encontrasse ao desligar. Era
+um caminho estreito (só acontece a quem ficou com o `.off` da versão anterior, e o interruptor nesse
+estado já aparece em baixo), mas apagar o script do utilizador para «limpar» não é aceitável: se ele
+desaparecesse, o interruptor deixava de o conseguir voltar a ligar. Agora o `.off` **também sai para
+`arranque/`** — nada é apagado, e o interruptor de ON restaura de lá.
+
+Com a APK nova instalada (09:36), o ciclo completo outra vez: **ON** → `service.d/cachalote.sh` 755,
+`arranque/` vazio → **OFF** → `service.d` vazio, `arranque/cachalote.sh` → **ON** → de volta ao
+`service.d`, com o interruptor a acompanhar (`checked=true`/`false` no `uiautomator dump`). O daemon
+(pid 16343) e a acessibilidade (*bound*) ficaram intactos.

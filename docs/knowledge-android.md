@@ -1849,3 +1849,17 @@ todos invisíveis no dia-a-dia do modo root:
 - **E a app não desobedece:** com «Parar tudo» dado, o laço de reconexão **não** ressuscita o daemon
   (a auto-reparação do G1 fazia isso em segundos, e parecia que a app ignorava o dono).
 - **Origem:** **[LOCAL]** (S10+, 2026-10-21).
+
+### 140. O `service.d` do Magisk corre **todos** os ficheiros — renomear para `.off` não desliga nada
+
+- **Sintoma:** o interruptor «Arrancar com o telefone» punha o `service.d/cachalote.sh` em
+  `cachalote.sh.off` e o `service.d` parecia vazio; no arranque seguinte o daemon **voltou a subir**
+  (o `boot.log` mostrava o `.off` a correr).
+- **Causa:** o `service.d` do Magisk não filtra por extensão — executa tudo o que lá está, com
+  qualquer nome. A ideia do `.off` vem do `init.d` de outras ROMs, não daqui.
+- **Correcção:** para desligar, o script tem de **sair da pasta**: com o interruptor em baixo vai para
+  `/data/adb/cachalote/arranque/cachalote.sh` (e volta ao `service.d` quando se liga). A app lê o
+  estado do **disco**, não de uma preferência, para o interruptor não mentir.
+- **Prova:** reboot com o interruptor em baixo → `pgrep -af cachalote` **vazio**, `service.d` vazio
+  (2026-10-22).
+- **Origem:** **[LOCAL]** (S10+, 2026-10-22).

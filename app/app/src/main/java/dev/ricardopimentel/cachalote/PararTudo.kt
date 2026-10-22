@@ -65,18 +65,26 @@ object PararTudo {
     }.getOrDefault(false)
 
     /**
-     * Liga/desliga o arranque no boot sem apagar o script: renomeia-o para `.off`.
+     * Liga/desliga o arranque no boot, **tirando o script da pasta**.
      *
-     * Assim o utilizador pode voltar a ligá-lo (o Motor tem o interruptor), e um `Parar tudo`
-     * garante que o próximo reboot **não** traz o daemon de volta.
+     * ⚠ O Magisk corre **todos** os ficheiros de `service.d/`, com qualquer extensão — renomear
+     * para `.off` não desliga nada (descoberto a 2026-10-22: o `cachalote.sh.off` de ontem foi
+     * executado no arranque de hoje). Por isso o script sai para `$BASE/arranque/`, e volta de lá.
      */
     suspend fun definirArranque(ligar: Boolean): Boolean = runCatching {
         val cmd = if (ligar) {
-            "if [ -f /data/adb/service.d/cachalote.sh.off ]; then mv /data/adb/service.d/cachalote.sh.off /data/adb/service.d/cachalote.sh; fi; " +
+            "mkdir -p /data/adb/service.d; " +
+                "if [ -f ${RootShell.BASE}/arranque/cachalote.sh ]; then " +
+                "mv ${RootShell.BASE}/arranque/cachalote.sh /data/adb/service.d/cachalote.sh; fi; " +
+                "if [ -f /data/adb/service.d/cachalote.sh.off ]; then mv /data/adb/service.d/cachalote.sh.off /data/adb/service.d/cachalote.sh; fi; " +
                 "chmod 755 /data/adb/service.d/cachalote.sh 2>/dev/null; test -f /data/adb/service.d/cachalote.sh && echo ok"
         } else {
-            "if [ -f /data/adb/service.d/cachalote.sh ]; then mv /data/adb/service.d/cachalote.sh /data/adb/service.d/cachalote.sh.off; fi; " +
-                "test ! -f /data/adb/service.d/cachalote.sh && echo ok"
+            "mkdir -p ${RootShell.BASE}/arranque; " +
+                "if [ -f /data/adb/service.d/cachalote.sh ]; then mv /data/adb/service.d/cachalote.sh ${RootShell.BASE}/arranque/cachalote.sh; fi; " +
+                // Um `.off` antigo (do tempo em que se renomeava) sai também para `arranque/`:
+                // o script nunca é apagado, senão o interruptor não o voltava a conseguir ligar.
+                "if [ -f /data/adb/service.d/cachalote.sh.off ]; then mv /data/adb/service.d/cachalote.sh.off ${RootShell.BASE}/arranque/cachalote.sh; fi; " +
+                "test ! -f /data/adb/service.d/cachalote.sh && test ! -f /data/adb/service.d/cachalote.sh.off && echo ok"
         }
         RootShell.run(cmd, 30).getOrThrow().contains("ok")
     }.getOrDefault(false)
