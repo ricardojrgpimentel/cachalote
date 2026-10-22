@@ -1893,3 +1893,16 @@ todos invisíveis no dia-a-dia do modo root:
 - **Para os testes:** quem cria sessões num ensaio tem de as apagar pelo daemon (não com `rm`), senão
   a cache fica a apontar para o nada. Ver `cachalote_apagar_sessao` em tools/lib-device.sh.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-22).
+
+### 143. O `service.d` do Magisk corre um **watchdog**, não um `start` — e ele desfaz um «parar»
+
+- **Sintoma:** «Parar tudo» parava, e meio minuto depois o daemon estava outra vez no ar.
+- **Causa:** o script do `service.d` é `cachalote watchdog 30` (um laço que levanta o daemon quando o
+  vê em baixo, para ele voltar depois de o LMK o matar). Matar o daemon não chega: o vigia levanta-o.
+- **Correcção:** o `stop` mata primeiro o watchdog **daquela base** (`pgrep -f "$BASE/bin/cachalote
+  watchdog"`, TERM, espera 1 s, KILL) e só depois o daemon. O `restart` **não** o mata (senão perdia-se
+  a vigilância até ao próximo arranque); o `start` também não.
+- **Como testar sem reiniciar o telefone:** `setsid` a partir do `adb shell` não sobrevive à sessão —
+  o `adbd` mata o grupo. Para ver o watchdog a agir, arrancá-lo **dentro da mesma** sessão (`… watchdog
+  5 &`), matar o bridge e esperar; para provar o `stop`, correr o script num só `adb shell`.
+- **Origem:** **[LOCAL]** (S10+, 2026-10-22).

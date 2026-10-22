@@ -2976,3 +2976,39 @@ nasceu no ensaio, e **verifica** que não sobrou nada — é o último passo do 
    OK    as conversas do ensaio foram apagadas (2)
 == resumo: 6 passos OK, 0 falhas ==
 ```
+
+## 81. O watchdog que ressuscitava o que o dono tinha mandado parar
+
+O §78 prometia que «Parar tudo» era definitivo. Não era: o `service.d` do Magisk não corre um
+`start`, corre um **`watchdog 30`** — um laço que levanta o daemon sempre que o vê em baixo. O `stop`
+matava o daemon, o watchdog via-o morto e, **30 segundos depois**, punha-o outra vez no ar. Foi
+preciso o §79 (o interruptor do arranque) para se olhar para o `service.d` com atenção e ver isto.
+
+### 81.1 A prova de que o watchdog fazia o que se temia
+
+| Passo | Resultado |
+|---|---|
+| reboot com o interruptor **ligado** | daemon pid 9369 **e** `cachalote watchdog 30` pid 9428 no `ps` |
+| `cachalote stop` | «parado»; `pgrep` vazio para bridge **e** watchdog |
+| 75 s depois (2,5 intervalos) | `status`: **daemon : PARADO**; nada voltou |
+| watchdog a vigiar, `kill -9` no bridge | bridge 11228 → **11363** em 9 s (o watchdog funciona mesmo) |
+| watchdog a vigiar, `restart` | bridge novo; **watchdog 14273 continua vivo** |
+| watchdog a vigiar, `stop` | bridge e watchdog **ambos** fora |
+
+Ou seja: o watchdog faz o que promete (levanta o daemon morto), e é exactamente por isso que o
+`stop` tem de o calar — senão «parar» era verdade durante meio minuto.
+
+### 81.2 Como ficou
+
+- `matar_watchdogs()` (no `daemon/cachalote`): encontra os `…/bin/cachalote watchdog` **desta base**
+  (o padrão com o caminho evita matar o watchdog do outro modo), `TERM`, 1 s, e `KILL` no que sobrar
+  (o laço pode estar a dormir num `sleep 30`).
+- `parar_de_facto [watchdog]`: só o **`stop`** passa `watchdog`. O `restart` **não** cala o vigia —
+  se o calasse, o motor ficava sem vigilância até ao próximo arranque do telefone — e o `start`
+  (que chama `parar_de_facto` quando muda de porto) também não.
+- A cópia do CLI foi posta nas **duas** bases (`/data/adb` e `/data/local/tmp`), com o mesmo sha256
+  do repositório (`cf8223ba…`).
+
+**O que continua igual, e é de propósito:** um daemon arrancado pela app ou pela CLI **não** tem
+watchdog (só o `service.d` o cria). É o que o `doctor` diz — «watchdog não está a correr (service.d
+liga-o no arranque)» —, e é um aviso, não um problema; a app volta a ligar-se sozinha quando abre.

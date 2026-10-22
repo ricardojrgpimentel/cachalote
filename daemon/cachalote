@@ -117,7 +117,25 @@ garantir_porto() {
 
 # Para o daemon e todos os bridges desta base. **Não** mexe no cadeado: quem chama decide (o
 # `stop` pega-o; o `start` já o tem na mão e não pode voltar a pedi-lo).
-parar_de_facto() {
+# O watchdog (o do `service.d`, no arranque) volta a levantar o daemon que o dono acabou de parar —
+# e «Parar tudo» passava a ser mentira 30 s depois, exactamente o que o utilizador não quer. Por
+# isso o `stop` cala-o **primeiro**; o `restart` também passa por aqui (e o `start` volta a subir
+# tudo, mas o watchdog só o `service.d` o tem).
+matar_watchdogs() {
+  local p encontrado=0
+  for p in $(pgrep -f "$BASE/bin/cachalote watchdog" 2>/dev/null | grep -v "^$$\$"); do
+    kill "$p" 2>/dev/null && encontrado=1
+  done
+  [ "$encontrado" = 1 ] || return 0
+  # O loop pode estar a dormir num `sleep 30`: dá-lhe um instante e o que sobrar sai à força.
+  sleep 1
+  for p in $(pgrep -f "$BASE/bin/cachalote watchdog" 2>/dev/null | grep -v "^$$\$"); do
+    kill -9 "$p" 2>/dev/null || true
+  done
+}
+
+parar_de_facto() {  # $1 = "watchdog" para o calar também — só o `stop` o pede
+  [ "${1:-}" = "watchdog" ] && matar_watchdogs
   if ! alive && [ -z "$(bridges_a_correr)" ]; then
     rm -f "$PIDFILE" "$SOCK"
     return 1
@@ -429,9 +447,18 @@ stop)
   # «PARADO» com o daemon à escuta no porto (visto no S10+ em 2026-10-21).
   lock_obter || true
   trap 'lock_largar' EXIT
-  if parar_de_facto; then echo "parado"; else echo "não está a correr"; fi
+  if parar_de_facto watchdog; then echo "parado"; else echo "não está a correr"; fi
   ;;
-restart) "$0" stop; "$0" start ;;
+restart)
+  # O `restart` **não** cala o watchdog: o daemon volta logo a subir e quem o vigiava continua a
+  # fazê-lo (calá-lo aqui deixava o motor sem vigilância até ao próximo arranque do telefone).
+  lock_obter || true
+  trap 'lock_largar' EXIT
+  parar_de_facto >/dev/null 2>&1 || true
+  lock_largar
+  trap - EXIT
+  "$0" start
+  ;;
 status)
   echo "== cachalote =="
   echo "base   : $BASE"

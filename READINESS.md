@@ -122,6 +122,7 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 11 | O interruptor do arranque no boot nunca tinha sido provado nos dois sentidos | ✅ desligado + reboot → **nenhum** processo do Cachalote e a app a dizer o que fazer; ligado → daemon no ar e um turno real — [`STATUS.md`](STATUS.md) §79.2 |
 | 12 | O **caminho de quem publica** estava partido: o `build-release.sh` tinha o JBR no 25 escrito à mão (o Kotlin do AGP não o lê) e o `gradle test` só passava numa das variantes | ✅ a regra do JDK passou a `tools/lib-jdk.sh`, usado pelos três scripts, e o `gradle test` ficou verde (a release não corre testes de unidade — a actividade do `createComposeRule` só existe no manifesto de debug) — §80 |
 | 13 | Uma conversa apagada deixava os metadados em disco, e os ensaios deixavam conversas na lista | ✅ `apagarSessao` limpa também a cache do projecto (e a órfã); os dois ensaios apagam as conversas que criaram e verificam que não sobrou nada (§80.3/§80.4) |
+| 14 | **«Parar tudo» não era definitivo**: o `service.d` corre um `watchdog`, que voltava a levantar o daemon 30 s depois | ✅ o `stop` cala primeiro o watchdog da base (e o `restart`/`start` não, para não perder a vigilância); provado com o watchdog real do arranque — §81 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 
