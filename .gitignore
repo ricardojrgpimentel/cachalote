@@ -33,3 +33,10 @@ cachalote-chave.jks.enc
 
 # payload do instalador do motor (gerado por tools/prepare-embed.sh)
 app/app/src/main/assets/motor-*
+
+# lixo de sistema e de editores (não entra num repositório público)
+.DS_Store
+*.swp
+*.log
+.idea/
+.vscode/

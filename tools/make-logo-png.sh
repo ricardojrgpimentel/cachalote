@@ -14,7 +14,7 @@ set -uo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
 SVG="$WS/design/logo/marca.svg"
 TMP="$WS/.work/logo-raster"
-PY="${CACHALOTE_PY:-/Users/ricardopimentel/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3}"
+PY="${CACHALOTE_PY:-$HOME/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3}"
 mkdir -p "$TMP"
 
 [ -f "$SVG" ] || { echo "erro: falta $SVG"; exit 1; }

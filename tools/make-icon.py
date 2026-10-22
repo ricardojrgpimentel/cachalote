@@ -16,7 +16,7 @@ O que produz, em `app/app/src/main/res/`:
 | `values/ic_launcher_background.xml` | a cor de fundo, para se mudar num sítio só |
 
 Precisa de Pillow (`import PIL`). No harness, usar o Python que o traz:
-`/Users/ricardopimentel/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3`.
+`$HOME/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3`.
 """
 import argparse
 import pathlib

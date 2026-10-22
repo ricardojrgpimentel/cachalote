@@ -1819,7 +1819,7 @@ de hoje: os turnos (*"DeepSeek Messages transport failed"*) e o MCP.
 
 ## 60. Os crashes dos menus: dois bugs de raiz, um sistema de secções partido e o BACK
 
-Medido no S10+ (`R58M55JNP6X`, LineageOS 23.2 / Android 16, Magisk) a 2026-10-14 à noite. O buffer
+Medido no S10+ (um Galaxy S10+ desta série, LineageOS 23.2 / Android 16, Magisk) a 2026-10-14 à noite. O buffer
 de crashes tinha **cinco** excepções do mesmo dia; duas causas distintas:
 
 **1. Scroll dentro de scroll (4 das 5).** `IllegalStateException: Vertically scrollable component was

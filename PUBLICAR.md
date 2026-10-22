@@ -10,8 +10,8 @@ token). Antes disso, isto é o que foi verificado e o que ficou por decidir.
 |---|---|---|
 | Segredos na árvore versionada | `git grep -nIE "sk-[A-Za-z0-9]{16,}\|gho_\|ghp_\|AIza[0-9A-Za-z_-]{20,}\|BEGIN .*PRIVATE KEY"` | **0** |
 | Segredos no **histórico** | ficheiros alguma vez adicionados (`.env`, `*credential*`, `*token*`, `*.jks`, `*keystore*`) | **0** |
-| Serial do telemóvel | `git grep -nI "R58M55JNP6X"` | **0** (era o valor por omissão em 9 scripts) |
-| Caminhos da máquina | `git grep -nI "/Users/ricardopimentel"` | **0** |
+| Serial do telemóvel | `git grep -nI "<serial>"` (o serial do aparelho) | **0** (era o valor por omissão em 9 scripts; nenhum identificador do aparelho fica no repositório) |
+| Caminhos da máquina | `git grep -nI "/Users/<nome>"` (caminhos com o home de quem construiu) | **0** |
 | Referências a empresa/interno | `git grep -nIiE "cartrack\|confidencial\|internal use"` | **0** |
 | Código LGPL/GPL | menções a LGPL/GPL no repositório | só **notas** a explicar que o *virtual display* do Operit ficou **de fora** |
 | Licenças de terceiros | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | cobre DSH, Node, Termux, Shizuku, AndroidX, o projecto de referência (MIT) |
@@ -205,3 +205,41 @@ Opcional: mudar a password por omissão (que está escrita no `build-release.sh`
 keytool -storepasswd -keystore .work/cachalote-release.jks    # depois usa CACHALOTE_STORE_PASS
 ```
 
+## 5. Re-auditoria (2026-10-22) — antes de tornar público
+
+A auditoria de 2026-10-14 foi feita sobre uma árvore muito menor. Esta repetiu tudo e acrescentou o
+que entretanto entrou (160 commits, 311 ficheiros, 149 capturas, uma Release com APK).
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Segredos na árvore | `./tools/secret-scan.sh` + `git grep` de `sk-`, `gho_`, `ghp_`, `AIza`, `BEGIN … PRIVATE KEY`, `xox[baprs]-` | **0** reais |
+| Segredos no histórico | `git log --all -S` para cada padrão; ficheiros alguma vez adicionados (`.env`, `*.jks`, `*credential*`) | **0** |
+| Chave do canal (32 hex) | `git grep` do token real do daemon | **0** |
+| Serial do aparelho | `git grep` do serial | **0** *(estava em `STATUS.md` e citado em `PUBLICAR.md` — mascarado)* |
+| Caminhos pessoais | `git grep "/Users/<nome>"` | **0** *(estavam em `tools/make-icon.py` e `tools/make-logo-png.sh` — passaram a `$HOME`)* |
+| Identidade dos commits | `git log --format='%an <%ae>'` | **uma só**: o endereço *noreply* do GitHub |
+| Mockups | `design/ecras/*.html` | **1 chave de mentira** em `chave.html` (`value="sk-…"`); não era real, mas parecia — trocada por um placeholder |
+| Capturas de ecrã | amostra revista (chave, resumo/diagnóstico, conversas, motor) | nenhuma mostra chave, token ou dados pessoais; a da chave mostra só «presente · 35 caracteres» |
+| GitHub | `gh repo view`, `gh secret list`, `gh api .../actions/permissions` | privado, sem segredos de Actions, Actions com `all` (nenhum workflow usa segredos nem `pull_request_target`) |
+| Release | assets de `v0.3.0` e do kernel | APK e `kernel.zip` — é o objectivo de publicar (o URL do kernel passa a funcionar sem token) |
+
+**Antes do flip, decide isto:**
+
+1. **`research/`** — dois relatórios internos (Bun vs Node, superfícies do SDK). São técnicos e sem
+   segredos; mantém-se ou tira-se, é uma decisão editorial.
+2. **Palavra-passe do keystore de release** — a de omissão no código é `cachalote`
+   (`CACHALOTE_STORE_PASS`). O `.jks` não está no repositório, mas publicá-la torna o *default*
+   público. Antes de distribuir a sério, roda-a (`keytool -storepasswd`) e usa sempre
+   `CACHALOTE_STORE_PASS`. Rodar **não** invalida a assinatura já publicada; o `keytool` guarda a
+   chave, só muda a palavra-passe do ficheiro.
+3. **`SECURITY.md`** — já existe; liga também o *Report a vulnerability* do GitHub.
+
+**O flip:**
+
+```sh
+gh repo edit --visibility public --accept-visibility-change-consequences
+```
+
+Depois, confirmar: o badge da CI no README abre, o URL do kernel
+(`https://github.com/ricardojrgpimentel/cachalote/releases/download/kernel-77fa6785a4e4/kernel.zip`)
+descarrega **sem token**, e a página do release `v0.3.0` mostra a APK.
