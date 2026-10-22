@@ -12,6 +12,9 @@ própria app).
 > [`STATUS.md`](STATUS.md). O ensaio de **instalação limpa nos três modos** (root, Shizuku e
 > embutido, com o assistente do início ao fim) está em [`READINESS.md`](READINESS.md).
 
+**Segurança:** como reportar uma vulnerabilidade e o modelo de segurança estão em
+[`SECURITY.md`](SECURITY.md).
+
 **Como está feito?** [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md) — as peças, os três motores, os
 canais, os segredos e o que trava (e não trava) o agente.
 

@@ -238,12 +238,18 @@ que entretanto entrou (160 commits, 311 ficheiros, 149 capturas, uma Release com
 3. **`SECURITY.md`** existe; o *Report a vulnerability* do GitHub é ligado logo a seguir ao flip (a
    API só o permite com o repositório público).
 
-**O flip:**
+**O flip — ✅ feito a 2026-10-22:**
 
 ```sh
 gh repo edit --visibility public --accept-visibility-change-consequences
 ```
 
-Depois, confirmar: o badge da CI no README abre, o URL do kernel
-(`https://github.com/ricardojrgpimentel/cachalote/releases/download/kernel-77fa6785a4e4/kernel.zip`)
-descarrega **sem token**, e a página do release `v0.3.0` mostra a APK.
+Verificado a seguir, **sem autenticação** (o que um visitante vê):
+
+| Verificação | Resultado |
+|---|---|
+| Página do repositório | `HTTP 200` |
+| Página do release `v0.3.0` | `HTTP 200` |
+| `kernel.zip` (o URL que a app usa) | `HTTP 206`, primeiros bytes `PK…` — **descarrega sem token** |
+| `app-release.apk` do release | `HTTP 206`, primeiros bytes `PK…` |
+| *Report a vulnerability* | `{"enabled":true}` (Security → Advisories) |

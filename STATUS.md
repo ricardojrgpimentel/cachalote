@@ -3244,3 +3244,20 @@ Ecrã virtual: **361 fotogramas**, sem erro; parado depois com `vscreen_stop` (f
 com uma sessão aberta; reiniciar a app resolveu e não voltou a acontecer nas três vezes seguintes.
 Fica anotado como suspeita (o motor responde «session is already active» à sessão que a ligação
 anterior deixou aberta), não como problema resolvido.
+
+## 86. O repositório é público (2026-10-22)
+
+Publicado a pedido do autor, depois da auditoria do §5 do [`PUBLICAR.md`](PUBLICAR.md). O que se fez
+nesta ronda:
+
+| Passo | Resultado |
+|---|---|
+| **Auditoria** de segredos (árvore e histórico), identidade, caminhos, serial, capturas, GitHub | 0 segredos; 4 coisas corrigidas (chave de mentira no mockup — fonte **e** imagem —, dois caminhos pessoais, o serial em docs) |
+| **`research/` fica** | são relatórios técnicos, sem segredos |
+| **Palavra-passe do keystore rodada** | a antiga (`cachalote`, escrita no código) já não abre o ficheiro; a nova tem 32 caracteres e vive em `.work/keystore.pass` (600, fora do repositório). O `build-release.sh` e o `build.gradle.kts` deixaram de ter omissão no código — lêem `CACHALOTE_STORE_PASS` ou esse ficheiro, e sem nenhum dos dois o build pára com a instrução. A **chave é a mesma**: a APK de release continua assinada com `CN=Cachalote` (sha-256 `f73cb673…`) e o sha256 do APK ficou igual (`cf88c83…`) |
+| **Flip** | `gh repo edit --visibility public` → `visibility: PUBLIC`, `isPrivate: false` |
+| **Verificação anónima** | repo `200`, release `v0.3.0` `200`, `kernel.zip` e `app-release.apk` `206` com bytes `PK…` — os artefactos descarregam **sem token**, que era o objectivo (o modo embutido vai buscar o kernel a esse URL) |
+| **Report a vulnerability** | ligado: `{"enabled":true}`; [`SECURITY.md`](SECURITY.md) diz como reportar e o modelo de segurança |
+
+**Para reverter** (se for preciso): `gh repo edit --visibility private --accept-visibility-change-consequences`.
+O que já foi servido publicamente (clone, download de um release asset) não se recolhe.
