@@ -3123,3 +3123,60 @@ O ecrã do motor usa-as; os outros ecrãs podem passar a usá-las também.
 [`73`](design/revisao/73-motor-blocos-baixo.png) (o arranque, a interface web e o parar tudo), no
 S10+ com a app em root. Tocar no modo activo não faz nada (o `switchMode` sai cedo), que era o
 comportamento dos chips e continua a ser o dos «rádios».
+
+## 84. O fecho: Shizuku outra vez, o kernel do embutido, a instrumentação no telefone e a 0.3.0
+
+Esta ronda foi a lista de «o que falta» dita ao autor, feita por ordem.
+
+### 84.1 Shizuku, outra vez, com as mudanças todas
+
+O modo Shizuku não era re-verificado desde 2026-10-21, e entretanto mudaram o `bridge.cjs` (o método
+`cachalote.sessions.turns`), o `session-meta.cjs` (turnos e o apagar com cache) e o CLI (watchdog).
+Corridos os dois ensaios com a app em Shizuku:
+
+```
+./tools/app-ui-test.sh            → 10 passos, 0 falhas
+./tools/app-capabilities-test.sh  →  6 passos, 0 falhas
+```
+
+A primeira passagem do `app-ui-test` **falhou na limpeza**: «ficaram 1 conversas do ensaio na lista».
+O motor ainda estava a criar/escrever a sessão quando o ensaio a tentou apagar — e o ensaio só
+tentava uma vez. `lib-device.sh` ganhou `cachalote_limpar_sessoes_do_ensaio`, que insiste até três
+vezes com a mesma regra (só apaga o que **não** estava na fotografia inicial) e devolve o número de
+apagadas; os dois ensaios usam-no. A segunda passagem: `10/10`, e a telemetria do turno aparece
+também em Shizuku (`turno 1 · 2 passos · 4,0 s`).
+
+### 84.2 O kernel do modo embutido, que estava de 19/10
+
+O `files/kernel.zip` do telefone era de **19/10** e sem marca de origem — o modo embutido corria uma
+árvore antiga enquanto a APK já levava o kernel do npm. Apagados `files/kernel` e `files/kernel.zip`
+e mudado para o modo embutido: a app copiou o asset novo e extraiu **272 MB** (`dsh/node_modules`,
+172 entradas), versão **0.2.0-rc.2**. Um turno real nesse modo («diz textualmente: ola» → «ola») e a
+telemetria a aparecer: `turno 1 · 1 passo · 2,4 s` — o caminho novo `meta.cjs turns`, que só o modo
+embutido usa ([74](design/revisao/74-embutido-turno.png)). Depois voltou-se a root.
+
+### 84.3 Instrumentação: 9/9 no emulador **e no telefone**
+
+`connectedDebugAndroidTest` corre nos dois aparelhos ligados. No emulador 9/9; no S10+ **1 falha**:
+`a_notificacao_de_fim_de_turno_aparece_com_a_app_atras` — «a notificação de fim de turno não
+apareceu». Não era a app: o teste lia `activeNotifications` **imediatamente** depois do `notify()`, e
+no telefone o sistema ainda não a tinha registado (no emulador, mais rápido, passava). O teste passou
+a esperar até 2 s a perguntar, e o negativo a dar 300 ms antes de concluir que nada apareceu.
+Resultado: **9/9 no Medium_Phone_API_36 e 9/9 no SM-G975F**.
+
+### 84.4 A 0.3.0
+
+A versão que o README e o CHANGELOG passam a nomear:
+
+| O que | Como ficou |
+|---|---|
+| `versionCode` / `versionName` | **2** / **0.3.0** |
+| CHANGELOG | [`CHANGELOG.md`](CHANGELOG.md), a primeira entrada: motor e arranque, ecrã do motor, conversa, ajustes, instalação e build — com as §s onde está a prova |
+| README | a lista de funcionalidades estava parada antes de §78; entram «Parar tudo», a notificação, a telemetria, a busca e as licenças |
+| Build | `kotlin.compiler.execution.strategy=in-process`: o build deixou de cuspir `Daemon compilation failed: Could not connect to Kotlin compile daemon` (o daemon do Kotlin quer escrever em `~/Library/Application Support/kotlin`, fora do ambiente do projecto) |
+| APK de release | **255 MB**, assinada (`CN=Cachalote`), sha256 `cf88c83…`; instalada num emulador **limpo** e aberta no assistente (`0.3.0` em `dumpsys package`) — [75](design/revisao/75-release-030-no-emulador.png) |
+| Tag | `v0.3.0` |
+
+**A app do telefone ficou na de debug** (a de release tem outra assinatura e substituí-la obrigaria a
+desinstalar, perdendo o token e as capacidades autorizadas): a de release foi verificada no emulador,
+que é o que interessa para provar que o artefacto que se publica arranca.

@@ -127,6 +127,7 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 16 | Os **filtros** da lista ficaram de fora de propósito | ✅ trocados por uma **busca** (título e prévia, sem acentos) com contagem «N de M» — §82.2 |
 | 17 | A **janela de licenças** era um diálogo de leitura | ✅ painel que sobe de baixo, texto integral, **copiar** e **abrir a página** — §82.3 |
 | 18 | O ecrã **Ajustes → Motor** era uma fila de botões sem contexto («não faço ideia o que fazem») e uma lista que não acabava | ✅ passou a blocos com título, uma frase por bloco e uma explicação por acção; o token só aparece quando falta e os cartões do embutido só no modo embutido — §83 |
+| 19 | Faltava re-verificar o **Shizuku** e o **modo embutido** depois das mudanças, a instrumentação **no telefone**, e o **lançamento** (versão, CHANGELOG, tag) | ✅ Shizuku 10/10 e 6/6; kernel do embutido refeito (0.2.0-rc.2) com turno real; instrumentação 9/9 no emulador **e** no S10+; **0.3.0** (versionCode 2) com CHANGELOG, README e APK de release verificada — §84 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 

@@ -300,21 +300,15 @@ echo
 echo "== 4. apagar as conversas que este ensaio criou =="
 APAGADAS=0
 if [ -n "$BASE" ]; then
-  for id in $(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true); do
-    if ! grep -qx "$id" <<<"$SESSOES_ANTES"; then
-      cachalote_apagar_sessao "$DEV" "$BASE" "$SE_ROOT" "$id" && APAGADAS=$((APAGADAS+1))
-    fi
-  done
-  novas=0
-  for id in $(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true); do
-    grep -qx "$id" <<<"$SESSOES_ANTES" || novas=$((novas+1))
-  done
-  [ "$novas" = 0 ] && check 0 "as conversas do ensaio foram apagadas ($APAGADAS)" \
-                   || check 1 "ficaram $novas conversas do ensaio na lista"
+  # Em `if` para o `set -e` não matar o script quando ainda sobra alguma (o helper devolve 1).
+  if APAGADAS="$(cachalote_limpar_sessoes_do_ensaio "$DEV" "$BASE" "$SE_ROOT" "$SESSOES_ANTES")"; then
+    check 0 "as conversas do ensaio foram apagadas ($APAGADAS)"
+  else
+    check 1 "ficaram conversas do ensaio na lista"
+  fi
 else
   echo "   (modo embutido: não há daemon para apagar sessões)"
 fi
-
 echo
 echo "== resumo: $ok passos OK, ${#falhas[@]} falhas =="
 for f in "${falhas[@]:-}"; do [ -n "$f" ] && echo "   - $f"; done

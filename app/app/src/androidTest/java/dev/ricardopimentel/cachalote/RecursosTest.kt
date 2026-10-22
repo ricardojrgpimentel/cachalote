@@ -72,8 +72,16 @@ class RecursosTest {
 
         Notificacoes.fimDeTurno(ctx, "título de teste", "resumo do turno de teste")
 
-        val activas = nm.activeNotifications
-        val nossa = activas.firstOrNull { it.id == Notificacoes.ID_FIM_DE_TURNO }
+        // `activeNotifications` não é síncrono com o `notify()`: no telefone a leitura imediata
+        // chegou antes de o sistema registar a notificação e o teste ficou vermelho (o mesmo teste
+        // passava no emulador, que é mais rápido). Espera-se até 2 s, a perguntar.
+        var nossa: android.service.notification.StatusBarNotification? = null
+        repeat(20) {
+            if (nossa == null) {
+                nossa = nm.activeNotifications.firstOrNull { it.id == Notificacoes.ID_FIM_DE_TURNO }
+                if (nossa == null) Thread.sleep(100)
+            }
+        }
         assertNotNull("a notificação de fim de turno não apareceu", nossa)
         val texto = nossa!!.notification.extras.getCharSequence("android.text")?.toString().orEmpty()
         assertTrue("a notificação não leva o resumo (veio: '$texto')", texto.contains("resumo do turno"))
@@ -88,6 +96,8 @@ class RecursosTest {
 
         Notificacoes.fimDeTurno(ctx, "não deve aparecer", "…")
 
+        // Do lado negativo dá-se o mesmo tempo: o que se quer provar é que **nada** aparece.
+        Thread.sleep(300)
         val nossa = nm.activeNotifications.firstOrNull { it.id == Notificacoes.ID_FIM_DE_TURNO }
         assertFalse("notificou com a app à frente — seria ruído", nossa != null)
         Notificacoes.appEmPrimeiroPlano = false

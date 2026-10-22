@@ -109,3 +109,31 @@ cachalote_apagar_sessao() { # $1=serial $2=base $3=tem_root $4=id
     adb -s "$1" shell "$cmd" >/dev/null 2>&1
   fi
 }
+
+# Apaga as conversas que nasceram durante o ensaio e confirma que não sobrou nenhuma.
+#
+# Uma passagem só não chegava: o motor pode criar a sessão (ou escrever o `session.v4.jsonl`)
+# depois de o ensaio a listar — em Shizuku aconteceu ficar uma para trás. Insiste até três vezes,
+# sempre com a mesma regra: só se apaga o que **não** estava na fotografia inicial.
+#
+#   cachalote_limpar_sessoes_do_ensaio "$DEV" "$BASE" "$SE_ROOT" "$SESSOES_ANTES"
+#   → imprime quantas apagou; devolve 1 se ainda sobrar alguma.
+cachalote_limpar_sessoes_do_ensaio() { # $1=serial $2=base $3=root $4="ids iniciais (linhas)"
+  local serial="$1" base="$2" root="$3" antes="$4"
+  local tentativa id apagadas=0 sobram
+  for tentativa in 1 2 3; do
+    for id in $(cachalote_sessoes "$serial" "$base" "$root" 2>/dev/null || true); do
+      if ! grep -qx "$id" <<<"$antes"; then
+        cachalote_apagar_sessao "$serial" "$base" "$root" "$id" && apagadas=$((apagadas + 1))
+      fi
+    done
+    sobram=0
+    for id in $(cachalote_sessoes "$serial" "$base" "$root" 2>/dev/null || true); do
+      grep -qx "$id" <<<"$antes" || sobram=$((sobram + 1))
+    done
+    [ "$sobram" = 0 ] && break
+    sleep 1
+  done
+  echo "$apagadas"
+  [ "${sobram:-0}" = 0 ]
+}

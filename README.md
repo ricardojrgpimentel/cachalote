@@ -34,6 +34,13 @@ Uma app Android que corre o [DeepSeek Harness](https://www.npmjs.com/package/@de
   abre apps, vê e toca **sem mexer no teu ecrã** — com pré-visualização na app. Não precisa do
   serviço de acessibilidade.
 - **Chave do provedor introduzida na app** e nunca copiada de outro sítio.
+- **Parar tudo** e um interruptor de arranque no boot: o motor corre fora da app, e agora há como o
+  desligar — no ecrã do motor e numa notificação («Parar o motor»), mesmo com a app fechada.
+- **Telemetria do turno**: no fim de cada turno a conversa mostra os passos, as ferramentas e o tempo
+  que levou; o **Resumo** guarda os últimos seis. Vem do registo da sessão (o protocolo não os envia).
+- **Busca nas conversas** (título e prévia, sem acentos) e **licenças de terceiros** com os textos
+  integrais, copiar e abrir a página.
+- **Três motores, um interruptor** — e o ecrã do motor explica cada um: root, Shizuku ou embutido.
 
 ## Três motores, um interruptor
 
