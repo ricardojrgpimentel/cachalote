@@ -41,6 +41,9 @@ MODO="$(cachalote_modo "$DEV")"
 SE_ROOT=0
 cachalote_tem_root "$DEV" && SE_ROOT=1
 sh_do() { if [ "$SE_ROOT" = 1 ]; then "${ADB[@]}" shell "su -c '$1'"; else "${ADB[@]}" shell "$1"; fi; }
+# As conversas que nascem no ensaio são apagadas no fim (lib-device.sh): sem isto, cada corrida
+# deixava uma conversa de teste na lista do utilizador.
+SESSOES_ANTES="$(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true)"
 ok=0; falhas=()
 
 pass() { echo "   OK    $1"; ok=$((ok+1)); }
@@ -347,6 +350,23 @@ if [ "$KEEP" = 0 ]; then
   fi
 else
   echo "   (--keep-key: a chave de teste ficou no dispositivo)"
+fi
+
+echo "== 8. apagar as conversas que este ensaio criou =="
+APAGADAS=0
+if [ -n "$BASE" ]; then
+  for id in $(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true); do
+    if ! grep -qx "$id" <<<"$SESSOES_ANTES"; then
+      cachalote_apagar_sessao "$DEV" "$BASE" "$SE_ROOT" "$id" && APAGADAS=$((APAGADAS+1))
+    fi
+  done
+  restantes="$(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true)"
+  novas=0
+  for id in $restantes; do grep -qx "$id" <<<"$SESSOES_ANTES" || novas=$((novas+1)); done
+  [ "$novas" = 0 ] && check 0 "as conversas do ensaio foram apagadas ($APAGADAS)" \
+                   || check 1 "ficaram $novas conversas do ensaio na lista"
+else
+  echo "   (modo embutido: não há daemon para apagar sessões)"
 fi
 
 echo

@@ -414,11 +414,19 @@ function apagarSessao(dshHome, id) {
   if (typeof id !== "string" || !/^[A-Za-z0-9._-]{6,80}$/.test(id)) {
     throw new Error("id de sessão inválido");
   }
+  // A cache do projecto guarda um `<id>.json` por sessão (título, datas, contagens). Se ficasse,
+  // uma conversa «apagada» continuava a ter um ficheiro com os metadados dela em disco — e foi
+  // por essa cache que a lista chegou a mostrar conversas já apagadas. Sai sempre.
+  const cache = path.join(dshHome, "storages", "session_projcache", "sessions", id + ".json");
+  const tinhaCache = fs.existsSync(cache);
+  const limparCache = () => { if (tinhaCache) fs.rmSync(cache, { force: true }); };
+
   const raiz = path.join(dshHome, "sessions");
   let slugs;
   try {
     slugs = fs.readdirSync(raiz, { withFileTypes: true });
   } catch {
+    if (tinhaCache) { limparCache(); return { apagada: id, soCache: true }; }
     throw new Error("não há sessões para apagar");
   }
   for (const slug of slugs) {
@@ -429,8 +437,11 @@ function apagarSessao(dshHome, id) {
     const conteudo = fs.readdirSync(pasta);
     if (!conteudo.some((f) => f.startsWith("session.v4.jsonl"))) continue;
     fs.rmSync(pasta, { recursive: true, force: true });
+    limparCache();
     return { apagada: id, pasta };
   }
+  // Ficou só a cache (uma sessão apagada por outra via, ou antes desta correcção): limpa-se.
+  if (tinhaCache) { limparCache(); return { apagada: id, soCache: true }; }
   throw new Error("não encontrei a sessão " + id);
 }
 

@@ -2876,6 +2876,14 @@ Os dois sentidos do interruptor funcionam, e o reboot com ele em baixo prova que
 Uma fila de tarefas com um resto de teste (`1. injuu`, de um `input text` que se baralhou) foi removida
 pelo botão da própria fila — `files/fila.json` ficou `{"itens":[]}` ([59](design/revisao/59-sem-fila.png)).
 
+As conversas que os testes automáticos criaram hoje (`diz apenas: ok`, `Avisar teste de capacidades via
+android_notify`, `Usar android_status e retornar JSON puro`) foram apagadas pela app (toque longo →
+«Apagar conversa», que diz que não se desfaz). Ficou a de 09:40 (`Verificar correção de script bash`),
+que é anterior a esta ronda e não me pertence para apagar ([61](design/revisao/61-lista-limpa.png)).
+
+**E os testes passaram a limpar-se sozinhos** (§80.3): cada ensaio tira uma fotografia às sessões
+antes e apaga as que nasceram nele, pelo daemon.
+
 ### 79.5 Mais uma volta de parafuso: o `.off` antigo não se apaga
 
 A primeira versão do `definirArranque` **apagava** um `cachalote.sh.off` que encontrasse ao desligar. Era
@@ -2909,7 +2917,9 @@ com o porquê escrito no `build.gradle.kts`). O `gradle test` passa a verde, a C
 caminho apareceram **classes velhas** de testes apagados (`ConsumoTest`…) na pasta da release — o
 build incremental não as limpava e davam falhas fantasma; a pasta foi apagada e não voltou.
 
-**Resultado:** `79 testes, 0 falhas` em `testDebugUnitTest`; `gradle test` verde.
+**Resultado:** `79 testes, 0 falhas` em `testDebugUnitTest`; `gradle test` verde. Os dois testes
+de dispositivo por modo ficaram provados **nos dois modos**: `app-ui-test.sh` (9/9 em root e Shizuku,
+agora **10/10** com o passo da limpeza do §80.4) e `app-capabilities-test.sh` (5/5, agora **6/6**).
 
 ### 80.2 O `build-release.sh` tinha o JDK 25 escrito à mão
 
@@ -2928,3 +2938,41 @@ funções ficavam no subshell.
 plano; `./tools/install-app.sh` instala. Nota: `gradle assembleRelease` **sozinho** falha com
 «SigningConfig "release" is missing required property "storeFile"» quando a chave não existe — é de
 propósito (a chave não é versionada); quem a gera é o `build-release.sh`.
+
+### 80.3 Uma conversa apagada ficava com os metadados em disco
+
+Ao limpar a lista (`§79.4`) apareceu a razão de haver «fantasmas»: a pasta `sessions/<projecto>/<id>/`
+era apagada, mas a cache do projecto — `home/storages/session_projcache/sessions/<id>.json`, com o
+**título**, as datas e as contagens — ficava lá. Ou seja: uma conversa que o utilizador apagava
+continuava a ter um ficheiro com o título dela no telefone, e a lista chegou a mostrá-la por causa
+disso (6 entradas de cache para 1 sessão real, medido hoje).
+
+**Correcção:** `apagarSessao` (daemon/session-meta.cjs) passou a tirar também o `<id>.json` da cache,
+e trata o caso **órfã** (sessão já apagada por outra via, só com a cache): limpa e devolve
+`{ apagada, soCache: true }` em vez de rebentar. Isto serve a app (botão «Apagar conversa») e o daemon
+por igual. A cópia embutida (`assets/motor-session-meta.cjs`) foi sincronizada e a APK reconstruída.
+
+**Testes:** `tools/session-meta-test.cjs` ganhou três casos (a pasta sai, a cache sai, a cache órfã sai
+sem erro) — todos verdes.
+
+**No telefone:** as 6 caches órfãs foram apagadas pelo `ctl` (as 6 responderam `soCache: true`), e o
+teste de capacidades voltou a correr depois: cria **2** conversas, apaga as **2**, e a cache continua
+em **1** ficheiro (`b9e4a225…`, a conversa real).
+
+### 80.4 Os ensaios deixam de sujar a lista de conversas
+
+`app-ui-test.sh` e `app-capabilities-test.sh` criavam conversas e deixavam-nas lá. Agora
+`tools/lib-device.sh` tem `cachalote_sessoes` (os ids da base do modo em uso) e `cachalote_apagar_sessao`
+(chama `cachalote.sessions.delete` com os parâmetros num ficheiro — o `ctl` aceita `@ficheiro`, que
+evita o inferno de aspas do `su -c`). Cada script tira a fotografia no início, apaga no fim o que
+nasceu no ensaio, e **verifica** que não sobrou nada — é o último passo do resumo:
+
+```
+== 8. apagar as conversas que este ensaio criou ==   (app-ui-test)
+   OK    as conversas do ensaio foram apagadas (1)
+== resumo: 10 passos OK, 0 falhas ==
+
+== 4. apagar as conversas que este ensaio criou ==   (app-capabilities-test)
+   OK    as conversas do ensaio foram apagadas (2)
+== resumo: 6 passos OK, 0 falhas ==
+```

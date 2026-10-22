@@ -226,6 +226,30 @@ const interrompido = historicoSessao(raiz, "eeee5555-6666-7777-8888-999999999999
 ok("o stream de um message com blocos não duplica", interrompido.events.length === 1 && interrompido.events[0].text === "resposta a meio",
   JSON.stringify(interrompido.events));
 
+// --- apagar: a pasta da sessão **e** a entrada na cache do projecto (o que fazia uma conversa
+// apagada continuar a ter um .json com o título dela em disco).
+const { apagarSessao } = require("../daemon/session-meta.cjs");
+const idApagar = "ffff9999-8888-7777-6666-555555555555";
+const dirApagar = path.join(slug, idApagar);
+const cacheApagar = path.join(raiz, "storages", "session_projcache", "sessions", idApagar + ".json");
+fs.mkdirSync(dirApagar, { recursive: true });
+fs.writeFileSync(path.join(dirApagar, "session.v4.jsonl.zstd"), cabecalho);
+fs.mkdirSync(path.dirname(cacheApagar), { recursive: true });
+fs.writeFileSync(cacheApagar, JSON.stringify({ id: idApagar, title: "conversa de teste" }));
+
+const r = apagarSessao(raiz, idApagar);
+ok("apagar tira a pasta da sessão", !fs.existsSync(dirApagar) && r.apagada === idApagar, JSON.stringify(r));
+ok("apagar tira a entrada da cache do projecto", !fs.existsSync(cacheApagar));
+
+// Uma cache órfã (sessão já apagada antes desta correcção) também tem de sair — sem erro.
+fs.writeFileSync(cacheApagar, JSON.stringify({ id: idApagar, title: "órfã" }));
+const r2 = apagarSessao(raiz, idApagar);
+ok("apagar limpa a cache órfã sem pasta", r2.soCache === true && !fs.existsSync(cacheApagar), JSON.stringify(r2));
+
+let rebentou = false;
+try { apagarSessao(raiz, "11112222-3333-4444-5555-666677778888"); } catch { rebentou = true; }
+ok("apagar uma sessão que não existe dá erro", rebentou);
+
 fs.rmSync(raiz, { recursive: true, force: true });
 console.log("");
 if (falhas === 0) {

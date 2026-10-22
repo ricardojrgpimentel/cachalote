@@ -69,3 +69,43 @@ cachalote_tem_root() { # $1 = serial
   adb -s "${1:?serial}" shell "su -c 'id -u'" 2>/dev/null | tr -d '\r' | grep -qx 0
 }
 
+
+# ---------------------------------------------------------------- conversas dos testes
+#
+# Os ensaios de dispositivo criam conversas novas na app e, até 2026-10-22, deixavam-nas lá: quem
+# corresse `app-ui-test.sh` ou `app-capabilities-test.sh` ficava com o lixo na lista (e a lista
+# ainda mostrava conversas apagadas, por causa da cache do projecto). Agora os dois scripts tiram
+# uma fotografia às sessões antes, e apagam as que nasceram no ensaio recorrendo ao **daemon**
+# (`cachalote.sessions.delete`), que também limpa a cache — apagar a pasta à mão deixava a lista
+# a mentir.
+#
+#   ANTES="$(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT")"
+#   ...
+#   for id in $(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT"); do
+#     grep -qx "$id" <<<"$ANTES" || cachalote_apagar_sessao "$DEV" "$BASE" "$SE_ROOT" "$id"
+#   done
+#
+cachalote_sessoes() { # $1=serial $2=base $3=tem_root(0/1)
+  local cmd="ls -1 $2/home/sessions/*/ 2>/dev/null"
+  if [ "${3:-0}" = 1 ]; then
+    adb -s "${1:?serial}" shell "su -c '$cmd'"
+  else
+    adb -s "${1:?serial}" shell "$cmd"
+  fi | tr -d '\r' | grep -E ^[0-9a-f]{8}-[0-9a-f]{4}- | sort -u
+}
+
+cachalote_apagar_sessao() { # $1=serial $2=base $3=tem_root $4=id
+  local f push="/data/local/tmp/cachalote-del.json"
+  f="$(mktemp)"
+  printf '{"sessionId":"%s"}' "$4" > "$f" || { rm -f "$f"; return 1; }
+  adb -s "$1" push "$f" "$push" >/dev/null 2>&1 || { rm -f "$f"; return 1; }
+  rm -f "$f"
+  # O `ctl` aceita `@ficheiro` com os parâmetros: evita o inferno de aspas do `su -c` (mesmo truque
+  # do tools/vscreen-tool-test.sh).
+  local cmd="cp $push $2/tmp/cachalote-del.json && $2/bin/cachalote ctl cachalote.sessions.delete @$2/tmp/cachalote-del.json; rm -f $2/tmp/cachalote-del.json $push"
+  if [ "${3:-0}" = 1 ]; then
+    adb -s "$1" shell "su -c '$cmd'" >/dev/null 2>&1
+  else
+    adb -s "$1" shell "$cmd" >/dev/null 2>&1
+  fi
+}

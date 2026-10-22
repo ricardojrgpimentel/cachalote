@@ -1880,3 +1880,16 @@ todos invisíveis no dia-a-dia do modo root:
   velhos** na pasta da variante e eles correm na mesma (falhas fantasma de testes que já não existem)
   — apagar `build/tmp/kotlin-classes/<variante>` resolve.
 - **Origem:** **[LOCAL]** (macOS, 2026-10-22).
+
+### 142. Apagar uma conversa deixava os metadados dela em disco (a cache do projecto)
+
+- **Sintoma:** a lista de conversas mostrava «fantasmas» — conversas já apagadas — e o disco tinha
+  mais entradas na cache do que sessões reais (6 para 1, medido a 2026-10-22).
+- **Causa:** o motor guarda dois sítios por sessão: a pasta `home/sessions/<projecto>/<id>/` (o log) e
+  `home/storages/session_projcache/sessions/<id>.json` (título, datas, contagens). Apagar só tirava a
+  pasta; o `.json` ficava, com o título da conversa «apagada».
+- **Correcção:** `apagarSessao` (daemon/session-meta.cjs) remove os dois; se só existir a cache
+  (sessão apagada antes da correcção) limpa-a e devolve `soCache: true`, em vez de falhar.
+- **Para os testes:** quem cria sessões num ensaio tem de as apagar pelo daemon (não com `rm`), senão
+  a cache fica a apontar para o nada. Ver `cachalote_apagar_sessao` em tools/lib-device.sh.
+- **Origem:** **[LOCAL]** (S10+, 2026-10-22).

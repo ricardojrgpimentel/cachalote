@@ -29,6 +29,9 @@ SE_ROOT=0
 cachalote_tem_root "$DEV" && SE_ROOT=1
 # Corre um comando no telefone como root quando há `su` (a base é root:600), senão como shell.
 sh_do() { if [ "$SE_ROOT" = 1 ]; then "${ADB[@]}" shell "su -c '$1'"; else "${ADB[@]}" shell "$1"; fi; }
+# As conversas que nascem no ensaio são apagadas no fim (lib-device.sh) — este teste cria duas
+# (o estado das capacidades e a notificação) e até 2026-10-22 deixava-as na lista do utilizador.
+SESSOES_ANTES="$(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true)"
 if [ "$MODO" = "embedded" ] || [ -z "$BASE" ]; then
   echo "nota: a app está no modo embutido — não há daemon para inspeccionar (os passos de ficheiro"
   echo "      da sessão ficam de fora); as capacidades testam-se na mesma."
@@ -291,6 +294,25 @@ PY
   else
     fail "registo da sessão legível (zstd)"
   fi
+fi
+
+echo
+echo "== 4. apagar as conversas que este ensaio criou =="
+APAGADAS=0
+if [ -n "$BASE" ]; then
+  for id in $(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true); do
+    if ! grep -qx "$id" <<<"$SESSOES_ANTES"; then
+      cachalote_apagar_sessao "$DEV" "$BASE" "$SE_ROOT" "$id" && APAGADAS=$((APAGADAS+1))
+    fi
+  done
+  novas=0
+  for id in $(cachalote_sessoes "$DEV" "$BASE" "$SE_ROOT" 2>/dev/null || true); do
+    grep -qx "$id" <<<"$SESSOES_ANTES" || novas=$((novas+1))
+  done
+  [ "$novas" = 0 ] && check 0 "as conversas do ensaio foram apagadas ($APAGADAS)" \
+                   || check 1 "ficaram $novas conversas do ensaio na lista"
+else
+  echo "   (modo embutido: não há daemon para apagar sessões)"
 fi
 
 echo
