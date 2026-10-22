@@ -9,14 +9,18 @@
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
-JH="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 GRADLE="$WS/.work/tools/gradle-8.13/bin/gradle"
 KS="$WS/.work/cachalote-release.jks"
 PASS="${CACHALOTE_STORE_PASS:-cachalote}"
 ALIAS="${CACHALOTE_KEY_ALIAS:-cachalote}"
 
-export JAVA_HOME="$JH"
-export PATH="$JH/bin:$PATH"
+# O JDK vem da regra comum (tools/lib-jdk.sh): um build-release com o JBR no 25 morria com
+# «IllegalArgumentException: 25.0.3», que não diz que o problema é o JDK (knowledge 138).
+. "$WS/tools/lib-jdk.sh"
+JAVA_HOME="$(cachalote_jdk "$WS")" || { echo "ERRO: não encontrei um JDK 17-21. Define JAVA_HOME." >&2; exit 1; }
+cachalote_exigir_jdk "$JAVA_HOME" || exit 1
+export JAVA_HOME
+export PATH="$JAVA_HOME/bin:$PATH"
 export GRADLE_USER_HOME="$WS/.work/gradle-home"
 export ANDROID_USER_HOME="$WS/.work/android-home"
 export CACHALOTE_KEYSTORE="$KS"

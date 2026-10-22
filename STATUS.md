@@ -2888,3 +2888,43 @@ Com a APK nova instalada (09:36), o ciclo completo outra vez: **ON** → `servic
 `arranque/` vazio → **OFF** → `service.d` vazio, `arranque/cachalote.sh` → **ON** → de volta ao
 `service.d`, com o interruptor a acompanhar (`checked=true`/`false` no `uiautomator dump`). O daemon
 (pid 16343) e a acessibilidade (*bound*) ficaram intactos.
+
+## 80. O `gradle test` que estava vermelho, e o `build-release.sh` que já não construía
+
+Duas coisas apareceram ao correr os testes e o build de release a sério, depois do §79.
+
+### 80.1 O `gradle test` só passava na variante que o CI corre
+
+`gradle test` (as duas variantes) dava **quatro classes em falha, todas na release**:
+`ConsumoTest`, `FilaCardTest`, `InterfaceTest` e `InterfaceEnTest`, com
+`RuntimeException: Unable to resolve activity for Intent { ... cmp=dev.ricardopimentel.cachalote/androidx.activity.ComponentActivity }`.
+Não era o código: o `createComposeRule` lança a `androidx.activity.ComponentActivity`, que só entra
+no **manifesto** pelo `ui-test-manifest` — e essa dependência está como `debugImplementation` **de
+propósito**, para não ir no APK que se publica. A release ficava sem a actividade e o Robolectric não
+a conseguia resolver.
+
+**Correcção:** a release deixou de ter testes de unidade (`androidComponents { beforeVariants(...) { it.enableUnitTest = false } }`,
+com o porquê escrito no `build.gradle.kts`). O `gradle test` passa a verde, a CI continua no
+`testDebugUnitTest` (é o que já corria) e a release continua coberta pelo `assembleRelease`. Pelo
+caminho apareceram **classes velhas** de testes apagados (`ConsumoTest`…) na pasta da release — o
+build incremental não as limpava e davam falhas fantasma; a pasta foi apagada e não voltou.
+
+**Resultado:** `79 testes, 0 falhas` em `testDebugUnitTest`; `gradle test` verde.
+
+### 80.2 O `build-release.sh` tinha o JDK 25 escrito à mão
+
+O §78.2 pôs a guarda do JDK no `install-app.sh` e no `bootstrap.sh`, mas o `build-release.sh` ficou
+com `JH="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` — o JBR no **25**, que o
+Kotlin do AGP não lê. Ou seja: **o caminho de quem publica estava partido** e ninguém tinha dado por
+isso, porque a APK de release não era construída desde a actualização do Android Studio.
+
+**Correcção:** a regra passou a viver num sítio só, `tools/lib-jdk.sh` (`cachalote_jdk` escolhe;
+`cachalote_exigir_jdk` recusa >= 24 com uma mensagem que diz o que fazer), usado pelos **três**
+scripts. `bootstrap.sh` tem de a carregar no processo principal — dentro de `$(detect_java)` as
+funções ficavam no subshell.
+
+**Prova (22/10):** `./tools/build-release.sh` → `BUILD SUCCESSFUL`, `app-release.apk` 255 MB assinada
+(`CN=Cachalote`, sha256 `1f45214…`); `./tools/bootstrap.sh --dry-run` detecta o JDK 21 e imprime o
+plano; `./tools/install-app.sh` instala. Nota: `gradle assembleRelease` **sozinho** falha com
+«SigningConfig "release" is missing required property "storeFile"» quando a chave não existe — é de
+propósito (a chave não é versionada); quem a gera é o `build-release.sh`.

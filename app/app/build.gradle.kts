@@ -115,3 +115,14 @@ tasks.withType<Test>().configureEach {
     // descarrega nada. Com o `user.home` redireccionado, ele descarrega para dentro do build.
     testLogging { events("failed") }
 }
+
+// Os testes de unidade correm na variante **debug**, e é essa que o CI corre
+// (`testDebugUnitTest`). Na release, as quatro classes que compõem Compose falham por uma razão
+// de arnês e não de produto: o `createComposeRule` lança a `androidx.activity.ComponentActivity`,
+// que só entra no manifesto pelo `ui-test-manifest` — e essa dependência é `debugImplementation`
+// de propósito, para não ir no APK que se publica. Sem isto, `gradle test` ficava vermelho por
+// uma actividade que só existe para os testes. A release continua coberta pelo `assembleRelease`
+// de `tools/build-release.sh`.
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) { it.enableUnitTest = false }
+}

@@ -1863,3 +1863,20 @@ todos invisíveis no dia-a-dia do modo root:
 - **Prova:** reboot com o interruptor em baixo → `pgrep -af cachalote` **vazio**, `service.d` vazio
   (2026-10-22).
 - **Origem:** **[LOCAL]** (S10+, 2026-10-22).
+
+### 141. Um teste Compose na JVM passa em debug e falha em release (`Unable to resolve activity … ComponentActivity`)
+
+- **Sintoma:** `gradle test` (as duas variantes) falha só na **release**, com
+  `RuntimeException: Unable to resolve activity for Intent { … cmp=<pkg>/androidx.activity.ComponentActivity }`,
+  nas classes que usam `createComposeRule()`. Em debug passam.
+- **Causa:** o `createComposeRule` lança a `androidx.activity.ComponentActivity`, e essa actividade só
+  está no **manifesto fundido** por causa do artefacto `androidx.compose.ui:ui-test-manifest` — que
+  se declara como `debugImplementation` **de propósito**, para não ir no APK publicado. Na release o
+  manifesto não a tem e o Robolectric não a resolve.
+- **Correcção:** não vale a pena pôr o `ui-test-manifest` na release (metia uma actividade de teste
+  no APK); desligam-se os testes de unidade dessa variante e corre-se a debug, que é o que a CI já
+  faz: `androidComponents { beforeVariants(selector().withBuildType("release")) { it.enableUnitTest = false } }`.
+- **Bónus:** se apagares classes de teste do `src/test`, o build incremental pode deixar **.class
+  velhos** na pasta da variante e eles correm na mesma (falhas fantasma de testes que já não existem)
+  — apagar `build/tmp/kotlin-classes/<variante>` resolve.
+- **Origem:** **[LOCAL]** (macOS, 2026-10-22).

@@ -25,6 +25,9 @@
 set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/.." && pwd)"
+# A regra do JDK vive num sítio só (a mesma do install-app.sh e do build-release.sh). Tem de ser
+# carregada aqui, no processo principal: dentro de `$(detect_java)` as funções ficavam no subshell.
+. "$WS/tools/lib-jdk.sh"
 DEV="${CACHALOTE_DEV:-}"
 DSH_VERSION="${CACHALOTE_DSH_VERSION:-0.2.0-rc.2}"
 DSH_DIR=""
@@ -80,21 +83,8 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "ERRO: falta '$1' ($2)"; exit
 
 # ---------------------------------------------------------------- JDK e SDK
 detect_java() {
-  local sdk="${1:-${ANDROID_HOME:-}}" c
-  # Um JDK 21 posto à mão em .work/jdk21 ganha (ver install-app.sh: o AGP quebra com >= 24).
-  if [ -x "$WS/.work/jdk21/Contents/Home/bin/java" ]; then echo "$WS/.work/jdk21/Contents/Home"; return; fi
-  if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then echo "$JAVA_HOME"; return; fi
-  # Os JDKs que os SDKs de Android trazem (Android Studio, montra) são os que o AGP espera —
-  # vêm PRIMEIRO. Um `/usr/lib/jvm/*/bin/java` genérico apanha o JDK do sistema, que numa
-  # máquina actualizada pode ser o 26; o AGP 8.x não o suporta e o build morre com um erro
-  # que não diz nada de útil ("What went wrong: 26.0.2.1").
-  for c in "$sdk"/jbr "$sdk"/jdk-* \
-           "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
-           "$HOME/Android/Sdk/jbr" \
-           /usr/lib/jvm/java-21-openjdk /usr/lib/jvm/java-17-openjdk; do
-    [ -x "$c/bin/java" ] && { echo "$c"; return; }
-  done
-  return 1
+  # Um JDK 21 posto à mão em .work/jdk21 ganha (ver tools/lib-jdk.sh: o AGP quebra com >= 24).
+  cachalote_jdk "$WS"
 }
 detect_sdk() {
   if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ]; then echo "$ANDROID_HOME"; return; fi
@@ -127,6 +117,7 @@ need python3 "Python 3 (pipelines e testes)"
 [ "$SKIP_APP" = 1 ] || { need zip "zip (empacotar o kernel)"; need unzip "unzip (extrair o Gradle)"; }
 SDK="$(detect_sdk || true)"
 JAVA="$(detect_java "$SDK" || true)"
+[ -z "$JAVA" ] || cachalote_exigir_jdk "$JAVA" || exit 1
 if [ "$SKIP_APP" != 1 ]; then
   [ -n "$JAVA" ] || { echo "ERRO: não encontrei um JDK 17+. Define JAVA_HOME (o JBR do Android Studio serve)."; exit 1; }
   [ -n "$SDK" ] || { echo "ERRO: não encontrei o Android SDK. Define ANDROID_HOME."; exit 1; }

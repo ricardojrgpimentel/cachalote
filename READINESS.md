@@ -120,6 +120,7 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 9 | O microfone aparecia sem reconhecedor; a lista no embutido só mostrava ids | ✅ §76.3 e §76.4 |
 | 10 | **«Fechei todas as apps e o telefone continua quente»**: o motor vive fora da app e não havia como o desligar | ✅ a notificação do serviço tem a acção **«Parar o motor»**, o ecrã **Motor** tem **«Parar tudo»** e há um interruptor **«Arrancar com o telefone»** que tira o script do `service.d` (renomear para `.off` **não** desligava — o Magisk corre tudo o que lá está, §79) |
 | 11 | O interruptor do arranque no boot nunca tinha sido provado nos dois sentidos | ✅ desligado + reboot → **nenhum** processo do Cachalote e a app a dizer o que fazer; ligado → daemon no ar e um turno real — [`STATUS.md`](STATUS.md) §79.2 |
+| 12 | O **caminho de quem publica** estava partido: o `build-release.sh` tinha o JBR no 25 escrito à mão (o Kotlin do AGP não o lê) e o `gradle test` só passava numa das variantes | ✅ a regra do JDK passou a `tools/lib-jdk.sh`, usado pelos três scripts, e o `gradle test` ficou verde (a release não corre testes de unidade — a actividade do `createComposeRule` só existe no manifesto de debug) — §80 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 
@@ -130,7 +131,9 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | Conversa antiga no modo embutido | ✅ abre com o histórico (não só «sessão X retomada») |
 | `doctor` nas duas bases | ✅ `resultado: tudo bem` |
 | Interruptor do arranque no boot (S10+, 2026-10-22) | ✅ desligado → reboot → `pgrep` vazio e `service.d` vazio; ligado → daemon + turno real (§79.2) |
-| Testes de JVM | ✅ 76, 0 falhas |
+| `./tools/build-release.sh` (2026-10-22) | ✅ `BUILD SUCCESSFUL`, APK assinada (`CN=Cachalote`), sha256 `1f45214…` (§80.2) |
+| `./tools/app-ui-test.sh` em modo **root** (2026-10-22) | ✅ **9 passos, 0 falhas** — o outro ramo do teste por modo, além do Shizuku |
+| Testes de JVM | ✅ 76, 0 falhas (79 em 2026-10-22, com `gradle test` verde — §80.1) |
 | `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ todos verdes |
 
 ### O que continua fora, e porquê
