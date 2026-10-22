@@ -3200,3 +3200,47 @@ concedida no diálogo que a app abriu. Verificado a seguir: `app-capabilities-te
 - `am force-stop` **desliga** o serviço de acessibilidade — a seguir a um force-stop, o `android_status`
   diz «acessibilidade desligada» até se voltar a ligar (foi o que fez uma passagem do ensaio falhar
   com 5/6).
+
+## 85. O ecrã virtual «só abria apps do sistema» — era o nome da actividade
+
+O autor pediu ao agente para abrir o **Brave** no ecrã virtual e ir a um site; não conseguiu. A
+suspeita era limitação do Android ou do ecrã virtual. Não era nenhuma das duas.
+
+### 85.1 O que se passou
+
+O ecrã virtual corre **qualquer** app: a prova directa foi `am start --display 22 -n
+com.brave.browser/com.google.android.apps.chrome.Main`, com o Brave a aparecer na pilha do display
+(`visible=true`). O que faltava era o **nome da actividade de arranque** de cada app — o
+`android_vscreen` só sabia lançar com `componente='pacote/Actividade'`, e para as apps do sistema esse
+nome é óbvio (ou já estava nos exemplos). Para o Brave é
+`com.google.android.apps.chrome.Main`; para cada app é outra coisa. O agente estava a adivinhar, e
+desistia.
+
+### 85.2 O que ficou
+
+| Onde | O que mudou |
+|---|---|
+| `daemon/bridge.cjs` | método **`cachalote.apps.list`**: corre `cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER` e devolve `{pacote, actividade, componente}` de todas as apps com actividade de arranque (28 no S10+) |
+| `daemon/bridge.cjs` | `cachalote.vscreen.launch` aceita **só o pacote**: resolve a actividade de arranque com `cmd package resolve-activity --brief` e devolve o componente resolvido (`resolvido: true`) |
+| `kernel-plugins/cachalote-tools` | a ferramenta `android_vscreen` ganhou a acção **`apps`** (lista o que se pode abrir) e o `launch` aceita o pacote; a descrição diz explicitamente «não adivinhes nomes de pacotes nem de actividades: usa `apps`» |
+
+### 85.3 A prova, no telefone e a sério
+
+Com a app em root, um turno novo no chat: *«abre o pacote com.brave.browser no ecrã virtual e vai a
+example.com e manda um fotograma»*. O agente:
+
+1. `android_vscreen start` → display 23;
+2. pediu autorização para `am start --display 23 -a VIEW -d https://example.com -n
+   com.brave.browser/com.google.android.apps.chrome.Main` (fora das áreas permitidas — aprovado);
+3. `android_vscreen frame` → fotograma anexado à conversa;
+4. respondeu: «abri o pacote com.brave.browser no ecrã virtual e naveguei para example.com… o link é
+   `example.com` — endereço completo: `https://example.com/`… a página mostra o aviso de domínio
+   reservado» — tudo verdade.
+
+Ecrã virtual: **361 fotogramas**, sem erro; parado depois com `vscreen_stop` (fechou a task do Brave)
+([77](design/revisao/77-vscreen-brave-funcionou.png)).
+
+**Nota:** durante o trabalho vi uma vez a app presa em «a reconectar…» depois de reiniciar o daemon
+com uma sessão aberta; reiniciar a app resolveu e não voltou a acontecer nas três vezes seguintes.
+Fica anotado como suspeita (o motor responde «session is already active» à sessão que a ligação
+anterior deixou aberta), não como problema resolvido.

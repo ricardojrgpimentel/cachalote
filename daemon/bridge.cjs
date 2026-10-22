@@ -300,6 +300,10 @@ function control(method, params) {
       return vscreenInput(params?.displayId, params?.args);
     case "cachalote.vscreen.launch":
       return vscreenLaunch(params?.displayId, params?.componente);
+    case "cachalote.apps.list":
+      // A lista de apps que se podem abrir (com o componente de arranque). É o que faltava para o
+      // agente deixar de adivinhar nomes de actividades de apps de terceiros.
+      return appsComActividade();
     case "cachalote.sessions.meta":
       // Título e datas de todas as sessões, lidos do que o motor grava em disco: o `session/list`
       // do ACP só devolve `sessionId` e `cwd` (medido no S10+ em 2026-10-15) e a lista de conversas
@@ -458,18 +462,76 @@ async function vscreenInput(displayId, args) {
   return { ok: true, displayId: id, comando: args.join(" ") };
 }
 
+/**
+ * As apps que têm actividade de arranque (as que aparecem na gaveta), com o componente completo.
+ *
+ * Sem isto o agente só conhecia os pacotes que alguém lhe disse — as apps do sistema — e desistia
+ * das outras («abre o Brave no ecrã virtual» era um tiro no escuro: `am start` precisa do nome da
+ * actividade, que muda de app para app). `cmd package query-activities` responde com todas de uma
+ * vez e o `--brief` dá exactamente `pacote/actividade`.
+ */
+async function appsComActividade() {
+  const r = await executar(
+    "cmd",
+    ["package", "query-activities", "--brief", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER"],
+    20_000,
+  );
+  const linhas = ((r.stdout || "") + "\n" + (r.stderr || "")).split("\n").map((l) => l.trim())
+    .filter((l) => /^[A-Za-z0-9_.]+\/[A-Za-z0-9_.$]+$/.test(l));
+  const vistos = new Set();
+  const apps = [];
+  for (const linha of linhas) {
+    const [pacote, act] = linha.split("/");
+    // O `--brief` abrevia a actividade quando ela é do próprio pacote: `com.x/.Main` → `com.x/.Main`.
+    const actividade = act.startsWith(".") ? pacote + act : act;
+    const componente = pacote + "/" + actividade;
+    if (vistos.has(componente)) continue;
+    vistos.add(componente);
+    apps.push({ pacote, actividade, componente });
+  }
+  apps.sort((a, b) => a.pacote.localeCompare(b.pacote));
+  return apps;
+}
+
+/**
+ * `pacote` ou `pacote/Actividade` → `pacote/Actividade` completo.
+ *
+ * Pedir ao agente o nome exacto da actividade de uma app de terceiros era pedir-lhe que adivinhasse
+ * (`com.brave.browser/com.google.android.apps.chrome.Main`?) — e era isso que fazia «só as apps do
+ * sistema» funcionarem. Com o pacote basta: quem resolve é o sistema.
+ */
+async function resolverComponente(componente) {
+  const bruto = String(componente || "").trim();
+  if (!bruto) throw new Error("falta o componente (o pacote, ou 'pacote/Actividade')");
+  if (bruto.includes("/")) {
+    const [pacote, act] = bruto.split("/");
+    if (!/^[A-Za-z0-9_.]+$/.test(pacote) || !/^[A-Za-z0-9_.$]+$/.test(act)) {
+      throw new Error("componente tem de ser 'pacote/Actividade' (só letras, números, ponto, _ e $)");
+    }
+    return { componente: act.startsWith(".") ? pacote + "/" + pacote + act : bruto, resolvido: false };
+  }
+  if (!/^[A-Za-z0-9_.]+$/.test(bruto)) {
+    throw new Error("pacote inválido: só letras, números, ponto e _");
+  }
+  const r = await executar("cmd", ["package", "resolve-activity", "--brief", bruto], 15_000);
+  const saida = ((r.stdout || "") + "\n" + (r.stderr || "")).split("\n").map((l) => l.trim());
+  const linha = saida.reverse().find((l) => /^[A-Za-z0-9_.]+\/[A-Za-z0-9_.$]+$/.test(l));
+  if (!linha) throw new Error(`não encontrei nenhuma app "${bruto}" com actividade de arranque`);
+  const [pacote, act] = linha.split("/");
+  return { componente: act.startsWith(".") ? pacote + "/" + pacote + act : linha, resolvido: true };
+}
+
 /** `am start --display <id> -n <pacote>/<actividade>` no ecrã virtual. */
 async function vscreenLaunch(displayId, componente) {
-  if (typeof componente !== "string" || !/^[A-Za-z0-9_.]+\/[A-Za-z0-9_.$]+$/.test(componente)) {
-    throw new Error("componente tem de ser 'pacote/Actividade' (só letras, números, ponto, _ e $)");
-  }
+  const alvo = await resolverComponente(componente);
+  componente = alvo.componente;
   const id = await ecraVirtualActivo(displayId);
   const r = await executar("am", ["start", "--display", String(id), "-n", componente], 20_000);
   const saida = (r.stdout + r.stderr).trim();
   if (r.erro && !/Starting:|Warning:/.test(saida)) {
     throw new Error(`am start falhou: ${saida.slice(0, 200) || r.erro.message}`);
   }
-  return { ok: true, displayId: id, componente, saida: saida.slice(0, 300) };
+  return { ok: true, displayId: id, componente, resolvido: alvo.resolvido, saida: saida.slice(0, 300) };
 }
 
 /* ---------------- ligações ---------------- */

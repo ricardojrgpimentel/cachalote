@@ -340,25 +340,28 @@ function apply(ctx) {
       "'start' (params width/height/density) creates it and returns displayId; " +
       "'frame' returns a PNG of it (attached to the conversation, like android_see) — use " +
       "maxWidth for a smaller image; 'status' reports it; 'stop' releases it. " +
-      "To put an app on it, run with bash: `am start --display <displayId> -n <pkg>/<activity>`. " +
-      "To interact, run with bash: `input -d <displayId> tap X Y` (also swipe/text/keyevent). " +
-      "The virtual screen needs NO accessibility service: the pixels come from the display and " +
-      "the input is injected into it. Its coordinates are its own (width×height), not the " +
-      "phone's. To open an app there use 'launch' with componente='pacote/Actividade'; to " +
-      "interact use 'tap' (x,y), 'swipe' (x,y,x2,y2), 'key' (tecla) or 'text' (texto). Every one " +
-      "of those needs displayId (from 'start'/'status').",
+      "Any app can run on it (system apps and installed apps alike). " +
+      "To find an app, use action 'apps' — it lists every app with a launcher activity and the " +
+      "component to open (do this instead of guessing package or activity names). " +
+      "To open one, use action 'launch' with componente = the package alone (e.g. " +
+      "'com.brave.browser') or 'pacote/Actividade' — the holder resolves the launcher activity. " +
+      "To interact use 'tap' (x,y), 'swipe' (x,y,x2,y2), 'key' (tecla) or 'text' (texto), or run " +
+      "with bash: `input -d <displayId> tap X Y`. The virtual screen needs NO accessibility " +
+      "service: the pixels come from the display and the input is injected into it. Its " +
+      "coordinates are its own (width×height), not the phone's. Every action needs displayId " +
+      "(from 'start'/'status').",
     parameters: {
       action: {
         type: "string",
         required: true,
-        enum: ["start", "status", "frame", "stop", "launch", "tap", "swipe", "key", "text"],
+        enum: ["start", "status", "frame", "stop", "apps", "launch", "tap", "swipe", "key", "text"],
         description: "What to do with the virtual screen.",
       },
       width: { type: "integer", description: "start: width in pixels (default 720)." },
       height: { type: "integer", description: "start: height in pixels (default 1280)." },
       density: { type: "integer", description: "start: density in dpi (default 320)." },
       maxWidth: { type: "integer", description: "frame: downscale the capture to this width (default 720)." },
-      componente: { type: "string", description: "launch: 'pacote/Actividade' a abrir no ecrã virtual." },
+      componente: { type: "string", description: "launch: o pacote (ex.: 'com.brave.browser') ou 'pacote/Actividade'." },
       x: { type: "integer", description: "tap/swipe: coordenada x no ecrã virtual." },
       y: { type: "integer", description: "tap/swipe: coordenada y no ecrã virtual." },
       x2: { type: "integer", description: "swipe: coordenada x final." },
@@ -389,7 +392,10 @@ function apply(ctx) {
       render: (_args, value) => {
         const parts = [{
           type: "text",
-          text: value.action === "frame"
+          text: value.action === "apps"
+            ? `apps que se podem abrir no ecrã virtual (${(value.apps || []).length}): ` +
+              (value.apps || []).map((a) => a.pacote).join(", ")
+            : value.action === "frame"
             ? `ecrã virtual ${value.displayId} — fotograma ${value.width}×${value.height}` +
               (value.attached ? " (imagem em anexo)" : "") + (value.hint ? ` — ${value.hint}` : "")
             : `ecrã virtual ${value.displayId >= 0 ? value.displayId : "(nenhum)"} · ` +
@@ -409,7 +415,7 @@ function apply(ctx) {
           height: args.height ?? 1280,
           density: args.density ?? 320,
         });
-        return { action: acao, ...r, hint: "lança apps com: bash → am start --display <displayId> -n <pkg>/<activity>" };
+        return { action: acao, ...r, hint: "para pôr uma app aqui: action 'apps' (lista) e depois 'launch' com o pacote" };
       }
       if (acao === "stop") {
         const r = await hostCall("vscreen_stop", {});
@@ -420,6 +426,16 @@ function apply(ctx) {
       }
       // As acções que mexem no ecrã virtual passam pelo daemon, que confirma com a app que é
       // mesmo o ecrã dela e recusa qualquer display que não seja esse (ver knowledge 110).
+      if (acao === "apps") {
+        const r = await ctlCall("cachalote.apps.list");
+        return {
+          action: acao,
+          running: true,
+          displayId: -1,
+          apps: r.apps,
+          hint: "abre com: launch { componente: '<pacote>' } (o pacote chega) — não precisas da actividade",
+        };
+      }
       if (acao === "launch") {
         const r = await ctlCall("cachalote.vscreen.launch", {
           displayId: args.displayId,

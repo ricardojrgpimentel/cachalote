@@ -1937,3 +1937,20 @@ todos invisíveis no dia-a-dia do modo root:
 - **Como evitar:** correr a instrumentação só no emulador (`-Pandroid.injected.device.serial=emulator-5554`)
   quando o telefone está a ser usado a sério.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-22).
+
+### 146. Um display virtual corre qualquer app — o que muda é o **componente de arranque**
+
+- **Sintoma:** «no ecrã virtual só abrem as apps do sistema; o Brave não».
+- **Causa:** `am start --display <id> -n <pacote>/<actividade>` exige a **actividade** de arranque,
+  que varia por app (`com.brave.browser/com.google.android.apps.chrome.Main`). Quem só tinha o
+  pacote (ou adivinhava) falhava — não é restrição do multi-display nem do Android 16.
+- **Como se resolve sem adivinhar:**
+  - listar: `cmd package query-activities --brief -a android.intent.action.MAIN -c
+    android.intent.category.LAUNCHER` → uma linha `pacote/actividade` por app (28 no S10+);
+  - resolver um pacote: `cmd package resolve-activity --brief <pacote>` → a última linha é o
+    componente (a forma abreviada `pkg/.Act` expande-se para `pkg/pkg.Act`).
+- **No Cachalote:** `cachalote.apps.list` e `cachalote.vscreen.launch` (aceita só o pacote); no
+  agente, a acção `apps` da ferramenta `android_vscreen`.
+- **Interacção:** `input -d <displayId> tap X Y` (também `swipe`, `text`, `keyevent`); o fotograma
+  vem por `vscreen_frame` (DisplayManager + ImageReader, sem acessibilidade).
+- **Origem:** **[LOCAL]** (S10+, 2026-10-22).

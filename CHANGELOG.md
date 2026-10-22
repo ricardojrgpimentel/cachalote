@@ -3,6 +3,16 @@
 Formato: as versões são `MAJOR.MINOR.PATCH`; cada entrada diz o que mudou **para quem usa** e
 aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
+## Não publicado
+
+### Ecrã virtual com qualquer app
+
+- O ecrã virtual já abria qualquer app — o que faltava era saber o **nome da actividade de arranque**
+  de cada uma. A ferramenta `android_vscreen` ganhou a acção **`apps`** (lista as apps que se podem
+  abrir) e o **`launch`** passa a aceitar só o pacote (o sistema resolve a actividade). O agente
+  deixou de adivinhar: abriu o Brave no ecrã virtual, navegou para um site e devolveu o fotograma
+  (§85).
+
 ## 0.3.0 — 2026-10-22
 
 A primeira versão em que o motor pode ser **desligado a sério**, a conversa mostra o que o turno
