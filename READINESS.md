@@ -126,6 +126,7 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 15 | A **telemetria do turno** estava «bloqueada no motor» | ✅ o motor não a manda, mas grava-a no registo da sessão: `cachalote.sessions.turns` lê passos, ferramentas e duração, e aparece na conversa e no Resumo — §82.1 |
 | 16 | Os **filtros** da lista ficaram de fora de propósito | ✅ trocados por uma **busca** (título e prévia, sem acentos) com contagem «N de M» — §82.2 |
 | 17 | A **janela de licenças** era um diálogo de leitura | ✅ painel que sobe de baixo, texto integral, **copiar** e **abrir a página** — §82.3 |
+| 18 | O ecrã **Ajustes → Motor** era uma fila de botões sem contexto («não faço ideia o que fazem») e uma lista que não acabava | ✅ passou a blocos com título, uma frase por bloco e uma explicação por acção; o token só aparece quando falta e os cartões do embutido só no modo embutido — §83 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 

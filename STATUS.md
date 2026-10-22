@@ -3083,3 +3083,43 @@ Brave na página da licença (`com.brave.browser` em `topResumedActivity`).
   (turnos) e os 3 do apagar; `i18n` verde com 8 chaves novas nos dois idiomas.
 - Instalado e verificado no S10+: telemetria na conversa e no Resumo, busca a filtrar e a dizer
   «0 de 1 conversas», e as licenças a abrir o browser.
+
+## 83. O ecrã do motor: de uma fila de botões para blocos que se explicam
+
+O autor voltou ao ecrã e disse o que qualquer pessoa diria ao vê-lo: *«não faço ideia o que fazem»* —
+`Atualizar`, `Ligar daemon`, `Obter token (root)`, `Reiniciar motor`, `Desligar`, `Modo completo` e
+`Parar tudo`, uns ao lado dos outros, sem um cartão a dizer a que pertencem nem uma frase a dizer o
+que fazem. E no fim a lista continuava com «Testar execução» e «Kernel por download», que só existem
+no modo embutido.
+
+### 83.1 O que mudou
+
+O ecrã passou a ser **blocos**, cada um com um título, uma frase que diz o que é, e as acções
+**dentro** dele — cada acção com o rótulo do que faz e uma linha a explicar o efeito:
+
+| Bloco | O que tem |
+|---|---|
+| **O motor** | chip `ligado/desligado`; **Desligar o motor** («pára o processo… as conversas ficam guardadas»), **Reiniciar o motor** («fecha-o e abre-o outra vez — a conversa continua»), **Serviço da app — ligado** («mantém a notificação e a ligação em segundo plano»), a linha `root · token` e **Atualizar estado** («relê o estado e a ligação») |
+| **Modo do motor** | as três formas de correr, cada uma com uma frase (root/Shizuku/embutido) e o «rádio» desenhado; a linha das conversas deste modo; e, só aqui, o que é específico do modo (instalar, permissão do Shizuku, kernel) |
+| **Arrancar com o telefone** | o interruptor e a frase do que acontece no arranque seguinte (só no modo root) |
+| **Interface web** | o que é a interface completa do DSH e **Abrir** |
+| **Detalhes técnicos** | fechado, como já estava (o JSON do daemon e o nome do motor) |
+| **Parar tudo** | no fim, com o contorno de perigo e a frase do que pára — «pára o motor e o serviço da app, e desliga o arranque com o telefone…» |
+
+**O que saiu:** o «Obter token (root)» deixou de estar sempre à vista (só aparece quando o token
+falta — quando está guardado era um botão onde se podia carregar sem querer); o nome do handshake
+(`deepseek-harness-acp`) saiu do bloco e foi para os detalhes técnicos; e os dois cartões do modo
+embutido («Testar execução» e «Kernel por download») só aparecem **no modo embutido** — era isso que
+fazia a lista parecer não acabar.
+
+### 83.2 Peças novas
+
+`Bloco(titulo, nota) { … }` e `Acao(rotulo, nota, botao) { … }` em
+[`UiParts.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/UiParts.kt): são a linguagem visual
+que faltava — um cartão com micro-etiqueta e uma frase, e uma acção com rótulo + explicação + botão.
+O ecrã do motor usa-as; os outros ecrãs podem passar a usá-las também.
+
+**Prova:** [`72`](design/revisao/72-motor-blocos.png) (o motor e os modos) e
+[`73`](design/revisao/73-motor-blocos-baixo.png) (o arranque, a interface web e o parar tudo), no
+S10+ com a app em root. Tocar no modo activo não faz nada (o `switchMode` sai cedo), que era o
+comportamento dos chips e continua a ser o dos «rádios».

@@ -647,8 +647,13 @@ private fun AjustesScreen(vm: MainViewModel) {
                             podeTentar = !vm.busy,
                         )
                     }
-                    CartaoTesteExecucao(vm)
-                    CartaoKernelDownload(vm)
+                    // Estes dois só fazem sentido no modo embutido (é o Node e o kernel da APK).
+                    // Ficavam sempre à vista, no fim de uma lista que parecia não acabar — o autor
+                    // notou-o: «tens uma lista enorme, nunca acaba» (`STATUS` §83).
+                    if (vm.modeKind == DaemonController.Mode.EMBEDDED) {
+                        CartaoTesteExecucao(vm)
+                        CartaoKernelDownload(vm)
+                    }
                 }
                 "provedor" -> KeyScreen(vm)
                 "capacidades" -> {
@@ -1398,13 +1403,19 @@ private fun OnboardingCard(vm: MainViewModel) {
     }
 }
 
+/**
+ * O ecrã do motor (`Ajustes → Motor`), em **blocos**.
+ *
+ * Antes era um cartão de texto, um cartão de «acesso» e depois uma fila de botões soltos
+ * («Atualizar», «Ligar daemon», «Obter token (root)», «Reiniciar motor», «Desligar», «Modo completo»,
+ * «Parar tudo»). O autor disse-o sem rodeios: «não faço ideia o que fazem». Agora cada bloco tem um
+ * título, uma frase a dizer o que é, e as acções **dentro** dele, cada uma com uma linha a explicar
+ * o que vai acontecer — e só aparece o que faz sentido no modo em que a app está (`STATUS` §83).
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StatusScreen(vm: MainViewModel) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU
-    val embutido = vm.modeKind == DaemonController.Mode.EMBEDDED
-    // Sem scroll próprio: quem rola é o contentor da secção (ver AjustesScreen).
     // Relê o estado **ao entrar**: o painel guarda o que a última consulta disse, e um «Autorizar
     // no Shizuku» que já foi autorizado (ou um «daemon instalado ✗» depois de uma instalação) ficavam
     // no ecrã até alguém carregar em «Verificar» (visto no S10+ em 2026-10-21).
@@ -1418,259 +1429,371 @@ private fun StatusScreen(vm: MainViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         OnboardingCard(vm)
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    when (vm.modeKind) {
-                        DaemonController.Mode.DAEMON -> stringResource(R.string.modo_daemon_texto)
-                        DaemonController.Mode.SHIZUKU -> stringResource(R.string.modo_shizuku_texto)
-                        DaemonController.Mode.EMBEDDED -> stringResource(R.string.modo_embutido_texto)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        DaemonController.Mode.DAEMON to "root",
-                        DaemonController.Mode.SHIZUKU to "Shizuku",
-                        DaemonController.Mode.EMBEDDED to "embutido",
-                    ).forEach { (kind, label) ->
-                        FilterChip(
-                            selected = vm.modeKind == kind,
-                            onClick = { vm.switchMode(kind) },
+        BlocoMotor(vm)
+        BlocoModo(vm, ctx)
+        if (vm.modeKind == DaemonController.Mode.DAEMON) BlocoArranque(vm)
+        BlocoInterfaceWeb(vm, ctx)
+        BlocoTecnico(vm)
+        BlocoPararTudo(vm)
+    }
+}
+
+/**
+ * «O motor»: o estado e as três coisas que se fazem com ele — ligar/desligar, reiniciar e atualizar
+ * o que se lê no ecrã. Cada uma com a frase do que faz.
+ */
+@Composable
+private fun BlocoMotor(vm: MainViewModel) {
+    val embutido = vm.modeKind == DaemonController.Mode.EMBEDDED
+    Bloco(
+        titulo = stringResource(R.string.bloco_motor),
+        nota = if (embutido) stringResource(R.string.bloco_motor_nota_embutido) else stringResource(R.string.bloco_motor_nota),
+    ) {
+        Chip(
+            if (vm.connected) stringResource(R.string.estado_ligado) else stringResource(R.string.estado_desligado),
+            cor = if (vm.connected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondary,
+        )
+        if (embutido) {
+            Acao(
+                rotulo = stringResource(R.string.reiniciar_motor),
+                nota = stringResource(R.string.nota_reiniciar_embutido),
+                botao = stringResource(R.string.reiniciar_motor),
+                enabled = !vm.busy,
+                destaque = true,
+            ) { vm.restartEngine() }
+        } else {
+            if (vm.connected) {
+                Acao(
+                    rotulo = stringResource(R.string.acao_desligar_motor),
+                    nota = stringResource(R.string.nota_desligar_motor),
+                    botao = stringResource(R.string.servico_desligar),
+                    enabled = !vm.busy,
+                    perigo = true,
+                ) { vm.stopDaemon() }
+            } else {
+                Acao(
+                    rotulo = stringResource(R.string.acao_ligar_motor),
+                    nota = stringResource(R.string.ligar_daemon_nota),
+                    botao = stringResource(R.string.servico_ligar),
+                    enabled = !vm.busy,
+                    destaque = true,
+                ) { vm.startDaemon() }
+            }
+            Acao(
+                rotulo = stringResource(R.string.acao_reiniciar_motor),
+                nota = stringResource(R.string.nota_reiniciar),
+                botao = stringResource(R.string.reiniciar_motor),
+                enabled = !vm.busy,
+            ) { vm.restartEngine() }
+        }
+        // O serviço da app (a notificação e a ligação em segundo plano). Tem estado próprio e é
+        // outra coisa que o motor: chama-se pelo nome, não «Desligar» solto.
+        Acao(
+            rotulo = if (CachaloteAgentService.running) {
+                stringResource(R.string.servico_titulo_ligado)
+            } else {
+                stringResource(R.string.servico_titulo_desligado)
+            },
+            nota = stringResource(R.string.nota_servico),
+            botao = if (CachaloteAgentService.running) stringResource(R.string.servico_desligar) else stringResource(R.string.servico_ligar),
+            enabled = !vm.busy,
+        ) {
+            val ctx2 = vm.getApplication<android.app.Application>()
+            if (CachaloteAgentService.running) CachaloteAgentService.stop(ctx2) else CachaloteAgentService.start(ctx2)
+        }
+        // O token só se oferece quando falta: é a password entre a app e o motor, e quando já está
+        // guardado o botão era só um sítio onde se podia carregar sem querer.
+        if (vm.tokenOk != true && !embutido) {
+            Acao(
+                rotulo = stringResource(R.string.token_titulo),
+                nota = stringResource(R.string.obter_token_nota),
+                botao = stringResource(if (vm.modeKind == DaemonController.Mode.SHIZUKU) R.string.obter_token_shizuku else R.string.obter_token),
+                enabled = !vm.busy,
+            ) { vm.obtainToken() }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(
+                    R.string.linha_de_acesso,
+                    stringResource(
+                        R.string.root_rotulo,
+                        when (vm.rootOk) {
+                            true -> stringResource(R.string.root_concedido)
+                            false -> stringResource(R.string.root_negado)
+                            null -> stringResource(R.string.root_desconhecido)
+                        },
+                    ),
+                    stringResource(R.string.token_rotulo, vm.tokenState),
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = Mono,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { vm.refreshStatus(consultarSistema = true) }, enabled = !vm.busy) {
+                Text(stringResource(R.string.acao_atualizar_estado))
+            }
+        }
+    }
+}
+
+/**
+ * «Modo do motor»: as três formas de correr, cada uma com uma frase que diz o que muda. O modo
+ * instalado/activo ganha o contorno e o resto fica clicável — antes eram três `FilterChip` sem
+ * explicação nenhuma ao lado.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BlocoModo(vm: MainViewModel, ctx: android.content.Context) {
+    Bloco(
+        titulo = stringResource(R.string.bloco_modo),
+        nota = stringResource(R.string.bloco_modo_nota),
+    ) {
+        listOf(
+            Triple(DaemonController.Mode.DAEMON, "root", R.string.modo_root_curto),
+            Triple(DaemonController.Mode.SHIZUKU, "Shizuku", R.string.modo_shizuku_curto),
+            Triple(DaemonController.Mode.EMBEDDED, stringResource(R.string.modo_embutido_curto_nome), R.string.modo_embutido_curto),
+        ).forEach { (kind, etiqueta, nota) ->
+            LinhaDeModo(
+                etiqueta = etiqueta,
+                nota = stringResource(nota),
+                activo = vm.modeKind == kind,
+                enabled = !vm.busy,
+            ) { vm.switchMode(kind) }
+        }
+        // **As conversas são por motor** e é aqui, no sítio onde se troca de modo, que se diz
+        // onde ficam as deste (ROADMAP G6): sem isto a troca parecia perder o histórico.
+        Text(
+            stringResource(R.string.conversas_deste_modo, vm.workspacePath),
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = Mono,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        // Sem motor instalado, o cartão que o instala — a app já leva tudo o que precisa.
+        if (vm.daemonInstalled != true && vm.modeKind != DaemonController.Mode.EMBEDDED) {
+            CartaoInstalarMotor(
+                shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU,
+                fracao = vm.instalacaoFracao,
+                passo = vm.instalacaoPasso,
+                podeInstalar = !vm.busy && (vm.modeKind != DaemonController.Mode.SHIZUKU || !vm.precisoPermissaoShizuku),
+                onInstalar = { vm.instalarMotor(ctx as android.app.Activity) },
+                onAutorizarShizuku = { vm.requestShizukuPermission(ctx as android.app.Activity) },
+            )
+        }
+        if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
+            // Pede a permissão assim que se sabe que falta, sem o utilizador ter de descobrir o
+            // botão (o diálogo do Shizuku precisa de uma Activity). Guarda-se que já se pediu numa
+            // chave que **não** é a `precisoPermissaoShizuku`: essa fica a verdadeira enquanto a
+            // permissão faltar, para o aviso se poder desenhar.
+            var jaPedimos by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(vm.precisoPermissaoShizuku) {
+                if (vm.precisoPermissaoShizuku && !jaPedimos) {
+                    jaPedimos = true
+                    vm.requestShizukuPermission(ctx as android.app.Activity)
+                }
+            }
+            if (vm.precisoPermissaoShizuku) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Etiqueta(stringResource(R.string.shizuku_falta), cor = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.shizuku_falta_texto), style = MaterialTheme.typography.bodySmall)
+                        Button(
+                            onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
                             enabled = !vm.busy,
-                            label = { Text(label) },
+                        ) { Text(stringResource(R.string.shizuku_autorizar)) }
+                        Passos(
+                            titulo = stringResource(R.string.shizuku_como_titulo),
+                            itens = listOf(
+                                stringResource(R.string.shizuku_como_1),
+                                stringResource(R.string.shizuku_como_2),
+                                stringResource(R.string.shizuku_como_3),
+                            ),
                         )
                     }
                 }
-                if (vm.shizukuState.isNotBlank()) {
-                    Text(vm.shizukuState, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
-                }
-                // **As conversas são por motor** e é aqui, no sítio onde se troca de modo, que se diz
-                // onde ficam as deste: sem isto a troca parecia perder o histórico (ROADMAP G6). A
-                // linha do transcript só se vê com uma conversa aberta; esta vê-se sempre.
+            }
+        }
+        if (vm.modeKind == DaemonController.Mode.EMBEDDED) {
+            if (vm.embeddedInfo.isNotBlank()) {
                 Text(
-                    stringResource(R.string.conversas_deste_modo, vm.workspacePath),
+                    vm.embeddedInfo,
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,
                 )
-                // Sem motor instalado, o cartão que o instala — a app já leva tudo o que precisa.
-                if (vm.daemonInstalled != true) {
-                    CartaoInstalarMotor(
-                        shizuku = vm.modeKind == DaemonController.Mode.SHIZUKU,
-                        fracao = vm.instalacaoFracao,
-                        passo = vm.instalacaoPasso,
-                        podeInstalar = !vm.busy && (vm.modeKind != DaemonController.Mode.SHIZUKU || !vm.precisoPermissaoShizuku),
-                        onInstalar = { vm.instalarMotor(ctx as android.app.Activity) },
-                        onAutorizarShizuku = { vm.requestShizukuPermission(ctx as android.app.Activity) },
-                    )
-                }
-                if (vm.modeKind == DaemonController.Mode.SHIZUKU) {
-                    // Pede a permissão assim que se sabe que falta, sem o utilizador ter de
-                    // descobrir o botão (o diálogo do Shizuku precisa de uma Activity). Guarda-se
-                    // que já se pediu, numa chave que **não** é a `precisoPermissaoShizuku`: essa
-                    // fica a verdadeira enquanto a permissão faltar, para o aviso abaixo se poder
-                    // desenhar. Antes era posta a falso aqui, e o aviso nunca chegava a aparecer —
-                    // quem escolhesse Shizuku no assistente via um diálogo e mais nada.
-                    var jaPedimos by rememberSaveable { mutableStateOf(false) }
-                    LaunchedEffect(vm.precisoPermissaoShizuku) {
-                        if (vm.precisoPermissaoShizuku && !jaPedimos) {
-                            jaPedimos = true
-                            vm.requestShizukuPermission(ctx as android.app.Activity)
-                        }
-                    }
-                    if (vm.precisoPermissaoShizuku) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Etiqueta(stringResource(R.string.shizuku_falta), cor = MaterialTheme.colorScheme.error)
-                                Text(stringResource(R.string.shizuku_falta_texto), style = MaterialTheme.typography.bodySmall)
-                                Button(
-                                    onClick = { vm.requestShizukuPermission(ctx as android.app.Activity) },
-                                    enabled = !vm.busy,
-                                ) { Text(stringResource(R.string.shizuku_autorizar)) }
-                                Passos(
-                                    titulo = stringResource(R.string.shizuku_como_titulo),
-                                    itens = listOf(
-                                        stringResource(R.string.shizuku_como_1),
-                                        stringResource(R.string.shizuku_como_2),
-                                        stringResource(R.string.shizuku_como_3),
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                    // **Não** há aqui um botão «Autorizar no Shizuku» permanente: ele aparecia
-                    // sempre que o modo era Shizuku — mesmo com a permissão dada, como se a app
-                    // estivesse a pedir outra vez. Quem falta é avisado pelo cartão acima (com o
-                    // porquê e o passo a passo); quem já autorizou não tem nada a fazer.
-                    // Visto no S10+ em 2026-10-21: Shizuku listava o Cachalote como autorizado e a
-                    // app continuava a pedir.
-                }
-                if (vm.modeKind == DaemonController.Mode.EMBEDDED) {
-                    OutlinedButton(onClick = { vm.downloadKernel() }, enabled = !vm.busy) {
-                        Text(stringResource(R.string.descarregar_kernel))
-                    }
-                }
-                if (vm.embeddedInfo.isNotBlank()) {
-                    Text(vm.embeddedInfo, style = MaterialTheme.typography.bodySmall, fontFamily = Mono)
-                }
             }
         }
-        // O JSON cru do daemon estava sempre à vista, no meio das definições. É diagnóstico:
-        // fica atrás de um «Detalhes técnicos», fechado (o autor notou-o na revisão).
-        Card(modifier = Modifier.fillMaxWidth()) {
-            var tecnicos by rememberSaveable { mutableStateOf(false) }
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { tecnicos = !tecnicos },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.detalhes_tecnicos),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        if (tecnicos) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                if (tecnicos) {
-                    Text(
-                        stringResource(
-                            R.string.diagnostico,
-                            android.os.Process.myPid(),
-                            vm.accessibilityOn.toString(),
-                            vm.a11yTicks,
-                            CachaloteAccessibilityService.isEnabled().toString(),
-                        ),
-                        fontFamily = Mono,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Text(
-                        vm.daemonInfo,
-                        fontFamily = Mono,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.acesso), fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.root_rotulo, when (vm.rootOk) { true -> stringResource(R.string.root_concedido); false -> stringResource(R.string.root_negado); null -> stringResource(R.string.root_desconhecido) }))
-                Text(stringResource(R.string.token_rotulo, vm.tokenState))
-                Text(stringResource(R.string.motor_rotulo, vm.agentInfo.ifBlank { stringResource(R.string.handshake_pendente) }))
-                // A linha de diagnóstico («pid 19385 · a11y false · ticks 3 · direto true») saiu
-                // daqui: é jargão interno no meio das definições. Fica com o JSON, em «Detalhes
-                // técnicos» — ver o cartão abaixo.
-            }
-        }
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    }
+}
+
+/** Uma linha escolhível do bloco «Modo do motor»: nome, uma frase, e o indicador à esquerda. */
+@Composable
+private fun LinhaDeModo(etiqueta: String, nota: String, activo: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val cor = if (activo) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (activo) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // O «rádio» desenhado: um círculo com o ponto dentro quando é o escolhido.
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .clip(RoundedCornerShape(50))
+                .border(1.5.dp, cor, RoundedCornerShape(50)),
+            contentAlignment = Alignment.Center,
         ) {
-            Button(onClick = { vm.refreshStatus(consultarSistema = true) }, enabled = !vm.busy) { Text(stringResource(R.string.atualizar)) }
-            // No modo embutido não há daemon para ligar: quem manda é o «Reiniciar motor».
-            if (!embutido) {
-                OutlinedButton(onClick = { vm.startDaemon() }, enabled = !vm.busy) {
-                    Text(stringResource(if (shizuku) R.string.ligar_motor_shizuku else R.string.ligar_daemon))
-                }
+            if (activo) {
+                Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(50)).background(cor))
             }
         }
-        if (!embutido) FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedButton(onClick = { vm.obtainToken() }, enabled = !vm.busy) {
-                Text(stringResource(if (shizuku) R.string.obter_token_shizuku else R.string.obter_token))
-            }
-            OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text(stringResource(R.string.reiniciar_motor)) }
-        } else FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedButton(onClick = { vm.restartEngine() }, enabled = !vm.busy) { Text(stringResource(R.string.reiniciar_motor)) }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(etiqueta, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = cor)
+            Text(nota, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         }
+    }
+}
+
+/** «Arrancar com o telefone»: o interruptor e a frase do que ele faz no próximo arranque. */
+@Composable
+private fun BlocoArranque(vm: MainViewModel) {
+    if (vm.arranqueBoot == null) return
+    Bloco(
+        titulo = stringResource(R.string.arranque_boot),
+        nota = stringResource(R.string.arranque_boot_texto_novo),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                if (CachaloteAgentService.running) stringResource(R.string.servico_ligado)
-                else stringResource(R.string.servico_desligado),
-                modifier = Modifier.weight(1f),
+                if (vm.arranqueBoot == true) stringResource(R.string.arranque_ligado_estado)
+                else stringResource(R.string.arranque_desligado_estado),
                 style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
             )
-            OutlinedButton(onClick = {
-                val ctx2 = ctx
-                if (CachaloteAgentService.running) CachaloteAgentService.stop(ctx2)
-                else CachaloteAgentService.start(ctx2)
-            }) { Text(if (CachaloteAgentService.running) stringResource(R.string.servico_desligar) else stringResource(R.string.servico_ligar)) }
+            Switch(
+                checked = vm.arranqueBoot == true,
+                enabled = !vm.busy && vm.arranqueBootAInda == false,
+                onCheckedChange = { vm.definirArranqueBoot(it) },
+            )
         }
-        OutlinedButton(onClick = {
-            // Arranca o motor do perfil web (se preciso) e abre a interface completa.
+    }
+}
+
+/** «Interface web»: o motor do perfil web (a interface completa do DSH) dentro da app. */
+@Composable
+private fun BlocoInterfaceWeb(vm: MainViewModel, ctx: android.content.Context) {
+    Bloco(
+        titulo = stringResource(R.string.bloco_web),
+        nota = stringResource(R.string.bloco_web_nota),
+    ) {
+        Acao(
+            rotulo = stringResource(R.string.acao_abrir_web),
+            nota = stringResource(R.string.nota_abrir_web),
+            botao = stringResource(R.string.acao_abrir),
+            enabled = !vm.busy,
+            destaque = true,
+        ) {
             vm.busy = true
             ctx.startActivity(android.content.Intent(ctx, WebModeActivity::class.java))
-        }, enabled = !vm.busy) { Text(stringResource(R.string.modo_completo)) }
+        }
+    }
+}
 
-        // **Arrancar com o telefone** (só root): o que faz o daemon voltar sozinho no boot.
-        // Sem este interruptor, «parar» não era uma decisão: o próximo reboot trazia o motor.
-        if (vm.modeKind == DaemonController.Mode.DAEMON && vm.arranqueBoot != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.arranque_boot), style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        stringResource(R.string.arranque_boot_texto),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                Switch(
-                    checked = vm.arranqueBoot == true,
-                    enabled = !vm.busy && vm.arranqueBootAInda == false,
-                    onCheckedChange = { vm.definirArranqueBoot(it) },
+/** Os detalhes técnicos (JSON do daemon, diagnóstico interno) — fechados, como já estavam. */
+@Composable
+private fun BlocoTecnico(vm: MainViewModel) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        var tecnicos by rememberSaveable { mutableStateOf(false) }
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { tecnicos = !tecnicos },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(R.string.detalhes_tecnicos),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    if (tecnicos) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            if (tecnicos) {
+                Text(
+                    stringResource(
+                        R.string.diagnostico,
+                        android.os.Process.myPid(),
+                        vm.accessibilityOn.toString(),
+                        vm.a11yTicks,
+                        CachaloteAccessibilityService.isEnabled().toString(),
+                    ),
+                    fontFamily = Mono,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    stringResource(R.string.motor_rotulo, vm.agentInfo.ifBlank { stringResource(R.string.handshake_pendente) }),
+                    fontFamily = Mono,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    vm.daemonInfo,
+                    fontFamily = Mono,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
+    }
+}
 
-        // **Parar tudo** — o botão que faltava. Está no fim e com o contorno de perigo: é a saída
-        // de emergência de quem sente o telefone quente e não sabe o que está a correr.
-        var confirmarParar by remember { mutableStateOf(false) }
-        if (confirmarParar) {
-            AlertDialog(
-                onDismissRequest = { confirmarParar = false },
-                title = { Text(stringResource(R.string.parar_tudo_confirmar)) },
-                text = { Text(stringResource(R.string.parar_tudo_confirmar_texto)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        confirmarParar = false
-                        vm.pararTudo()
-                    }) { Text(stringResource(R.string.parar_tudo)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { confirmarParar = false }) { Text(stringResource(R.string.cancelar)) }
-                },
-            )
-        }
+/**
+ * «Parar tudo» no fim e com o contorno de perigo: é a saída de emergência de quem sente o telefone
+ * quente e não sabe o que está a correr. A frase diz exactamente o que pára.
+ */
+@Composable
+private fun BlocoPararTudo(vm: MainViewModel) {
+    var confirmarParar by remember { mutableStateOf(false) }
+    if (confirmarParar) {
+        AlertDialog(
+            onDismissRequest = { confirmarParar = false },
+            title = { Text(stringResource(R.string.parar_tudo_confirmar)) },
+            text = { Text(stringResource(R.string.parar_tudo_confirmar_texto)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarParar = false
+                    vm.pararTudo()
+                }) { Text(stringResource(R.string.parar_tudo)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmarParar = false }) { Text(stringResource(R.string.cancelar)) }
+            },
+        )
+    }
+    Bloco(
+        titulo = stringResource(R.string.parar_tudo),
+        nota = stringResource(R.string.parar_tudo_explicacao),
+    ) {
         OutlinedButton(
             onClick = { confirmarParar = true },
             enabled = !vm.busy,
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) { Text(stringResource(R.string.parar_tudo)) }
-        Text(
-            stringResource(R.string.parar_tudo_explicacao),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
-        )
     }
 }
 

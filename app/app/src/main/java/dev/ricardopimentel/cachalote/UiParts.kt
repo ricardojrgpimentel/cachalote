@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.FlowRow
@@ -1327,6 +1328,81 @@ fun AvisoMagiskRecusou(onAbrir: (() -> Unit)?, onTentar: () -> Unit, podeTentar:
             OutlinedButton(onClick = onTentar, enabled = podeTentar, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.magisk_tentar))
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Blocos do ecrã do motor (Ajustes → Motor). Cada bloco tem um título, uma frase a dizer o que é,
+// e as acções **dentro** dele com uma linha a explicar o que vão fazer — é a linguagem visual que
+// faltava ali, onde havia uma fila de botões soltos (`STATUS` §83).
+
+/** Um bloco: título em micro-etiqueta, uma frase de contexto e o conteúdo. */
+@Composable
+fun Bloco(titulo: String, nota: String? = null, conteudo: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Etiqueta(titulo)
+            if (nota != null) {
+                Text(
+                    nota,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            conteudo()
+        }
+    }
+}
+
+/**
+ * Uma acção: o que faz (e uma frase a explicá-lo) à esquerda, o botão à direita.
+ *
+ * Assim cada botão tem contexto no sítio onde está — o problema do «Atualizar» e do «Desligar»
+ * sozinhos era não se saber o que atualizavam nem o que desligavam.
+ */
+@Composable
+fun Acao(
+    rotulo: String,
+    nota: String,
+    botao: String,
+    enabled: Boolean = true,
+    destaque: Boolean = false,
+    perigo: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(rotulo, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                nota,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+        if (destaque) {
+            Button(onClick = onClick, enabled = enabled) { Text(botao) }
+        } else {
+            OutlinedButton(
+                onClick = onClick,
+                enabled = enabled,
+                colors = if (perigo) {
+                    ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                },
+            ) { Text(botao) }
         }
     }
 }
