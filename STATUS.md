@@ -3176,6 +3176,7 @@ A versão que o README e o CHANGELOG passam a nomear:
 | Build | `kotlin.compiler.execution.strategy=in-process`: o build deixou de cuspir `Daemon compilation failed: Could not connect to Kotlin compile daemon` (o daemon do Kotlin quer escrever em `~/Library/Application Support/kotlin`, fora do ambiente do projecto) |
 | APK de release | **255 MB**, assinada (`CN=Cachalote`), sha256 `cf88c83…`; instalada num emulador **limpo** e aberta no assistente (`0.3.0` em `dumpsys package`) — [75](design/revisao/75-release-030-no-emulador.png) |
 | Tag | `v0.3.0` |
+| Release | publicada em <https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.0> com a **APK anexada** (`app-release.apk`, 267 345 694 bytes); o ficheiro foi descarregado de volta e o sha256 é o mesmo (`cf88c83…`) |
 
 **A app do telefone ficou na de debug** (a de release tem outra assinatura e substituí-la obrigaria a
 desinstalar, perdendo o token e as capacidades autorizadas): a de release foi verificada no emulador,
