@@ -328,6 +328,16 @@ function control(method, params) {
         });
       });
     }
+    case "cachalote.sessions.turns": {
+      // Quantos passos e quanto tempo levou cada turno. O ACP não manda isto (é a linha de
+      // telemetria do desenho que faltava): o motor grava `turn/start`, `step/start` e `turn/end` no
+      // registo da sessão, e o daemon lê-os de lá. `require` tardio e promessa, como os vizinhos.
+      const id = String(params && params.sessionId ? params.sessionId : "");
+      return Promise.resolve().then(() => {
+        const mod = require("./session-meta.cjs");
+        return mod.resumoTurnos(path.join(BASE, "home"), id);
+      });
+    }
     case "cachalote.sessions.delete": {
       // Apagar uma conversa. O ACP não tem `deletion` (está na lista do que o dsh-acp recusa), por
       // isso o que se pode fazer é tirar os ficheiros da sessão -- e é o daemon (root) que os pode

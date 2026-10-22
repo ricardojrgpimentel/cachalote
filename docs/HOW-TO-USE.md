@@ -57,6 +57,11 @@ Two things change the experience:
   the app is not in the foreground — it is not meant to be noise).
 - **Approvals:** when the agent needs to leave the workspace, the app shows a dialog with the exact
   command. Nothing happens without you seeing it.
+- **Turn telemetry:** after each turn the conversation shows its steps, tool calls and duration
+  (`turn 3 · 1 step · 1.8 s`), and the **Summary** tab has a "Turns and time" card with the last six.
+  It comes from the session log — the engine does not send these numbers.
+- **Search conversations:** the list has a search box that matches the title and preview, without
+  needing accents ("correcao" finds "correção").
 
 ## 5. Virtual screen: a second display
 

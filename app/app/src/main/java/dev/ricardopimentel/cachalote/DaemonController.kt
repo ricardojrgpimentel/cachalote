@@ -345,6 +345,22 @@ class DaemonController(private val context: Context) {
     }
 
     /**
+     * Os turnos de uma conversa: quantos passos, quantas ferramentas e quanto tempo cada um levou.
+     *
+     * O ACP não manda isto (é a linha de telemetria que faltava, ver `STATUS` §82): vem do registo
+     * da sessão em disco, pelo daemon — ou, no modo embutido, pelo Node que já está na APK.
+     */
+    suspend fun sessionTurns(sessionId: String): JSONObject {
+        if (mode == Mode.EMBEDDED) return JSONObject(engine.sessionTurns(sessionId))
+        ensureAcp()
+        return client.callForResult(
+            "cachalote.sessions.turns",
+            JSONObject().put("sessionId", sessionId),
+            timeoutMs = 20_000,
+        )
+    }
+
+    /**
      * Apaga uma conversa: tira os ficheiros dela do disco.
      *
      * O ACP não tem `deletion` (o `dsh-acp` recusa-a explicitamente), portanto «apagar» só pode ser

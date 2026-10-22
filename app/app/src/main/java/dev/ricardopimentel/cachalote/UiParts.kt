@@ -54,6 +54,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Stop
@@ -77,6 +79,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -609,6 +612,23 @@ data class ItemConversa(
 )
 
 /**
+ * A busca da lista de conversas: sem distinguir maiúsculas **nem acentos** — «correcao» encontra
+ * «correção», que é como se escreve depressa no telefone. A ideia veio dos filtros do desenho
+ * (`Todas / Activas / Fechadas`), que não serviam: a app não tem sessões «fechadas» e todas as da
+ * lista são do mesmo motor, por isso um filtro que não filtra nada foi trocado por um que serve
+ * (`STATUS` §82).
+ */
+fun conversaCorresponde(c: ItemConversa, termo: String): Boolean {
+    val busca = semAcentos(termo.trim())
+    return busca.isEmpty() || semAcentos(c.titulo + " " + c.previa).contains(busca)
+}
+
+/** Minúsculas e sem marcas de acento (NFD + remoção das marcas). */
+fun semAcentos(texto: String): String =
+    java.text.Normalizer.normalize(texto.lowercase(), java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{Mn}+"), "")
+
+/**
  * A **lista de conversas** — o ecrã da aba «Conversa», como a lista de chats do WhatsApp: uma
  * linha por sessão, o botão «Nova» a pairar em baixo à direita, e o estado vazio quando ainda não
  * há nada. Tocar numa linha entra na conversa (é quem chama que decide o que isso significa).
@@ -623,6 +643,10 @@ fun ListaDeConversas(
     onNova: () -> Unit,
     onApagar: (String) -> Unit = {},
 ) {
+    var busca by rememberSaveable { mutableStateOf("") }
+    val filtradas = remember(conversas, busca) {
+        if (busca.isBlank()) conversas else conversas.filter { conversaCorresponde(it, busca) }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         if (conversas.isEmpty()) {
             Column(
@@ -657,21 +681,50 @@ fun ListaDeConversas(
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 Text(
-                    if (conversas.size == 1) stringResource(R.string.conversa_contagem_uma)
-                    else stringResource(R.string.conversa_contagem, conversas.size),
+                    when {
+                        busca.isNotBlank() -> stringResource(R.string.conversa_contagem_filtro, filtradas.size, conversas.size)
+                        conversas.size == 1 -> stringResource(R.string.conversa_contagem_uma)
+                        else -> stringResource(R.string.conversa_contagem, conversas.size)
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = Mono,
                     color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(start = 16.dp, top = 10.dp),
+                    modifier = Modifier.padding(start = 16.dp, top = 10.dp, end = 16.dp),
                 )
-                Text(
-                    stringResource(R.string.conversa_toque_longo),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
+                OutlinedTextField(
+                    value = busca,
+                    onValueChange = { busca = it },
+                    placeholder = { Text(stringResource(R.string.conversa_buscar), style = MaterialTheme.typography.bodySmall) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        if (busca.isNotEmpty()) {
+                            IconButton(onClick = { busca = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.conversa_buscar_limpar), modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 )
+                if (filtradas.isEmpty()) {
+                    Text(
+                        stringResource(R.string.conversa_sem_resultado, busca),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.conversa_toque_longo),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
+                    )
+                }
                 LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    items(conversas, key = { it.id }) { c ->
+                    items(filtradas, key = { it.id }) { c ->
                         LinhaDeConversa(c, onAbrir, onApagar)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }

@@ -132,6 +132,9 @@
     <string name="legenda_sessoes">✕ fecha a sessão activa · toca numa linha para retomar</string>
     <string name="licenca_url">Página do projecto</string>
     <string name="licencas_texto">O Cachalote é MIT. Dentro desta app viajam bibliotecas com as suas próprias licenças: aqui estão os textos integrais, como elas pedem.</string>
+    <string name="licenca_copiar">copiar</string>
+    <string name="licenca_abrir">abrir a página</string>
+    <string name="licenca_copiada">licença copiada</string>
     <string name="licencas_titulo">Licenças de terceiros</string>
     <string name="ligar_daemon">Ligar daemon</string>
     <string name="limpar">Limpar</string>
@@ -224,6 +227,18 @@
     <string name="sobre_texto">Cachalote — o DeepSeek Harness a correr no telemóvel. Com root, o Android não impõe o sandbox do DSH: quem trava um comando fora do workspace é a autorização que aprovas, e tudo fica registado.</string>
     <string name="telemetria_ferramentas">%1$d ferramentas · %2$d a correr</string>
     <string name="telemetria_tempo">%1$d s</string>
+    <string name="telemetria_turno_label">turno %1$d</string>
+    <string name="resumo_turnos">Turnos e tempo</string>
+    <string name="resumo_turnos_vazio">ainda não há turnos nesta conversa (a telemetria vem do registo da sessão, escrito pelo motor)</string>
+    <string name="resumo_turnos_nota">lido do registo da sessão: o motor não envia estes números pelo protocolo</string>
+    <plurals name="turnos_passos">
+        <item quantity="one">%d passo</item>
+        <item quantity="other">%d passos</item>
+    </plurals>
+    <plurals name="turnos_ferramentas">
+        <item quantity="one">%d ferramenta</item>
+        <item quantity="other">%d ferramentas</item>
+    </plurals>
     <string name="tentar_novamente">Tentar novamente</string>
     <string name="testar_execucao">Testar execução</string>
     <string name="testar_execucao_texto">Testa se o Node embutido na APK consegue executar-se a partir do directório de bibliotecas nativas.</string>
@@ -442,6 +457,10 @@
     <string name="apagar_conversa">Apagar conversa</string>
     <string name="apagar_conversa_texto">A conversa «%1$s» e todo o histórico dela são apagados do telefone. Não se pode desfazer.</string>
     <string name="cancelar">Cancelar</string>
+    <string name="conversa_buscar">procurar nas conversas</string>
+    <string name="conversa_buscar_limpar">limpar a busca</string>
+    <string name="conversa_contagem_filtro">%1$d de %2$d conversas</string>
+    <string name="conversa_sem_resultado">nenhuma conversa com «%1$s»</string>
     <string name="conversa_toque_longo">Toca sem largar numa conversa para a apagar</string>
     <string name="fechar_sessao_menu">Fechar a sessão</string>
     <string name="menu_conversa">Mais opções</string>

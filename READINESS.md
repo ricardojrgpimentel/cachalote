@@ -123,6 +123,9 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | 12 | O **caminho de quem publica** estava partido: o `build-release.sh` tinha o JBR no 25 escrito à mão (o Kotlin do AGP não o lê) e o `gradle test` só passava numa das variantes | ✅ a regra do JDK passou a `tools/lib-jdk.sh`, usado pelos três scripts, e o `gradle test` ficou verde (a release não corre testes de unidade — a actividade do `createComposeRule` só existe no manifesto de debug) — §80 |
 | 13 | Uma conversa apagada deixava os metadados em disco, e os ensaios deixavam conversas na lista | ✅ `apagarSessao` limpa também a cache do projecto (e a órfã); os dois ensaios apagam as conversas que criaram e verificam que não sobrou nada (§80.3/§80.4) |
 | 14 | **«Parar tudo» não era definitivo**: o `service.d` corre um `watchdog`, que voltava a levantar o daemon 30 s depois | ✅ o `stop` cala primeiro o watchdog da base (e o `restart`/`start` não, para não perder a vigilância); provado com o watchdog real do arranque — §81 |
+| 15 | A **telemetria do turno** estava «bloqueada no motor» | ✅ o motor não a manda, mas grava-a no registo da sessão: `cachalote.sessions.turns` lê passos, ferramentas e duração, e aparece na conversa e no Resumo — §82.1 |
+| 16 | Os **filtros** da lista ficaram de fora de propósito | ✅ trocados por uma **busca** (título e prévia, sem acentos) com contagem «N de M» — §82.2 |
+| 17 | A **janela de licenças** era um diálogo de leitura | ✅ painel que sobe de baixo, texto integral, **copiar** e **abrir a página** — §82.3 |
 
 ### Verificação desta ronda (S10+, app em **Shizuku**)
 
@@ -136,16 +139,22 @@ o que mudou é que os pontos abertos têm correção e prova, e a verificação 
 | `./tools/build-release.sh` (2026-10-22) | ✅ `BUILD SUCCESSFUL`, APK assinada (`CN=Cachalote`), sha256 `1f45214…` (§80.2) |
 | `./tools/app-ui-test.sh` em modo **root** (2026-10-22) | ✅ **10 passos, 0 falhas** (9 + o passo da limpeza) — o outro ramo do teste por modo, além do Shizuku |
 | `./tools/app-capabilities-test.sh` em modo **root** (2026-10-22) | ✅ **6 passos, 0 falhas** (5 + a limpeza) — a matriz dos dois modos fechada (Shizuku já estava) |
-| Testes de JVM | ✅ 76, 0 falhas (79 em 2026-10-22, com `gradle test` verde — §80.1) |
+| Testes de JVM | ✅ 76, 0 falhas (79 em 2026-10-22, **87** com `Turno` e a busca — §80.1/§82.4) |
 | `i18n-check` / `session-meta` / `plugin-schema` / `secret-scan` | ✅ todos verdes |
 
-### O que continua fora, e porquê
+### O que continua fora, e porquê (actualizado a 2026-10-22)
 
-- **Telemetria do turno** (linha com tokens/custo em directo): o motor não a envia — está bloqueada
-  no `dsh-acp` (§64/§69.6), não na app.
-- **Filtros da lista de conversas**: ficaram de fora **de propósito** (§68.1).
-- **Janela de licenças**: continua um diálogo de leitura; é uma lista de referência que se abre uma
-  vez, e o redesenho não acrescentava nada ao uso.
+Os três pontos que aqui estavam foram fechados em §82 — dois por se ter percebido que o dado já
+existia (no registo da sessão) e um por se ter trocado uma decisão de desenho por outra que serve:
+
+- **Telemetria do turno**: ✅ os passos, as ferramentas e a duração são lidos do registo da sessão
+  (`cachalote.sessions.turns`) e aparecem na conversa e no Resumo. O que continua a não existir é a
+  contagem de passos **em direto**, antes de o turno acabar — essa o motor não a manda, e a linha
+  mostra o tempo em direto enquanto corre.
+- **Filtros da lista**: ✅ `Todas / Activas / Fechadas` não filtravam nada e saíram; entrou uma busca
+  que procura no título e na prévia, sem acentos (§82.2).
+- **Janela de licenças**: ✅ deixou de ser um diálogo estreito: é o painel que sobe de baixo, com o
+  texto integral, **copiar** e **abrir a página** (§82.3).
 - **Watchdog no modo Shizuku**: não existe `service.d` sem root. O `doctor` já não avisa disso.
 
 **Números actualizados:** 79 testes de JVM, 485 chaves nos dois idiomas (450 usadas).

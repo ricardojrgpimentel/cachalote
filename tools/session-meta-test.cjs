@@ -39,6 +39,14 @@ fs.mkdirSync(dir, { recursive: true });
 
 // Um frame zstd por "lote durável" — como o motor escreve.
 const frame = (obj) => zlib.zstdCompressSync(Buffer.from(JSON.stringify(obj) + "\n", "utf8"));
+/** O cabeçalho de uma sessão com outro id (o motor escreve um por ficheiro). */
+const cabecalhoRepetido = (id) => frame({
+  type: "session",
+  version: 4,
+  id,
+  createdAt: 1791977431778,
+  cwd: "/data/adb/cachalote/home/ws",
+});
 const cabecalho = frame({
   type: "session",
   version: 4,
@@ -225,6 +233,32 @@ fs.writeFileSync(path.join(dir5, "session.v4.jsonl.zstd"), Buffer.concat([
 const interrompido = historicoSessao(raiz, "eeee5555-6666-7777-8888-999999999999");
 ok("o stream de um message com blocos não duplica", interrompido.events.length === 1 && interrompido.events[0].text === "resposta a meio",
   JSON.stringify(interrompido.events));
+
+// --- turnos: passos, ferramentas e duração, lidos do registo (a telemetria que o ACP não manda).
+// O registo de mentira tem de ter a mesma forma do motor: `turn/start`, `step/start`, `turn/end`.
+const { resumoTurnos } = require("../daemon/session-meta.cjs");
+const idTurnos = "abcd1234-0000-1111-2222-333344445555";
+const dirTurnos = path.join(slug, idTurnos);
+fs.mkdirSync(dirTurnos, { recursive: true });
+const t0 = 1792000000000;
+fs.writeFileSync(path.join(dirTurnos, "session.v4.jsonl.zstd"), Buffer.concat([
+  cabecalhoRepetido(idTurnos),
+  frame({ type: "turn/start", seq: 2, time: t0, data: { turn: 1 } }),
+  frame({ type: "step/start", seq: 3, time: t0 + 100, data: { turn: 1, step: 1 } }),
+  frame({ type: "tool/call", seq: 4, time: t0 + 200, data: { turn: 1, toolCallId: "c1", toolName: "bash" } }),
+  frame({ type: "step/start", seq: 5, time: t0 + 900, data: { turn: 1, step: 2 } }),
+  frame({ type: "turn/end", seq: 6, time: t0 + 3454, data: { turn: 1, reason: { kind: "completed" } } }),
+  frame({ type: "turn/start", seq: 7, time: t0 + 5000, data: { turn: 2 } }),
+  frame({ type: "step/start", seq: 8, time: t0 + 5100, data: { turn: 2, step: 1 } }),
+]));
+
+const rTurnos = resumoTurnos(raiz, idTurnos);
+ok("lê os turnos do registo", rTurnos.turns.length === 2, JSON.stringify(rTurnos.turns));
+ok("conta os passos e as ferramentas do turno",
+  rTurnos.turns[0].steps === 2 && rTurnos.turns[0].tools === 1, JSON.stringify(rTurnos.turns[0]));
+ok("a duração é o intervalo entre turn/start e turn/end",
+  rTurnos.turns[0].ms === 3454 && rTurnos.turns[0].reason === "completed", JSON.stringify(rTurnos.turns[0]));
+ok("um turno aberto não tem duração", rTurnos.turns[1].ms === null, JSON.stringify(rTurnos.turns[1]));
 
 // --- apagar: a pasta da sessão **e** a entrada na cache do projecto (o que fazia uma conversa
 // apagada continuar a ter um .json com o título dela em disco).

@@ -57,6 +57,11 @@ Duas coisas que mudam a experiência:
   aparece se a app não estiver à frente — não é para incomodar).
 - **Autorizações:** quando o agente precisa de sair do workspace, a app abre um diálogo com o
   comando exacto. Nada acontece sem tu veres.
+- **Telemetria do turno:** no fim de cada turno, a conversa mostra os passos, as ferramentas e o
+  tempo que ele levou (`turno 3 · 1 passo · 1,8 s`), e o separador **Resumo** tem o cartão «Turnos e
+  tempo» com os últimos seis. Vem do registo da sessão — o motor não manda estes números.
+- **Procurar conversas:** a lista tem uma busca que procura no título e na prévia, sem precisares de
+  acentos («correcao» encontra «correção»).
 
 ## 5. Ecrã virtual: uma segunda tela
 

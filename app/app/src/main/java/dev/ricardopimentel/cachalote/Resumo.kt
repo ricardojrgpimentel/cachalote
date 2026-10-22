@@ -46,8 +46,63 @@ fun ResumoScreen(vm: MainViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         CartaoConsumo(vm)
+        CartaoTurnos(vm)
         CartaoDiagnostico(vm)
         CartaoFila(vm)
+    }
+}
+
+/**
+ * Os últimos turnos desta conversa: passos, ferramentas e duração.
+ *
+ * É a telemetria que o desenho pedia («Em directo · 2/6 · … · 3s») e que o motor **não envia** pelo
+ * ACP — estes números são lidos do registo da sessão (ver [`Turno`] e `STATUS` §82). Fica no Resumo,
+ * onde se olha para o consumo, e o último turno aparece também na linha da conversa.
+ */
+@Composable
+private fun CartaoTurnos(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val turnos = vm.turnos
+    Cartao {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Etiqueta(stringResource(R.string.resumo_turnos), Modifier.weight(1f))
+            if (turnos.isNotEmpty()) Chip("${turnos.size}")
+        }
+        if (turnos.isEmpty()) {
+            Text(
+                stringResource(R.string.resumo_turnos_vazio),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        } else {
+            // O mais recente primeiro: é o que interessa depois de um turno.
+            turnos.asReversed().forEach { t ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.telemetria_turno_label, t.numero),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.width(78.dp),
+                    )
+                    Text(
+                        t.linha(ctx),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = Mono,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (t.concluido == false) Chip(t.razao ?: "?")
+                }
+            }
+            Text(
+                stringResource(R.string.resumo_turnos_nota),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
     }
 }
 

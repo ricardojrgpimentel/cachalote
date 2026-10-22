@@ -3024,3 +3024,62 @@ daemon foi arrancado pela CLI e não pelo `service.d`); o interruptor «Arrancar
 
 A carga do sistema foi verificada outra vez: **636 % de 800 % idle**, 15 processos em `D` e 2 a correr
 — o `loadavg` alto é de espera de I/O, não de CPU queimada.
+
+## 82. As três coisas que o READINESS ainda dava como fora
+
+Sobravam três linhas em «O que continua fora»: a telemetria do turno, os filtros da lista e a janela
+das licenças. Nenhuma era impossível — duas estavam fechadas em falso e a terceira era uma decisão
+que se podia melhorar sem inventar nada.
+
+### 82.1 A telemetria do turno: o motor não a manda, mas **grava-a**
+
+A linha do desenho («Em directo · 2/6 · 1.102/8.000 · 3s») ficou por fazer em §64 porque o ACP não
+manda contagem de passos nem a duração do turno — e continua a não mandar. Mas o motor **escreve-os
+no registo da sessão**, e o daemon já sabia ler esse ficheiro desde §70:
+
+| No registo | Serve para |
+|---|---|
+| `turn/start` (com `time`) | o início do turno |
+| `step/start` | os passos (cada chamada ao modelo é um) |
+| `tool/call` | as ferramentas |
+| `turn/end` (`reason`) | o fim, e se acabou bem |
+
+**Daemon:** `resumoTurnos()` em [`daemon/session-meta.cjs`](daemon/session-meta.cjs) e o método
+`cachalote.sessions.turns`. Um turno aberto devolve `ms: null` — não se inventa duração.
+
+**App:** [`Turno.kt`](app/app/src/main/java/dev/ricardopimentel/cachalote/Turno.kt) (parsing +
+formatação), `DaemonController.sessionTurns()` (daemon **e** embutido — o `meta.cjs` da APK passou a
+aceitar `turns <id>`), e `carregarTurnos()` no `MainViewModel`, chamado no fim de cada turno e ao
+abrir uma conversa. Lê **duas vezes** quando ainda não há nenhum turno fechado: o motor escreve o
+registo em lotes e a primeira leitura pode apanhar o ficheiro a meio.
+
+**No ecrã:** a linha de telemetria da conversa passa a dizer, depois do turno,
+`turno 3 · 1 passo · 1,8 s` ([65](design/revisao/65-telemetria-do-turno.png)); e o **Resumo** ganhou
+o cartão «Turnos e tempo» com os últimos seis, do mais recente para o mais antigo
+([66](design/revisao/66-resumo-turnos.png)) — com a nota de que os números vêm do registo, não do
+protocolo.
+
+### 82.2 Os filtros: onde o desenho pedia um filtro que não filtrava nada, há uma busca
+
+O desenho tinha `Todas / Activas / Fechadas`; a app não tem sessões «fechadas» e todas as da lista
+são do mesmo motor, por isso §68.1 recusou-os. Mas a lista chega a ter dezenas de conversas, e aí
+um filtro **serve**: entrou uma **busca** — procura no título e na prévia, sem distinguir maiúsculas
+**nem acentos** («correcao» encontra «correção»), com a contagem a passar a «N de M conversas» e uma
+linha «nenhuma conversa com «…»» quando não há resultados
+([67](design/revisao/67-busca-na-lista.png), [68](design/revisao/68-busca-sem-resultado.png)).
+
+### 82.3 As licenças: de diálogo de leitura a painel com o texto
+
+Era um `AlertDialog` com uma lista e o texto corrido lá dentro: cabia pouco e não se podia fazer
+nada com ele. Passou a ser o mesmo **painel que sobe de baixo** do seletor de modelo e da
+autorização, com o texto em quase ecrã inteiro e duas acções que o Apache-2.0 torna úteis —
+**copiar** a licença e **abrir a página** de origem ([69](design/revisao/69-licencas-painel.png),
+[70](design/revisao/70-licenca-aberta.png)). O «abrir a página» foi tocado no telefone e abriu o
+Brave na página da licença (`com.brave.browser` em `topResumedActivity`).
+
+### 82.4 Números desta ronda
+
+- **87 testes de JVM, 0 falhas** (79 + 4 do `Turno` + 4 da busca); `session-meta` com 4 casos novos
+  (turnos) e os 3 do apagar; `i18n` verde com 8 chaves novas nos dois idiomas.
+- Instalado e verificado no S10+: telemetria na conversa e no Resumo, busca a filtrar e a dizer
+  «0 de 1 conversas», e as licenças a abrir o browser.

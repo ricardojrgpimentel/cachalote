@@ -242,7 +242,7 @@ fun CachaloteApp() {
                     if (!emConversa) Header(vm, busy = vm.busy)
                     vm.approval?.let { ap -> ApprovalDialog(vm, ap) }
                     vm.configPicker?.let { opt -> ConfigPickerDialog(vm, opt) }
-                    if (vm.mostrarLicencas) LicensesDialog(vm)
+                    if (vm.mostrarLicencas) LicencasSheet(vm)
                     LaunchedEffect(tab) {
                         // A lista de conversas é o ecrã da aba: recarrega-se sempre que se lá chega
                         // (o motor pode ter sessões novas — de outra app, de outro turno, do boot).
@@ -2266,14 +2266,18 @@ private fun EstadoDeTrabalho(vm: MainViewModel) {
 private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val uso = vm.uso
-    if (!vm.busy && uso == null) return
+    val ultimo = vm.ultimoTurno
+    if (!vm.busy && uso == null && ultimo == null) return
 
     val ferramentas = vm.transcript.count { it.role == "tool" }
     val aCorrer = vm.transcript.count { it.role == "tool" && !it.done }
-    val partes = ArrayList<String>(3)
+    val partes = ArrayList<String>(4)
     if (ferramentas > 0) partes.add(stringResource(R.string.telemetria_ferramentas, ferramentas, aCorrer))
     uso?.let { partes.add(it.texto(ctx)) }
     if (vm.busy) partes.add(stringResource(R.string.telemetria_tempo, segundos))
+    // Depois de o turno acabar, os números do **turno que acabou** (passos, duração): o motor
+    // não os manda pelo protocolo, vêm do registo da sessão (ver Turno e STATUS §82).
+    else ultimo?.let { partes.add(it.rotulo(ctx)) }
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
@@ -2402,27 +2406,74 @@ private fun BarraDeInput(vm: MainViewModel, input: String, onInput: (String) -> 
     }
 }
 
+/**
+ * As licenças de terceiros, num painel que sobe de baixo (como o seletor de modelo e a autorização
+ * — é o mesmo gesto em toda a app).
+ *
+ * Era um `AlertDialog` com uma lista e um texto corrido lá dentro: cabia pouco e não se podia fazer
+ * nada com o texto. O Apache-2.0 pede a licença junto do binário, por isso agora há **copiar** e
+ * **abrir a página** de origem — e o texto lê-se em ecrã quase inteiro (`STATUS` §82).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LicensesDialog(vm: MainViewModel) {
-    AlertDialog(
+private fun LicencasSheet(vm: MainViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = { vm.mostrarLicencas = false; vm.licencaAberta = null },
-        title = { Text(stringResource(R.string.licencas_titulo)) },
-        text = {
+        sheetState = sheet,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            val aberta = vm.licencaAberta
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (aberta == null) stringResource(R.string.licencas_titulo) else aberta.nome,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                if (aberta != null) {
+                    TextButton(onClick = {
+                        val clip = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                        clip?.setPrimaryClip(android.content.ClipData.newPlainText(aberta.nome, aberta.texto))
+                        android.widget.Toast.makeText(
+                            ctx,
+                            ctx.getString(R.string.licenca_copiada),
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    }) { Text(stringResource(R.string.licenca_copiar)) }
+                    if (aberta.url.isNotBlank()) {
+                        TextButton(onClick = {
+                            runCatching {
+                                ctx.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(aberta.url),
+                                    ),
+                                )
+                            }
+                        }) { Text(stringResource(R.string.licenca_abrir)) }
+                    }
+                }
+            }
             LicensesBody(
                 licencas = vm.licencas,
-                aberta = vm.licencaAberta,
+                aberta = aberta,
                 onAbrir = { vm.licencaAberta = it },
             )
-        },
-        confirmButton = {
-            if (vm.licencaAberta != null) {
-                TextButton(onClick = { vm.licencaAberta = null }) { Text(stringResource(R.string.voltar)) }
+            TextButton(onClick = {
+                if (aberta != null) {
+                    vm.licencaAberta = null
+                } else {
+                    vm.mostrarLicencas = false
+                    vm.licencaAberta = null
+                }
+            }) {
+                Text(stringResource(if (aberta != null) R.string.voltar else R.string.fechar))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = { vm.mostrarLicencas = false; vm.licencaAberta = null }) {
-                Text(stringResource(R.string.fechar))
-            }
-        },
-    )
+        }
+    }
 }

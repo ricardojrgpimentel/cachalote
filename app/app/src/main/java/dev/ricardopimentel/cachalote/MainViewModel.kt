@@ -194,6 +194,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Consumo de contexto, como o motor o reporta (`usage_update`). */
     var uso by mutableStateOf<Uso?>(null)
 
+    /**
+     * Os turnos desta conversa (passos, ferramentas, duração), lidos do registo da sessão. O motor
+     * não os manda pelo ACP — ver [`Turno`] e `STATUS` §82. O último turno fechado é o que a linha
+     * de telemetria mostra depois de o turno acabar.
+     */
+    var turnos by mutableStateOf<List<Turno>>(emptyList())
+        private set
+
+    val ultimoTurno: Turno? get() = turnos.lastOrNull { it.ms != null }
+
     /** Resumo do `cachalote doctor`, trazido pela ponte (estruturado). */
     var doctor by mutableStateOf<JSONObject?>(null)
 
@@ -442,6 +452,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         sessionId = null
         transcript.clear()
+        turnos = emptyList()
         controller.stopEmbedded()
         controller.mode = kind
         modeKind = kind
@@ -979,6 +990,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         sessionId = res.optString("sessionId").takeIf { it.isNotBlank() }
         applyConfigOptions(res)
         transcript.clear()
+        turnos = emptyList()
         transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_criada, sessionId?.take(8) ?: "?")))
         anotarAvisoMcp()
         loaded = true
@@ -1045,6 +1057,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             controller.prompt(sid!!, text, img?.bytes, img?.mime ?: "image/png")
             // Se os MCP tiveram de ficar de fora para o turno correr, diz-se (ver knowledge 134).
             anotarAvisoMcp()
+            // A telemetria do turno (passos, ferramentas, duração) é lida do registo da sessão:
+            // o ACP não a manda (§64), o motor grava-a em disco (§82).
+            carregarTurnos(sid!!)
             // Turno acabado. Com a app em segundo plano, avisa-se por notificação (é o que
             // permite lançar trabalho e ir fazer outra coisa).
             val resposta = transcript.lastOrNull { it.role == "assistant" }?.text.orEmpty()
@@ -1070,6 +1085,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     saveState()
                     try {
                         controller.prompt(novo, text, img?.bytes, img?.mime ?: "image/png")
+                        carregarTurnos(novo)
                         val resposta = transcript.lastOrNull { it.role == "assistant" }?.text.orEmpty()
                         Notificacoes.fimDeTurno(
                             getApplication(),
@@ -1288,6 +1304,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             transcript.clear()
             transcript.add(ChatLine("system", getApplication<Application>().getString(R.string.sessao_retomada, id.take(8))))
             carregarHistorico(id)
+        } else {
+            // Já era esta: o transcript em memória serve, mas a telemetria pode faltar (app
+            // acabada de abrir, modo trocado). Lê-se do registo.
+            carregarTurnos(id)
         }
         anotarAvisoMcp()
         conversaAberta = true
@@ -1317,6 +1337,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
         transcript.addAll(lido.linhas)
+        carregarTurnos(id)
+    }
+
+    /**
+     * Lê do daemon os turnos da conversa e guarda os últimos.
+     *
+     * Repete uma vez, 800 ms depois, quando ainda não há nenhum turno fechado: o motor escreve o
+     * registo em lotes e a primeira leitura pode apanhar o ficheiro a meio do turno que acabou de
+     * terminar. Não falhar é o normal (modo sem daemon, ficheiro ainda vazio): a lista fica vazia e
+     * a linha de telemetria simplesmente não aparece.
+     */
+    private suspend fun carregarTurnos(id: String, repetir: Boolean = true) {
+        val lista = runCatching { Turno.lista(controller.sessionTurns(id)) }.getOrDefault(emptyList())
+        if (lista.none { it.ms != null } && repetir) {
+            kotlinx.coroutines.delay(800)
+            carregarTurnos(id, repetir = false)
+            return
+        }
+        // Só os últimos: é um indicador, não um relatório (o cartão do Resumo mostra seis).
+        turnos = lista.takeLast(6)
     }
 
     /**
@@ -1333,6 +1373,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (id == sessionId) {
             sessionId = null
             conversaAberta = false
+            turnos = emptyList()
             // Sem isto, o arranque seguinte (ou a troca de modo) voltava a retomar a sessão
             // que acabámos de fechar — verificado em teste.
             controller.forgetLastSession()

@@ -132,6 +132,9 @@
     <string name="legenda_sessoes">✕ closes the active session · tap a row to resume</string>
     <string name="licenca_url">Project page</string>
     <string name="licencas_texto">Cachalote is MIT. This app ships libraries with their own licences: the full texts are here, as they require.</string>
+    <string name="licenca_copiar">copy</string>
+    <string name="licenca_abrir">open page</string>
+    <string name="licenca_copiada">license copied</string>
     <string name="licencas_titulo">Third-party licences</string>
     <string name="ligar_daemon">Start daemon</string>
     <string name="limpar">Clear</string>
@@ -224,6 +227,18 @@
     <string name="sobre_texto">Cachalote — the DeepSeek Harness running on the phone. With root, Android does not enforce the DSH sandbox: what stops a command outside the workspace is the approval you give, and everything is logged.</string>
     <string name="telemetria_ferramentas">%1$d tool calls · %2$d running</string>
     <string name="telemetria_tempo">%1$d s</string>
+    <string name="telemetria_turno_label">turn %1$d</string>
+    <string name="resumo_turnos">Turns and time</string>
+    <string name="resumo_turnos_vazio">no turns in this conversation yet (the telemetry comes from the session log the engine writes)</string>
+    <string name="resumo_turnos_nota">read from the session log: the engine does not send these numbers over the protocol</string>
+    <plurals name="turnos_passos">
+        <item quantity="one">%d step</item>
+        <item quantity="other">%d steps</item>
+    </plurals>
+    <plurals name="turnos_ferramentas">
+        <item quantity="one">%d tool call</item>
+        <item quantity="other">%d tool calls</item>
+    </plurals>
     <string name="tentar_novamente">Try again</string>
     <string name="testar_execucao">Test execution</string>
     <string name="testar_execucao_texto">Checks whether the Node embedded in the APK can run from the native library directory.</string>
@@ -442,6 +457,10 @@
     <string name="apagar_conversa">Delete conversation</string>
     <string name="apagar_conversa_texto">The conversation «%1$s» and its whole history are deleted from the phone. This cannot be undone.</string>
     <string name="cancelar">Cancel</string>
+    <string name="conversa_buscar">search conversations</string>
+    <string name="conversa_buscar_limpar">clear search</string>
+    <string name="conversa_contagem_filtro">%1$d of %2$d conversations</string>
+    <string name="conversa_sem_resultado">no conversation matching “%1$s”</string>
     <string name="conversa_toque_longo">Press and hold a conversation to delete it</string>
     <string name="fechar_sessao_menu">Close the session</string>
     <string name="menu_conversa">More options</string>

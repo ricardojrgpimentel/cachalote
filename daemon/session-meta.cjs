@@ -410,6 +410,77 @@ function sessionMeta(dshHome, opts = {}) {
  * ficheiros. O `id` é validado contra o que está lá dentro, para nunca apagar uma pasta escolhida
  * por quem chama.
  */
+/**
+ * Resumo dos turnos de uma sessão: passos, ferramentas e duração de cada um.
+ *
+ * Sai do **registo em disco** (`turn/start`, `step/start`, `tool/call`, `turn/end`), porque o ACP
+ * não manda contagem de passos nem a duração do turno — era a linha de telemetria que faltava no
+ * desenho («Em directo · 2/6 · 1.102/8.000 · 3s»). O que é medido fica medido: `ms` é `null` num
+ * turno que ainda não acabou ou que foi cortado a meio, em vez de se inventar um número.
+ */
+function resumoTurnos(dshHome, id, opts = {}) {
+  const pasta = pastaDaSessao(dshHome, id);
+  if (!pasta) throw new Error("não encontrei a sessão " + id);
+  const zst = path.join(pasta, FICHEIRO_ZSTD);
+  const plain = path.join(pasta, FICHEIRO_PLAIN);
+  const arquivo = fs.existsSync(zst) ? zst : fs.existsSync(plain) ? plain : null;
+  if (!arquivo) return { sessionId: id, turns: [] };
+
+  let texto = textoDaSessao(arquivo, opts.maxFrames ?? 4096);
+  if (texto.length > LIMITE_TEXTO_LIDO) texto = texto.slice(texto.length - LIMITE_TEXTO_LIDO);
+
+  const porTurno = new Map();
+  const obter = (n) => {
+    const chave = Number.isFinite(n) ? Number(n) : 0;
+    if (!porTurno.has(chave)) {
+      porTurno.set(chave, { turn: chave, steps: 0, tools: 0, inicio: null, fim: null, reason: null });
+    }
+    return porTurno.get(chave);
+  };
+
+  for (const linha of texto.split("\n")) {
+    if (!linha.trim()) continue;
+    let registo;
+    try {
+      registo = JSON.parse(linha);
+    } catch {
+      continue;
+    }
+    const data = registo.data || {};
+    switch (registo.type) {
+      case "turn/start":
+        obter(data.turn).inicio = registo.time;
+        break;
+      case "step/start":
+        obter(data.turn).steps += 1;
+        break;
+      case "tool/call":
+        obter(data.turn).tools += 1;
+        break;
+      case "turn/end": {
+        const t = obter(data.turn);
+        t.fim = registo.time;
+        t.reason = data.reason && data.reason.kind ? String(data.reason.kind) : null;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  const turns = [...porTurno.values()]
+    .filter((t) => t.inicio !== null || t.steps > 0 || t.tools > 0)
+    .sort((a, b) => a.turn - b.turn)
+    .map((t) => ({
+      turn: t.turn,
+      steps: t.steps,
+      tools: t.tools,
+      ms: t.inicio !== null && t.fim !== null ? Math.max(0, t.fim - t.inicio) : null,
+      reason: t.reason,
+    }));
+  return { sessionId: id, turns };
+}
+
 function apagarSessao(dshHome, id) {
   if (typeof id !== "string" || !/^[A-Za-z0-9._-]{6,80}$/.test(id)) {
     throw new Error("id de sessão inválido");
@@ -453,4 +524,5 @@ module.exports = {
   textoDaSessao,
   scanZstdFrames,
   apagarSessao,
+  resumoTurnos,
 };

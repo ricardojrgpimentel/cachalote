@@ -326,6 +326,16 @@ class EmbeddedEngine(private val ctx: Context) {
         correrScript("meta.cjs", listOf(home.absolutePath), timeoutSeconds, "a ler os metadados das sessões")
 
     /**
+     * Os turnos de uma sessão (passos, ferramentas e duração), lidos do ficheiro dela.
+     *
+     * O ACP não manda a contagem de passos nem o tempo do turno; o motor grava-os no registo da
+     * sessão (`turn/start`, `step/start`, `turn/end`) e o Node da APK lê-os com o mesmo leitor do
+     * daemon — no modo embutido não há daemon a quem pedir.
+     */
+    suspend fun sessionTurns(id: String, timeoutSeconds: Long = 25): String =
+        correrScript("meta.cjs", listOf(home.absolutePath, "turns", id), timeoutSeconds, "a ler os turnos da sessão")
+
+    /**
      * Corre um dos scripts auxiliares (em `files/bin`) com o **runtime embutido** e devolve o stdout.
      *
      * É o que permite ao modo embutido ler os ficheiros das sessões: são zstd de frames

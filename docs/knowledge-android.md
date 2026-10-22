@@ -1906,3 +1906,18 @@ todos invisíveis no dia-a-dia do modo root:
   o `adbd` mata o grupo. Para ver o watchdog a agir, arrancá-lo **dentro da mesma** sessão (`… watchdog
   5 &`), matar o bridge e esperar; para provar o `stop`, correr o script num só `adb shell`.
 - **Origem:** **[LOCAL]** (S10+, 2026-10-22).
+
+### 144. A telemetria do turno (passos, duração) está no registo da sessão, não no ACP
+
+- **Pedido:** a linha do desenho «Em directo · 2/6 · 1.102/8.000 · 3s» — contagem de passos e tempo.
+- **O que o protocolo dá:** nada disso. O `dsh-acp` manda mensagens e `usage_update`, não passos nem
+  duração de turno (é a razão pela qual a linha ficou por fazer em §64).
+- **O que o motor grava:** o registo da sessão (`session.v4.jsonl.zstd`) tem `turn/start`,
+  `step/start`, `tool/call` e `turn/end`, todos com `seq` e `time`. Passos = nº de `step/start`;
+  duração = `turn/end.time - turn/start.time`; estado = `turn/end.data.reason.kind`.
+- **Como se lê:** `resumoTurnos()` em `daemon/session-meta.cjs` (frames zstd concatenados, leitor que
+  já existia) e o método `cachalote.sessions.turns`; no modo embutido, o `meta.cjs` da APK com o
+  argumento `turns <id>`.
+- **Cuidado:** o motor escreve em lotes — a primeira leitura a seguir ao fim do turno pode não o ver.
+  Uma segunda leitura ~800 ms depois resolve (foi o que a app passou a fazer).
+- **Origem:** **[LOCAL]** (S10+, 2026-10-22).
