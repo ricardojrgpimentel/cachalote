@@ -11,7 +11,19 @@ set -euo pipefail
 WS="$(cd "$(dirname "$0")/.." && pwd)"
 GRADLE="$WS/.work/tools/gradle-8.13/bin/gradle"
 KS="$WS/.work/cachalote-release.jks"
-PASS="${CACHALOTE_STORE_PASS:-cachalote}"
+# A palavra-passe do keystore NÃO tem omissão no código: lê-se de CACHALOTE_STORE_PASS ou, se não
+# estiver definida, de `.work/keystore.pass` (modo 600, fora do repositório). Antes disto o valor por
+# omissão era `cachalote` — escrito aqui, logo público, e o mesmo que abria o ficheiro.
+PASS="${CACHALOTE_STORE_PASS:-}"
+if [ -z "$PASS" ]; then
+  if [ -r "$WS/.work/keystore.pass" ]; then
+    PASS="$(cat "$WS/.work/keystore.pass")"
+  else
+    echo "ERRO: falta a palavra-passe do keystore de release." >&2
+    echo "      Define CACHALOTE_STORE_PASS ou escreve-a em .work/keystore.pass (chmod 600)." >&2
+    exit 1
+  fi
+fi
 ALIAS="${CACHALOTE_KEY_ALIAS:-cachalote}"
 
 # O JDK vem da regra comum (tools/lib-jdk.sh): um build-release com o JBR no 25 morria com

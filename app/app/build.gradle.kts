@@ -29,10 +29,20 @@ android {
         create("release") {
             val ks = file(System.getenv("CACHALOTE_KEYSTORE") ?: "${rootDir}/../.work/cachalote-release.jks")
             if (ks.exists()) {
+                // A palavra-passe não tem omissão no código: vem do ambiente ou de
+                // `.work/keystore.pass` (600, fora do repositório). Era `cachalote`, escrita aqui —
+                // ou seja, pública e a mesma que abria o ficheiro.
+                val passFile = file("${rootDir}/../.work/keystore.pass")
+                val pass = System.getenv("CACHALOTE_STORE_PASS")
+                    ?: passFile.takeIf { it.isFile }?.readText()?.trim()
+                    ?: error(
+                        "falta a palavra-passe do keystore de release: define CACHALOTE_STORE_PASS " +
+                            "ou escreve-a em .work/keystore.pass (chmod 600)",
+                    )
                 storeFile = ks
-                storePassword = System.getenv("CACHALOTE_STORE_PASS") ?: "cachalote"
+                storePassword = pass
                 keyAlias = System.getenv("CACHALOTE_KEY_ALIAS") ?: "cachalote"
-                keyPassword = System.getenv("CACHALOTE_KEY_PASS") ?: "cachalote"
+                keyPassword = System.getenv("CACHALOTE_KEY_PASS") ?: pass
             }
         }
     }

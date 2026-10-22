@@ -223,16 +223,20 @@ que entretanto entrou (160 commits, 311 ficheiros, 149 capturas, uma Release com
 | GitHub | `gh repo view`, `gh secret list`, `gh api .../actions/permissions` | privado, sem segredos de Actions, Actions com `all` (nenhum workflow usa segredos nem `pull_request_target`) |
 | Release | assets de `v0.3.0` e do kernel | APK e `kernel.zip` — é o objectivo de publicar (o URL do kernel passa a funcionar sem token) |
 
-**Antes do flip, decide isto:**
+**Decidido em 2026-10-22:**
 
-1. **`research/`** — dois relatórios internos (Bun vs Node, superfícies do SDK). São técnicos e sem
-   segredos; mantém-se ou tira-se, é uma decisão editorial.
-2. **Palavra-passe do keystore de release** — a de omissão no código é `cachalote`
-   (`CACHALOTE_STORE_PASS`). O `.jks` não está no repositório, mas publicá-la torna o *default*
-   público. Antes de distribuir a sério, roda-a (`keytool -storepasswd`) e usa sempre
-   `CACHALOTE_STORE_PASS`. Rodar **não** invalida a assinatura já publicada; o `keytool` guarda a
-   chave, só muda a palavra-passe do ficheiro.
-3. **`SECURITY.md`** — já existe; liga também o *Report a vulnerability* do GitHub.
+1. **`research/` fica.** São dois relatórios técnicos (Bun vs Node, superfícies do SDK), sem segredos
+   nem dados de terceiros — e são parte de como as decisões foram tomadas.
+2. **Palavra-passe do keystore rodada.** A antiga (`cachalote`, que estava escrita no código) já não
+   abre o ficheiro (`keytool error: keystore password was incorrect`). A nova tem 32 caracteres e
+   vive em **`.work/keystore.pass`** (modo `600`, fora do repositório) — **guarda-a no teu gestor de
+   palavras-passe**, porque sem ela não se assina mais nenhuma actualização.
+   O `build-release.sh` e o `build.gradle.kts` deixaram de ter omissão no código: lêem
+   `CACHALOTE_STORE_PASS` e, se não existir, `.work/keystore.pass`; sem uma das duas, o build pára
+   com uma mensagem que diz o que fazer. A chave é a mesma — a APK de release continua assinada com
+   `CN=Cachalote`, sha-256 `f73cb673…`, e o sha256 do APK ficou igual (`cf88c83…`).
+3. **`SECURITY.md`** existe; o *Report a vulnerability* do GitHub é ligado logo a seguir ao flip (a
+   API só o permite com o repositório público).
 
 **O flip:**
 
