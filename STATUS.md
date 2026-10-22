@@ -3180,3 +3180,22 @@ A versão que o README e o CHANGELOG passam a nomear:
 **A app do telefone ficou na de debug** (a de release tem outra assinatura e substituí-la obrigaria a
 desinstalar, perdendo o token e as capacidades autorizadas): a de release foi verificada no emulador,
 que é o que interessa para provar que o artefacto que se publica arranca.
+
+### 84.5 O susto: a instrumentação desinstalou a app do telefone
+
+`connectedDebugAndroidTest` corre nos **dois** aparelhos ligados e, no fim, o AGP desinstala a app e
+o APK de teste de onde os instalou — e o telefone ficou sem o Cachalote (o `run-as` dizia «unknown
+package»). Não se perdeu nada do motor: o `home/` do daemon (chave, conversas, token) vive fora da
+app. Perdeu-se o que estava nas preferências da app: modo escolhido, capacidades autorizadas, a marca
+do assistente e — porque a reinstalação dá outro uid — a **autorização do Shizuku**.
+
+Foi tudo reposto no telefone: app reinstalada (0.3.0), assistente saltado com «Já tenho tudo
+configurado», **Autorizar todas** nas capacidades, acessibilidade ligada e a permissão do Shizuku
+concedida no diálogo que a app abriu. Verificado a seguir: `app-capabilities-test.sh` **6/6** e
+`versionName=0.3.0`.
+
+**Duas lições, para a próxima:**
+- correr instrumentação com o telefone ligado desinstala a app dele (o AGP não pergunta);
+- `am force-stop` **desliga** o serviço de acessibilidade — a seguir a um force-stop, o `android_status`
+  diz «acessibilidade desligada» até se voltar a ligar (foi o que fez uma passagem do ensaio falhar
+  com 5/6).

@@ -1921,3 +1921,19 @@ todos invisíveis no dia-a-dia do modo root:
 - **Cuidado:** o motor escreve em lotes — a primeira leitura a seguir ao fim do turno pode não o ver.
   Uma segunda leitura ~800 ms depois resolve (foi o que a app passou a fazer).
 - **Origem:** **[LOCAL]** (S10+, 2026-10-22).
+
+### 145. `connectedAndroidTest` desinstala a app de **todos** os aparelhos ligados
+
+- **Sintoma:** depois de correr os testes de instrumentação, o telefone ficou sem a app («unknown
+  package» no `run-as`), as preferências desapareceram e o Shizuku voltou a pedir autorização.
+- **Causa:** o Gradle/AGP instala o APK de debug **e** o de teste em cada aparelho ligado e, no fim,
+  desinstala os dois. Não é um erro: é o ciclo de vida do `connectedDebugAndroidTest`.
+- **O que sobrevive:** tudo o que vive fora da app (o `home/` do daemon: chave, conversas, token).
+  Perdem-se as preferências (modo, capacidades, marca do assistente) e, porque o uid muda, a
+  autorização do Shizuku (a app volta a pedi-la no primeiro arranque — e o diálogo permite conceder).
+- **E o `am force-stop`:** desliga o serviço de acessibilidade. Num ensaio, `android_status` passa a
+  dizer «acessibilidade desligada» até se voltar a ligar (`settings put secure
+  enabled_accessibility_services …`).
+- **Como evitar:** correr a instrumentação só no emulador (`-Pandroid.injected.device.serial=emulator-5554`)
+  quando o telefone está a ser usado a sério.
+- **Origem:** **[LOCAL]** (S10+, 2026-10-22).
