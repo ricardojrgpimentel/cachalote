@@ -501,22 +501,22 @@ private fun quandoCurto(iso: String): String = runCatching {
 }.getOrElse { iso.replace("T", " ").take(16) }
 
 /** Uma entrada do menu dos Ajustes: rótulos (recursos), ícone e a secção que abre. */
-private class EntradaDeAjuste(
+internal class EntradaDeAjuste(
     val titulo: Int,
     val detalhe: Int?,
     val icone: androidx.compose.ui.graphics.vector.ImageVector,
     val destino: String,
 )
 
-private val ENTRADAS_DE_AJUSTE = listOf(
+internal val ENTRADAS_DE_AJUSTE = listOf(
     EntradaDeAjuste(R.string.motor, R.string.motor_detalhe, Icons.Filled.Memory, "motor"),
     EntradaDeAjuste(R.string.chave_provedor, R.string.chave_detalhe, Icons.Filled.Key, "provedor"),
-    EntradaDeAjuste(R.string.capacidades_titulo, R.string.capacidades_detalhe, Icons.Filled.Tune, "capacidades"),
+    EntradaDeAjuste(R.string.capacidades_titulo, null, Icons.Filled.Tune, "capacidades"),
     EntradaDeAjuste(R.string.acessibilidade, R.string.acessibilidade_detalhe, Icons.Filled.Accessibility, "acessibilidade"),
     EntradaDeAjuste(R.string.areas_bash, R.string.areas_detalhe, Icons.Filled.Terminal, "areas"),
     EntradaDeAjuste(R.string.mcp_titulo, R.string.mcp_detalhe, Icons.Filled.Hub, "mcp"),
     EntradaDeAjuste(R.string.vscreen_titulo, R.string.vscreen_detalhe, Icons.Filled.PhoneAndroid, "vscreen"),
-    EntradaDeAjuste(R.string.backup_e_licencas, R.string.backup_detalhe, Icons.Filled.Backup, "backup"),
+    EntradaDeAjuste(R.string.backup_e_licencas, null, Icons.Filled.Backup, "backup"),
 )
 
 /**

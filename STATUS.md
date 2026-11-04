@@ -3450,3 +3450,47 @@ a affordance («Apagar», «Ver o que ele pensou»). A tabela completa está no
 fundo do `SwipeToDismissBox` fica **por trás** dela — a lista inteira apareceu vermelha. O conteúdo
 passou a ser opaco (`surface`, e `surfaceContainerHigh` na activa). Fica registado porque é o tipo de
 defeito que só se vê ao desenhar o gesto, não ao ler o código.
+
+## 90. O menu dos Ajustes: o subtítulo que repete o título é ruído (2026-11-04)
+
+Continuação da regra do §89, agora passada a **todas** as telas com menu. O padrão que sobrava não era
+uma legenda a explicar a disposição: era o **subtítulo que repete o título** — ocupa uma segunda linha
+e não diz nada de novo.
+
+### 90.1 O que foi cortado
+
+| Entrada | Antes | Agora |
+|---|---|---|
+| Chave do provedor | «a chave do provedor, guardada no daemon» (repete o título) | «nunca sai do telefone» — o facto que interessa e que o título não diz |
+| Capacidades autorizadas | «o que o agente pode fazer no telefone» (repete) | sem subtítulo — uma linha |
+| Backup e licenças | «exportar definições e ver o software de terceiros» (repete o título) | sem subtítulo |
+| Repetir a configuração inicial | «Voltar a correr o assistente de boas-vindas» (repete) | «não apaga conversas, chave nem capacidades» — o que o utilizador quer saber **antes** de carregar |
+
+Ficaram de propósito os subtítulos que acrescentam: «estado, modos (root, Shizuku, embutido) e
+diagnóstico», «ver e tocar no ecrã», «onde o agente corre sem pedir autorização», «ferramentas externas
+ligadas por JSON», «um segundo ecrã onde o agente trabalha».
+
+### 90.2 A regra passou a ser um teste (e o teste foi provado)
+
+[`AjustesSubtitulosTest`](../app/app/src/test/java/dev/ricardopimentel/cachalote/AjustesSubtitulosTest.kt)
+percorre `ENTRADAS_DE_AJUSTE` (agora `internal`, para o teste a poder ler) e falha se o subtítulo
+contiver o título, nos dois idiomas. Há um caso à parte para o cartão de repetir o assistente, que não
+vive naquela lista.
+
+**Provei que o teste apanha o defeito**: reintroduzi de propósito o subtítulo antigo da chave e
+`testDebugUnitTest --tests '*AjustesSubtitulosTest*'` falhou («o subtítulo «a chave do provedor,
+guardada no daemon» só repete o título «chave do provedor»»). Reposto o texto bom, verde outra vez.
+Um teste que nunca falhou não prova nada.
+
+### 90.3 Estado
+
+| Verificação | Resultado |
+|---|---|
+| Ecrã | [86](design/revisao/86-ajustes-sem-repeticao.png) — 8 entradas, duas de uma linha |
+| Testes de JVM | **95**, 0 falhas (4 novos: menu nos dois idiomas, cartão do assistente, texto vazio) |
+| `i18n-check` | 542 chaves · 496 usadas |
+| Dispositivo | instalado e aberto no S10+; sem mudanças no telemóvel além da app |
+
+**Limite assumido:** o teste cobre o menu dos Ajustes e o cartão do assistente. Não há forma honesta
+de o estender a todo o texto da app sem inventar uma convenção de nomes (um `titulo`/`detalhe` em cada
+par). Fica a regra no DESIGN.md e o teste onde o padrão já existe.

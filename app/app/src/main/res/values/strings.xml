@@ -17,7 +17,7 @@
     <string name="acessibilidade_voltou">accessibility is back on</string>
     <string name="acesso">Access</string>
     <string name="ajustes_modulos">%1$d modules configured</string>
-    <string name="ajustes_repetir_detalhe">Run the welcome wizard again</string>
+    <string name="ajustes_repetir_detalhe">does not erase conversations, key or capabilities</string>
     <string name="ajustes_titulo">Settings</string>
     <string name="anexar">Attach</string>
     <string name="anexar_imagem">Attach image</string>
@@ -40,7 +40,6 @@
     <string name="autorizacao_rodape">PID: %1$d · mode %2$s</string>
     <string name="autorizar_todas">Allow all</string>
     <string name="aviso_root">Warning: the engine runs as root and Android does not enforce the DSH sandbox. What stops a command outside the workspace is the authorisation you approve here — and everything is logged.</string>
-    <string name="backup_detalhe">export settings and see third-party software</string>
     <string name="backup_e_licencas">Backup and licences</string>
     <string name="backup_exportar">Export settings</string>
     <string name="backup_importar">Import settings</string>
@@ -50,14 +49,13 @@
     <string name="cabecalho_motor_desligado">DSH engine on the phone · disconnected</string>
     <string name="cabecalho_motor_ligado">DSH engine on the phone · connected</string>
     <string name="cabecalho_motor_a_ligar">DSH engine on the phone · connecting…</string>
-    <string name="capacidades_detalhe">what the agent can do on the phone</string>
     <string name="capacidades_explicacao">The agent asks; you decide. Every request is logged below.</string>
     <string name="capacidades_titulo">Allowed capabilities</string>
     <string name="chave_acesso">Provider access</string>
     <string name="chave_armazenamento">App storage</string>
     <string name="chave_auditavel">Auditable</string>
     <string name="chave_ausente">no key stored yet</string>
-    <string name="chave_detalhe">the provider key, stored in the daemon</string>
+    <string name="chave_detalhe">never leaves the phone</string>
     <string name="chave_efemero">ephemeral in RAM</string>
     <string name="chave_explicacao">The key is sent to the daemon, which writes it to home/.env with mode 600. The app does not keep it.</string>
     <string name="chave_explicacao_embutida">The key is written to the app\'s private storage with mode 600. Only the agent uses it.</string>

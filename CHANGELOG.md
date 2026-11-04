@@ -15,6 +15,10 @@ aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
   «Toca em «Ligar web»». Fica o **estado**; o botão ao lado diz o resto.
 - A regra passou a ser um teste: `tools/i18n-check.sh` falha o build se voltar a aparecer uma legenda
   a explicar a disposição (§89).
+- **Menu dos Ajustes sem subtítulos que repetem o título**: «Chave do provedor» passou a «nunca sai do
+  telefone», «Capacidades autorizadas» e «Backup e licenças» ficaram de uma linha só, e «Repetir a
+  configuração inicial» passou a dizer o que **não** perde («não apaga conversas, chave nem
+  capacidades»). Agora há um teste que falha quando um subtítulo só repete o título (§90).
 
 ### O cabeçalho da conversa deixou de ser uma parede de texto
 

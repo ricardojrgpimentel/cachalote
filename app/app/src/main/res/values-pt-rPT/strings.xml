@@ -17,7 +17,7 @@
     <string name="acessibilidade_voltou">a acessibilidade voltou a estar ligada</string>
     <string name="acesso">Acesso</string>
     <string name="ajustes_modulos">%1$d módulos configurados</string>
-    <string name="ajustes_repetir_detalhe">Voltar a correr o assistente de boas-vindas</string>
+    <string name="ajustes_repetir_detalhe">não apaga conversas, chave nem capacidades</string>
     <string name="ajustes_titulo">Ajustes</string>
     <string name="anexar">Anexar</string>
     <string name="anexar_imagem">Anexar imagem</string>
@@ -40,7 +40,6 @@
     <string name="autorizacao_rodape">PID: %1$d · modo %2$s</string>
     <string name="autorizar_todas">Autorizar todas</string>
     <string name="aviso_root">Aviso: o motor corre como root e o Android não impõe o sandbox do DSH. O que trava um comando fora do workspace é a autorização que aprovas aqui — e tudo fica registado.</string>
-    <string name="backup_detalhe">exportar definições e ver o software de terceiros</string>
     <string name="backup_e_licencas">Backup e licenças</string>
     <string name="backup_exportar">Exportar definições</string>
     <string name="backup_importar">Importar definições</string>
@@ -50,14 +49,13 @@
     <string name="cabecalho_motor_desligado">motor DSH no telefone · desligado</string>
     <string name="cabecalho_motor_ligado">motor DSH no telefone · ligado</string>
     <string name="cabecalho_motor_a_ligar">motor DSH no telefone · a ligar…</string>
-    <string name="capacidades_detalhe">o que o agente pode fazer no telefone</string>
     <string name="capacidades_explicacao">O agente pede; tu decides. Cada pedido fica registado em baixo.</string>
     <string name="capacidades_titulo">Capacidades autorizadas</string>
     <string name="chave_acesso">Acesso ao provedor</string>
     <string name="chave_armazenamento">Armazenamento da app</string>
     <string name="chave_auditavel">Auditável</string>
     <string name="chave_ausente">ainda não há chave guardada</string>
-    <string name="chave_detalhe">a chave do provedor, guardada no daemon</string>
+    <string name="chave_detalhe">nunca sai do telefone</string>
     <string name="chave_efemero">efémero na RAM</string>
     <string name="chave_explicacao">A chave é enviada ao daemon, que a escreve em home/.env com modo 600. A app não a guarda.</string>
     <string name="chave_explicacao_embutida">A chave fica no armazenamento privado da app, com modo 600. Só o agente a usa.</string>

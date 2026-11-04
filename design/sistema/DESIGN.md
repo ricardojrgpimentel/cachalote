@@ -197,6 +197,8 @@ O que **pode** continuar a ter texto:
 | **Efeito de uma acção** | «as conversas ficam guardadas» | é a consequência que o utilizador não adivinha |
 | **Instrução fora da app** | «Liga-o em Definições → Acessibilidade → Cachalote» | o utilizador não sai do sítio sem isso |
 | **Rótulo de controlo** | «Apagar», «Ver o que ele pensou» | o texto **é** a affordance |
+| — | «Chave do provedor — a chave do provedor, guardada no daemon» | **é o que não pode ficar**: um subtítulo que repete o título ocupa uma linha e não diz nada |
+
 
 Esta regra não é uma opinião de estilo: `tools/i18n-check.sh` verifica-a (item 4) e falha o build
 quando aparece «toca em «…»», «toca sem largar», «desliza para…». Se a mensagem de erro te bloquear,
