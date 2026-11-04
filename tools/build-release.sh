@@ -1,7 +1,11 @@
 #!/bin/bash
-# build-release.sh — gera (se preciso) a chave de assinatura e compila a APK de release.
+# build-release.sh — compila a APK de release com a chave de assinatura existente.
 #
 #   ./tools/build-release.sh
+#   CACHALOTE_NOVA_CHAVE=1 ./tools/build-release.sh   # (só) para criar uma identidade nova
+#
+# A chave **não** é gerada por omissão: se faltar, o script pára e diz como a repor. Uma chave nova
+# em silêncio quebra as actualizações de quem já tem a app (ver o bloco de erro).
 #
 # A chave fica em .work/cachalote-release.jks (NÃO versionada). Para distribuir, guarda-a
 # em segurança: sem ela não consegues actualizar a app instalada (assinaturas diferentes
@@ -41,12 +45,36 @@ export CACHALOTE_KEY_ALIAS="$ALIAS"
 export CACHALOTE_KEY_PASS="$PASS"
 
 if [ ! -f "$KS" ]; then
-  echo "== a gerar a chave de assinatura em $KS =="
+  # **Não se gera uma chave nova em silêncio.** Uma chave nova tem a mesma DN (CN=Cachalote) e um
+  # certificado diferente: a APK compila, instala-se num telefone limpo — e quem já tem a app deixa
+  # de a poder actualizar, porque o Android recusa assinaturas diferentes. O erro só aparece no
+  # telefone do utilizador, semanas depois. Já houve uma chave gerada assim (a de debug, noutra
+  # máquina); a de release não volta a acontecer por descuido.
+  if [ "${CACHALOTE_NOVA_CHAVE:-0}" != "1" ]; then
+    cat >&2 <<'FIM'
+ERRO: falta a chave de assinatura de release em .work/cachalote-release.jks.
+
+Não a gero sozinho de propósito: uma chave nova tem o mesmo DN (CN=Cachalote) mas um
+certificado diferente. A APK sairia assinada, instalar-se-ia num telefone limpo, e
+quem já tem a app deixava de conseguir actualizá-la.
+
+Para a repor a partir da nota do Bitwarden:
+  ./tools/backup-signing-key.sh --de-texto <nota.txt>
+e confirma que é a mesma identidade (certificado):
+  881b04b0c38746eda8c61da319b99f65bb39364c01884862857a1f29895931a9
+
+Se o que queres mesmo é uma identidade NOVA (e aceitas que a app instalada deixa de
+receber actualizações), pede-lho explicitamente:
+  CACHALOTE_NOVA_CHAVE=1 ./tools/build-release.sh
+FIM
+    exit 1
+  fi
+  echo "== a gerar uma chave NOVA (CACHALOTE_NOVA_CHAVE=1) em $KS =="
   keytool -genkeypair -v -keystore "$KS" -alias "$ALIAS" -keyalg RSA -keysize 2048 \
     -validity 10000 -storepass "$PASS" -keypass "$PASS" \
     -dname "CN=Cachalote, O=Cachalote, C=PT" >/dev/null
   chmod 600 "$KS"
-  echo "   (guarda este ficheiro e a password '$PASS' — sem eles não consegues actualizar a app)"
+  echo "   (guarda este ficheiro e a password — sem eles não consegues actualizar a app)"
 fi
 
 echo "== a compilar release =="
