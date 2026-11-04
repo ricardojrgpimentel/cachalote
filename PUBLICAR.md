@@ -116,12 +116,13 @@ Notas:
 
 ## 4. Depois de público
 
-- [ ] Confirmar os três jobs da CI verdes no repositório público.
-- [ ] Confirmar que o URL do kernel responde a um `GET` sem autenticação
-      (`curl -sI <url> | head -1`).
+- [x] Confirmar os três jobs da CI verdes no repositório público. *(2026-11-04, commit da 0.3.1)*
+- [x] Confirmar que o URL do kernel responde a um `GET` sem autenticação
+      (`curl -sI <url> | head -1`). *(2026-10-22, §86 do STATUS; repetido para o asset da 0.3.1)*
 - [ ] Instalar a app noutro telefone (ou no emulador) e deixar o modo embutido descarregar o
       kernel com verificação de integridade.
-- [ ] Verificar que nenhum segredo entrou por engano: `git log -p | grep -iE "sk-[a-z0-9]{20}"`.
+- [x] Verificar que nenhum segredo entrou por engano: `git log -p | grep -iE "sk-[a-z0-9]{20}"`.
+      *(`tools/secret-scan.sh`: árvore e 164 commits)*
 
 
 ---

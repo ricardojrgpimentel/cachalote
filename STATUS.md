@@ -3328,3 +3328,22 @@ em cada volta daquele ciclo pintava «desligado» durante ~1 s. O mesmo valia pa
   colateral: o motor passou a responder `session is not resumable` a esse id. O ficheiro está intacto
   (`storages/session_projcache/sessions/d0db….json`) e a conversa lê-se; o que não volta é o
   `resume` dessa sessão em concreto.
+
+### 87.6 A 0.3.1 publicada (2026-11-04)
+
+A pedido do autor, a versão corrigida saiu como **release** — a 0.3.0 instalada não tinha a
+correcção e a app só aceita actualizações da mesma chave.
+
+| Passo | Resultado |
+|---|---|
+| Versão | `versionCode 3` · `versionName 0.3.1` |
+| APK | `app-release.apk`, **11 597 206 B**, `sha256 d7db1dad…ffc0f` — assinada com `CN=Cachalote` (a **mesma** chave da 0.3.0, logo instala-se por cima) |
+| Metadados do kernel | `assets/kernel.remote.json` → `kernel-77fa6785a4e4` + `sha256 77fa6785…` (o `sha256` veio do *digest* do próprio asset no GitHub — é o que a app verifica antes de usar o kernel; o modo embutido passa a poder descarregá-lo numa instalação nova) |
+| Tag | `v0.3.1` (anotada, empurrada) |
+| Release | [`v0.3.1`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.1) — não *draft*, não *prerelease*, com as notas do CHANGELOG e uma secção de instalação |
+| Verificação anónima (`Authorization:` vazio) | página do release **200**; asset com `Range: bytes=0-1023` → **206**, 1024 B, a começar em `PK…` |
+| CI do commit publicado | três jobs verdes (`sintaxe dos scripts`, `schema do plugin`, `APK de debug a partir de um clone`) |
+
+**Nota:** a primeira corrida da CI deste commit ficou vermelha sem culpa do código — 65 dos 88 testes
+morreram a **descarregar** os jars do Robolectric (`MavenArtifactFetcher … IOException`). Repetida,
+passou. Fica registado porque é o tipo de vermelho que se confunde com uma regressão.
