@@ -104,7 +104,6 @@
     <string name="ferramenta_a_correr">running</string>
     <string name="ferramenta_concluida">done</string>
     <string name="ferramenta_falhada">failed</string>
-    <string name="fila_dica">Write a task and tap «Add to queue» — the agent runs them one after another.</string>
     <string name="fila_falhada">failed</string>
     <string name="fila_feita">done</string>
     <string name="fila_pendente">pending</string>
@@ -130,7 +129,6 @@
     <string name="kernel_pronto">kernel ready (%1$d files)</string>
     <string name="kernel_texto">With no asset in the APK, the app fetches the kernel from this URL and checks its sha256. Empty = use the URL baked into the build. Useful for self-hosting.</string>
     <string name="kernel_titulo">Kernel by download (embedded mode)</string>
-    <string name="legenda_sessoes">✕ closes the active session · tap a row to resume</string>
     <string name="licenca_url">Project page</string>
     <string name="licencas_texto">Cachalote is MIT. This app ships libraries with their own licences: the full texts are here, as they require.</string>
     <string name="licenca_copiar">copy</string>
@@ -267,7 +265,7 @@
     <string name="vscreen_registo_nota">Events injected without touch focus on the main physical screen.</string>
     <string name="vscreen_render">local render</string>
     <string name="vscreen_rodape">display %1$s · %2$s · %3$d KB · RGBA_8888</string>
-    <string name="vscreen_sem_ecra">the virtual screen is not running — tap Start</string>
+    <string name="vscreen_sem_ecra">the virtual screen is not running</string>
     <string name="vscreen_sem_fotograma">no frame yet — put an app on this display with bash: am start --display %1$d -n &lt;pkg&gt;/&lt;activity&gt;</string>
     <string name="vscreen_texto">A second screen where the agent works without touching what is in front of you. It lives inside this app: close the app and the virtual screen goes away.</string>
     <string name="vscreen_titulo">Virtual screen</string>
@@ -400,7 +398,7 @@
     <string name="token_obtido_n">obtained (%1$d characters)</string>
     <string name="token_por_obter">(not obtained yet)</string>
     <string name="token_rodado">%1$s — rotated</string>
-    <string name="token_toca_obter">(tap Get token)</string>
+    <string name="token_toca_obter">(no token)</string>
     <string name="contexto">context: %1$s</string>
     <string name="nao_consegui_abrir_destino">could not open the destination</string>
     <string name="nao_consegui_ler_ficheiro">could not read the file</string>
@@ -409,7 +407,7 @@
     <string name="notif_canal_desc">Keeps the connection to the engine while the agent works</string>
     <string name="notif_texto_servico">The agent can keep working with the screen off</string>
     <string name="notif_titulo_servico">Cachalote connected to the engine</string>
-    <string name="sem_dados_atualizar">(no data — tap Refresh)</string>
+    <string name="sem_dados_atualizar">(no data)</string>
     <string name="sem_kernel">no kernel: neither embedded nor a download URL (set it in Settings → Engine)</string>
     <string name="shizuku_a_arrancar">starting the daemon through Shizuku…</string>
     <string name="shizuku_activo">daemon running through Shizuku (%1$s…)</string>
@@ -464,7 +462,6 @@
     <string name="conversa_buscar_limpar">clear search</string>
     <string name="conversa_contagem_filtro">%1$d of %2$d conversations</string>
     <string name="conversa_sem_resultado">no conversation matching “%1$s”</string>
-    <string name="conversa_toque_longo">Press and hold a conversation to delete it</string>
     <string name="fechar_sessao_menu">Close the session</string>
     <string name="menu_conversa">More options</string>
     <string name="pensamento">Thought</string>

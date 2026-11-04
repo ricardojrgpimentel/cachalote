@@ -5,6 +5,17 @@ aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
 ## Não publicado
 
+### Menos legendas, mais acções à vista
+
+- **Apagar uma conversa** passou a ser um **deslize para a esquerda** que descobre um fundo vermelho
+  com o caixote (com o mesmo diálogo de confirmação). Saiu o «Toca sem largar numa conversa para a
+  apagar» — uma legenda que só existia porque a acção não se via; o toque longo continua a funcionar.
+- Saíram as legendas que apontavam para botões da mesma linha — «(toca em Obter token)»,
+  «(sem dados — toca em Atualizar)», «ainda não verifiquei — toca em Verificar», «toca em «Iniciar»»,
+  «Toca em «Ligar web»». Fica o **estado**; o botão ao lado diz o resto.
+- A regra passou a ser um teste: `tools/i18n-check.sh` falha o build se voltar a aparecer uma legenda
+  a explicar a disposição (§89).
+
 ### O cabeçalho da conversa deixou de ser uma parede de texto
 
 - Antes, por cima da conversa, liam-se **duas** linhas densas em monospace e a segunda repetia o

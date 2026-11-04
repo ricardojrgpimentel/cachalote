@@ -3403,3 +3403,50 @@ reinstalar a app, correr `install-app.sh` **sem** `--no-root` (ou repetir o `mag
 
 **Nota de método:** a limpeza dos avisos de acessibilidade que os reinstalls provocaram foi feita no
 instantâneo da sessão (4 linhas de sistema), com a app parada.
+
+## 89. As três pessoas e as legendas que explicavam a disposição (2026-11-04)
+
+O autor, depois do cabeçalho: *«Three people open every screen: the user experience (UX), developer
+experience (DX), and agent experience (AX) that edits it next. Serve all three, or you're robbing one
+to pay another.»* E a regra que se segue: *«Kill any label that only exists to explain the layout. If
+the screen needs a caption, the screen is broken.»*
+
+### 89.1 O que a regra apanhou
+
+Um teste com o próprio critério — a legenda existe porque a acção **não se vê**? — deu isto:
+
+| Legenda | Porque é que existia | O que ficou |
+|---|---|---|
+| «Toca sem largar numa conversa para a apagar» | o apagar só existia no toque longo, que não se vê | **deslizar para a esquerda** descobre um fundo vermelho com o caixote; o toque longo continua a funcionar; os dois vão ao mesmo diálogo de confirmação |
+| «✕ fecha a sessão activa · toca numa linha para retomar» | explicava a lista inteira | não existia já em uso — string apagada |
+| «(toca em Obter token)» · «(sem dados — toca em Atualizar)» · «ainda não verifiquei — toca em Verificar» | apontei para um botão que está na mesma linha | passaram a **estado**: «(sem token)», «(sem dados)», «ainda não verificado» |
+| «o ecrã virtual não está a correr — toca em «Iniciar»» · «…Toca em «Ligar web»…» | idem | idem: fica o estado, e o botão ao lado diz o resto |
+| «Escreve uma tarefa e toca em «Juntar à fila»…» | a caixa de escrita está logo abaixo | ficou só o **comportamento** da fila (correm uma a seguir à outra, avisa no fim, espera por autorização) |
+
+O que **ficou de propósito**: o estado («sem token»), o efeito de uma acção («as conversas ficam
+guardadas»), a instrução **fora** da app («Liga-o em Definições → Acessibilidade») e o rótulo que *é*
+a affordance («Apagar», «Ver o que ele pensou»). A tabela completa está no
+[`design/sistema/DESIGN.md`](../design/sistema/DESIGN.md#regra-nada-de-legendas-que-explicam-a-disposição).
+
+### 89.2 As três pessoas
+
+| | Como ficou servida |
+|---|---|
+| **UX** | a acção aparece no gesto (fundo vermelho + caixote), com o diálogo a dizer o que se perde; deixa de haver texto para decorar |
+| **DX** | a regra é um teste (`tools/i18n-check.sh`, item 4) que falha o build quando alguém voltar a escrever «toca em «…»» — não fica dependente de quem revê |
+| **AX** | o *porquê* está no código, junto da linha (`LinhaDeConversa`) e no DESIGN.md, e o teste é executável: o agente seguinte não tem de adivinhar a convenção |
+
+### 89.3 A prova (S10+)
+
+| Verificação | Resultado |
+|---|---|
+| Lista sem legenda | [83](design/revisao/83-lista-sem-legenda.png) |
+| Deslize a meio | [84](design/revisao/84-deslize-revela-apagar.png) — fundo vermelho, caixote, a linha a sair |
+| Diálogo | [85](design/revisao/85-deslize-confirmacao.png) — com o título da conversa e «não se pode desfazer» |
+| `tools/i18n-check.sh` | 546 chaves · 499 usadas · item 4 **OK** |
+| Testes de JVM | 91, 0 falhas |
+
+**Um erro meu, apanhado na primeira captura:** o conteúdo da linha usava `Color.Transparent`, e o
+fundo do `SwipeToDismissBox` fica **por trás** dela — a lista inteira apareceu vermelha. O conteúdo
+passou a ser opaco (`surface`, e `surfaceContainerHigh` na activa). Fica registado porque é o tipo de
+defeito que só se vê ao desenhar o gesto, não ao ler o código.

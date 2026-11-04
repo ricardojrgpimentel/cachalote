@@ -182,6 +182,30 @@ The design system enforces a disciplined `16dp` (`1rem`) base curvature across a
 - **Interactive Buttons & Input Bars:** Configured with `16dp` corners or full continuous pill curvature (`rounded-xl` / fully rounded) depending on terminal grouping context.
 - **Code Blocks & Tool Payloads:** Scaled down to `8dp` (`rounded`) interior nests to retain rigid terminal-like structure while sitting seamlessly within `16dp` parent containers.
 
+## Regra: nada de legendas que expliquem a disposição
+
+**Se o ecrã precisa de uma legenda, o ecrã está mal.** Uma etiqueta como *«toca sem largar numa
+conversa para a apagar»* ou *«✕ fecha a sessão activa · toca numa linha para retomar»* existe porque a
+acção **não se vê** — e o que está mal é a acção, não a frase. O sítio da explicação é o próprio
+controlo: um ícone, um deslize que descobre o caixote, um botão com nome.
+
+O que **pode** continuar a ter texto:
+
+| Tipo | Exemplo | Porquê |
+|---|---|---|
+| **Estado** | «sem token», «ainda não verificado», «o ecrã virtual não está a correr» | descreve o mundo, não o ecrã |
+| **Efeito de uma acção** | «as conversas ficam guardadas» | é a consequência que o utilizador não adivinha |
+| **Instrução fora da app** | «Liga-o em Definições → Acessibilidade → Cachalote» | o utilizador não sai do sítio sem isso |
+| **Rótulo de controlo** | «Apagar», «Ver o que ele pensou» | o texto **é** a affordance |
+
+Esta regra não é uma opinião de estilo: `tools/i18n-check.sh` verifica-a (item 4) e falha o build
+quando aparece «toca em «…»», «toca sem largar», «desliza para…». Se a mensagem de erro te bloquear,
+a resposta é tornar a acção visível — não reescrever a legenda.
+
+**As três pessoas que abrem o mesmo ecrã** (e que a regra serve): quem usa (**UX** — não tem de
+descobrir gestos escondidos), quem mantém o código (**DX** — a acção está onde se lê o controlo) e o
+agente que o edita a seguir (**AX** — a intenção está no código e no teste, não na memória de alguém).
+
 ## Components
 
 ### Botões (Buttons)

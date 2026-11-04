@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Download
@@ -749,13 +750,6 @@ fun ListaDeConversas(
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     )
-                } else {
-                    Text(
-                        stringResource(R.string.conversa_toque_longo),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
-                    )
                 }
                 LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     items(filtradas, key = { it.id }) { c ->
@@ -781,11 +775,47 @@ fun ListaDeConversas(
     }
 }
 
-/** Uma linha da lista: iniciais, título, prévia, quando e o estado — com o realce da activa. */
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * Uma linha da lista: iniciais, título, prévia, quando e o estado — com o realce da activa.
+ *
+ * **Apagar** é um deslize para a esquerda que descobre um fundo vermelho com o caixote: a acção
+ * aparece no gesto, não numa legenda. Antes havia um «Toca sem largar numa conversa para a apagar»
+ * por cima da lista — texto que só existia para explicar a disposição (e que ninguém lê duas vezes).
+ * O toque longo continua a funcionar (é o gesto que já estava na memória de quem usa a app) e os dois
+ * caminhos vão dar ao **mesmo** diálogo de confirmação, em `MainActivity`.
+ */
+@OptIn(ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit, onApagar: (String) -> Unit = {}) {
     val destaque = MaterialTheme.colorScheme.primaryContainer
+    val deslizar = androidx.compose.material3.rememberSwipeToDismissBoxState()
+    // Volta ao lugar assim que dispara: quem apaga confirma no diálogo, não fica com a linha
+    // pendurada à espera. Sem este `reset` a lista ficava com um buraco até ao `recompose`.
+    androidx.compose.runtime.LaunchedEffect(deslizar.currentValue) {
+        if (deslizar.currentValue != androidx.compose.material3.SwipeToDismissBoxValue.Settled) {
+            onApagar(c.id)
+            deslizar.reset()
+        }
+    }
+    androidx.compose.material3.SwipeToDismissBox(
+        state = deslizar,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.apagar),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        },
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -793,8 +823,12 @@ private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit, onApagar
                 onClick = { onAbrir(c.id) },
                 onLongClick = { onApagar(c.id) },
             )
+            // **Opaco**, nunca transparente: esta linha é o *conteúdo* do `SwipeToDismissBox` e o
+            // fundo vermelho do deslize vive por trás dela. Transparente, a lista inteira ficava
+            // vermelha (visto no S10+ a 2026-11-04 — todas as linhas, não só a que se arrastava).
             .background(
-                if (c.activa) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
+                if (c.activa) MaterialTheme.colorScheme.surfaceContainerHigh
+                else MaterialTheme.colorScheme.surface,
             )
             // A barra de acento da linha activa, como a linha seleccionada do WhatsApp.
             .drawBehind {
@@ -853,6 +887,7 @@ private fun LinhaDeConversa(c: ItemConversa, onAbrir: (String) -> Unit, onApagar
                 c.activa -> Chip(stringResource(R.string.sessao_estado_activa), cor = MaterialTheme.colorScheme.primaryContainer)
             }
         }
+    }
     }
 }
 

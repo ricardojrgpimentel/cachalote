@@ -104,13 +104,12 @@
     <string name="ferramenta_a_correr">a correr</string>
     <string name="ferramenta_concluida">concluída</string>
     <string name="ferramenta_falhada">falhada</string>
-    <string name="fila_dica">Escreve uma tarefa e toca em «Juntar à fila» — o agente corre-as uma a seguir à outra.</string>
     <string name="fila_falhada">falhada</string>
     <string name="fila_feita">feita</string>
     <string name="fila_pendente">pendente</string>
     <string name="fila_quantas">%1$d na fila</string>
     <string name="fila_remover">Remover esta tarefa da fila</string>
-    <string name="fila_texto">Escreve uma tarefa e toca em «Juntar à fila»: o agente corre-as uma a seguir à outra e avisa-te no fim de cada uma. Se precisar de autorização, fica à espera — e avisa-te.</string>
+    <string name="fila_texto">As tarefas correm uma a seguir à outra; o agente avisa-te no fim de cada uma. Se precisar de autorização, fica à espera — e avisa-te.</string>
     <string name="fila_titulo">Fila de tarefas</string>
     <string name="fila_vazia">fila vazia</string>
     <string name="fotograma_desc">fotograma do ecrã virtual</string>
@@ -130,7 +129,6 @@
     <string name="kernel_pronto">kernel pronto (%1$d ficheiros)</string>
     <string name="kernel_texto">Sem asset na APK, a app vai buscar o kernel a este URL e verifica o sha256. Vazio = usa o URL gravado no build. Serve para hospedagem própria.</string>
     <string name="kernel_titulo">Kernel por download (modo embutido)</string>
-    <string name="legenda_sessoes">✕ fecha a sessão activa · toca numa linha para retomar</string>
     <string name="licenca_url">Página do projecto</string>
     <string name="licencas_texto">O Cachalote é MIT. Dentro desta app viajam bibliotecas com as suas próprias licenças: aqui estão os textos integrais, como elas pedem.</string>
     <string name="licenca_copiar">copiar</string>
@@ -199,7 +197,7 @@
     <string name="resumo_consumo">Consumo e sessão</string>
     <string name="resumo_diagnostico">Diagnóstico</string>
     <string name="resumo_embutido">No modo embutido não há daemon para diagnosticar: o motor corre dentro da app e o sandbox do Android é o limite.</string>
-    <string name="resumo_nao_verifiquei">ainda não verifiquei — toca em Verificar</string>
+    <string name="resumo_nao_verifiquei">ainda não verificado</string>
     <string name="resumo_por_fazer">%1$d por fazer</string>
     <string name="resumo_resultado">%1$d problema(s) · %2$d aviso(s) · %3$s</string>
     <string name="resumo_sem_numeros">sem números ainda — o motor só os manda depois de um turno</string>
@@ -267,7 +265,7 @@
     <string name="vscreen_registo_nota">Eventos injectados sem foco de toque no ecrã físico principal.</string>
     <string name="vscreen_render">render local</string>
     <string name="vscreen_rodape">display %1$s · %2$s · %3$d KB · RGBA_8888</string>
-    <string name="vscreen_sem_ecra">o ecrã virtual não está a correr — toca em «Iniciar»</string>
+    <string name="vscreen_sem_ecra">o ecrã virtual não está a correr</string>
     <string name="vscreen_sem_fotograma">ainda sem fotograma — põe uma app neste display com bash: am start --display %1$d -n &lt;pkg&gt;/&lt;activity&gt;</string>
     <string name="vscreen_texto">Um segundo ecrã onde o agente trabalha sem mexer no que tens à frente. Vive dentro desta app: se ela for fechada, o ecrã virtual desaparece.</string>
     <string name="vscreen_titulo">Ecrã virtual</string>
@@ -400,7 +398,7 @@
     <string name="token_obtido_n">obtido (%1$d caracteres)</string>
     <string name="token_por_obter">(por obter)</string>
     <string name="token_rodado">%1$s — rodado</string>
-    <string name="token_toca_obter">(toca em Obter token)</string>
+    <string name="token_toca_obter">(sem token)</string>
     <string name="contexto">contexto: %1$s</string>
     <string name="nao_consegui_abrir_destino">não consegui abrir o destino</string>
     <string name="nao_consegui_ler_ficheiro">não consegui ler o ficheiro</string>
@@ -409,7 +407,7 @@
     <string name="notif_canal_desc">Mantém a ligação ao motor enquanto o agente trabalha</string>
     <string name="notif_texto_servico">O agente pode continuar a trabalhar com o ecrã apagado</string>
     <string name="notif_titulo_servico">Cachalote ligado ao motor</string>
-    <string name="sem_dados_atualizar">(sem dados — toca em Atualizar)</string>
+    <string name="sem_dados_atualizar">(sem dados)</string>
     <string name="sem_kernel">sem kernel: nem embutido nem URL de download (define em Ajustes → Motor)</string>
     <string name="shizuku_a_arrancar">a arrancar o daemon via Shizuku…</string>
     <string name="shizuku_activo">daemon activo via Shizuku (%1$s…)</string>
@@ -423,7 +421,7 @@
     <string name="cap_elemento_nao_clicavel">encontrei o elemento mas ele não aceita cliques</string>
     <string name="cap_elemento_nao_encontrado">não encontrei nenhum elemento com esse texto/descrição</string>
     <string name="cap_sem_perm_notif">a app não tem permissão de notificações</string>
-    <string name="web_sem_motor">O motor web não está a correr. Toca em «Ligar web» para arrancar a interface completa do DSH aqui dentro.</string>
+    <string name="web_sem_motor">O motor web não está a correr. «Ligar web» arranca a interface completa do DSH aqui dentro.</string>
 
     <plurals name="mcp_gravados_n">
         <item quantity="one">gravado: %d servidor</item>
@@ -464,7 +462,6 @@
     <string name="conversa_buscar_limpar">limpar a busca</string>
     <string name="conversa_contagem_filtro">%1$d de %2$d conversas</string>
     <string name="conversa_sem_resultado">nenhuma conversa com «%1$s»</string>
-    <string name="conversa_toque_longo">Toca sem largar numa conversa para a apagar</string>
     <string name="fechar_sessao_menu">Fechar a sessão</string>
     <string name="menu_conversa">Mais opções</string>
     <string name="pensamento">Pensamento</string>

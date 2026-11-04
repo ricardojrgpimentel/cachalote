@@ -8,7 +8,10 @@
 #      `values-pt-rPT/strings.xml` são iguais — uma tradução em falta passa a falhar aqui, em vez
 #      de aparecer silenciosamente em inglês no telefone;
 #   2. todas as `R.string.<chave>` usadas no Kotlin existem no ficheiro de omissão;
-#   3. nenhum texto em pt-PT tem formas brasileiras (tela/arquivo/celular/carregando/você/…).
+#   3. nenhum texto em pt-PT tem formas brasileiras (tela/arquivo/celular/carregando/você/…);
+#   4. **nenhuma legenda explica a disposição** — «toca em «X»», «toca sem largar», «desliza»… Uma
+#      legenda dessas existe porque a acção não se vê: o que está mal é o ecrã, não a frase. Este
+#      teste é a forma de a regra não se perder quando o próximo a mexer no código não a souber.
 #
 # Porque existe: o `values-pt-rPT` só se aplica em aparelhos em pt-PT; uma chave em falta **não dá
 # erro** — cai no inglês. Só uma comparação dos ficheiros apanha isso.
@@ -62,6 +65,21 @@ if [ -n "$achados" ]; then
   falhas=$((falhas + 1))
 else
   echo "   OK  nenhuma forma brasileira"
+fi
+
+echo "== 4. nenhuma legenda explica a disposição =="
+# Só padrões que apontam para **dentro** do ecrã. «Liga-o em Definições → Acessibilidade» fica de
+# fora de propósito: é noutra app, e sem isso o utilizador não sai do sítio.
+explicativas='toca em «|toque em «|toca sem largar|toque sem largar|desliza para|arrasta para|mantém premido'
+achados4=""
+for f in "$EN" "$PT"; do
+  if grep -nE "$explicativas" "$f"; then achados4="$achados4 $(basename "$(dirname "$f")")"; fi
+done
+if [ -n "$achados4" ]; then
+  echo "   [!] legendas a explicar a disposição:$achados4"
+  falhas=$((falhas + 1))
+else
+  echo "   OK  nenhuma (a acção tem de se ver no próprio controlo)"
 fi
 
 echo
