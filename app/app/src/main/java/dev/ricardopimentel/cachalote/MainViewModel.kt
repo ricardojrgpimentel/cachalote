@@ -307,6 +307,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // `saveState()` gravava um mapa vazio por cima do que estava no ficheiro, e a lista de
             // conversas ficava só com hexadecimais (apanhado em 2026-10-15, ao pôr a lista).
             sessionTitles = snap.titles
+            // O medidor de contexto do cabeçalho sobrevive ao arranque: sem isto ficava a faltar
+            // até ao turno seguinte (o motor só o manda durante um turno).
+            uso = snap.uso
             snapModel = snap.model
             snapEffort = snap.effort
             loaded = true
@@ -1200,7 +1203,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val sid = params.optString("sessionId")
         if (sessionId != null && sid.isNotEmpty() && sid != sessionId) return
         val update = params.optJSONObject("update") ?: return
-        Uso.de(update)?.let { uso = it; return }
+        // O consumo de contexto chega em cada turno. Grava-se logo: sem isto o medidor do cabeçalho
+        // voltava vazio em cada arranque (só havia `saveState()` nos apêndices do transcript, que
+        // acontecem antes de o número chegar).
+        Uso.de(update)?.let { uso = it; saveState(); return }
         when (update.optString("sessionUpdate")) {
             "agent_message_chunk" -> append("assistant", textOf(update))
             "agent_thought_chunk" -> append("thought", textOf(update))
@@ -1801,7 +1807,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun saveState() {
         val model = configOptions.firstOrNull { it.id == "model" }?.currentValue
         val effort = configOptions.firstOrNull { it.id == "reasoning_effort" }?.currentValue
-        store.save(sessionId, controller.workspace, model, effort, transcript, sessionTitles)
+        store.save(sessionId, controller.workspace, model, effort, transcript, sessionTitles, uso)
     }
 
     private fun append(role: String, chunk: String) {

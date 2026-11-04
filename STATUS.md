@@ -3347,3 +3347,47 @@ correcção e a app só aceita actualizações da mesma chave.
 **Nota:** a primeira corrida da CI deste commit ficou vermelha sem culpa do código — 65 dos 88 testes
 morreram a **descarregar** os jars do Robolectric (`MavenArtifactFetcher … IOException`). Repetida,
 passou. Fica registado porque é o tipo de vermelho que se confunde com uma regressão.
+
+## 88. O cabeçalho da conversa: de duas linhas de texto corrido para um cabeçalho que se lê (2026-11-04)
+
+O autor, a olhar para uma conversa aberta: *«vê como fica ali o header, cheio de texto todo ao monte,
+temos de melhorar aquilo visualmente»*. Tinha razão — por cima da conversa havia **duas** linhas em
+monospace, e o contexto aparecia nas duas.
+
+### 88.1 O que estava lá
+
+| Linha | Conteúdo |
+|---|---|
+| 1 | `root · deepseek-official: DeepSeek-V4-Flash · contexto: 8 772 / 1 000 000 · 1%` (a 360 dp acabava em «co…») |
+| 2 | `2 ferramentas · 0 a correr · contexto: … · turno 2 · 3 passos · 12 s` (partia-se a meio de um número) |
+
+Eram 90 dp de metadados antes de a primeira mensagem aparecer, com três problemas: o **fornecedor**
+(`deepseek-official:`) não diz nada a quem escolheu o modelo; o **contexto** estava duplicado; e a
+contagem de **ferramentas** (da sessão) estava ao lado dos números do **turno** — dois âmbitos na
+mesma frase.
+
+### 88.2 O que ficou
+
+| Onde | Mudança |
+|---|---|
+| [`Modelo.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/Modelo.kt) | `Modelo.curto()`: corta o fornecedor e a marca (`deepseek-official: DeepSeek-V4-Flash` → `V4-Flash`) e põe maiúsculas num rótulo que venha todo em minúsculas (`v4-flash` → `V4-Flash`). Lógica pura, com testes. |
+| [`MainActivity.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt) | 2.ª linha do cabeçalho: **chip do modo** + modelo curto + **contexto como medidor** (`ctx 1%` e uma barra de 34 dp). Uma linha, com elipse. |
+| idem | Telemetria: só os números do turno; «N ferramentas» **só enquanto correm** (deixa de misturar sessão e turno); `maxLines = 1` com elipse. |
+| [`Uso.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/Uso.kt) + [`SessionStore.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/SessionStore.kt) | o consumo de contexto passa a ficar no instantâneo da sessão (`usoUsado`/`usoLimite`) e volta no arranque — antes o medidor só existia depois de um turno, e reabrir a app deixava-o vazio. |
+| [`FalhasDeLigacaoTest`](../app/app/src/test/java/dev/ricardopimentel/cachalote/FalhasDeLigacaoTest.kt) / novo `ModeloTest` | 3 testes novos para o nome curto do modelo. |
+
+### 88.3 A prova (S10+, no aparelho)
+
+| Verificação | Resultado |
+|---|---|
+| Antes | [79](design/revisao/79-cabecalho-conversa-antes.png) — duas linhas, contexto duplicado |
+| Depois | [80](design/revisao/80-cabecalho-conversa-depois.png) — `← Olá` / `[ROOT] V4-Flash ctx 1% ▬` / `turno 5 · 1 passo · 1,8 s` |
+| A **360 dp** (`wm size 1080x1920`, densidade 480) | [81](design/revisao/81-cabecalho-conversa-360dp.png) — cabe numa linha, sem embrulhar nem cortar o modelo |
+| Medidor depois de reiniciar a app | `ctx 1%` continua lá (o instantâneo guarda `usoUsado: 8875`, `usoLimite: 1000000`) |
+| Testes de JVM | **91**, 0 falhas |
+| `i18n-check` | 549 chaves nos dois idiomas, 500 usadas |
+
+**Nota de método:** para medir a 360 dp o tamanho/ densidade do ecrã foram mudados com `wm size` /
+`wm density` e **repostos** (`wm size reset` → 1440x3040, `wm density reset` → 560). E a limpeza dos
+avisos de acessibilidade que os meus reinstalls provocaram foi feita no instantâneo da sessão (4
+linhas de sistema), com a app parada.

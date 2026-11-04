@@ -3,6 +3,23 @@
 Formato: as versões são `MAJOR.MINOR.PATCH`; cada entrada diz o que mudou **para quem usa** e
 aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
+## Não publicado
+
+### O cabeçalho da conversa deixou de ser uma parede de texto
+
+- Antes, por cima da conversa, liam-se **duas** linhas densas em monospace e a segunda repetia o
+  contexto: `root · deepseek-official: DeepSeek-V4-Flash · contexto: 8 772 / 1 000 000 · 1%` e, logo
+  abaixo, `2 ferramentas · 0 a correr · contexto: … · turno 2 · 3 passos · 12 s`. A 360 dp a primeira
+  acabava em «co…» e a segunda partia-se a meio de um número (§88).
+- Agora o cabeçalho diz o mesmo em pedaços que se leem de relance: o **chip do modo** (`ROOT`), o
+  **modelo curto** (`V4-Flash`, sem o fornecedor nem a marca — o nome completo continua no menu) e o
+  **contexto como medidor** (`ctx 1%` + barra fina), em vez de dois números grandes.
+- A linha de telemetria ficou só com os números do turno (`turno 5 · 1 passo · 1,8 s`), numa linha,
+  com elipse em vez de embrulho; as ferramentas só aparecem enquanto correm (antes misturava a
+  contagem da sessão com os números do turno).
+- O medidor de contexto passou a **sobreviver ao arranque** (fica no instantâneo da sessão): antes só
+  aparecia depois de um turno, e a app reaberta ficava sem ele.
+
 ## 0.3.1 — 2026-11-04
 
 A versão em que o cabeçalho deixa de piscar «ligado/desligado» — e em que se percebeu porquê.

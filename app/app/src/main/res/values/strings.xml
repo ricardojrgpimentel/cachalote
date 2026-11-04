@@ -227,6 +227,7 @@
     <string name="sobre_detalhe">identity, version and the security model</string>
     <string name="sobre_texto">Cachalote — the DeepSeek Harness running on the phone. With root, Android does not enforce the DSH sandbox: what stops a command outside the workspace is the approval you give, and everything is logged.</string>
     <string name="telemetria_ferramentas">%1$d tool calls · %2$d running</string>
+    <string name="telemetria_ferramentas_paradas">%1$d tools</string>
     <string name="telemetria_tempo">%1$d s</string>
     <string name="telemetria_turno_label">turn %1$d</string>
     <string name="resumo_turnos">Turns and time</string>
@@ -428,6 +429,7 @@
         <item quantity="one">saved: %d server</item>
         <item quantity="other">saved: %d servers</item>
     </plurals>
+    <string name="contexto_curto">ctx %1$d%%</string>
     <string name="contexto_com_limite_simples">context: %1$s</string>
     <string name="fila_e_mais">and %1$d more…</string>
     <string name="autorizacao_fora_da_area">Outside the allowed area: %1$s</string>

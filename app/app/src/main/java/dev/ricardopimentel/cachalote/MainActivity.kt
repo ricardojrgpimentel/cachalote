@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -2170,8 +2171,7 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
         else -> "on-device"
     }
     var menuAberto by remember { mutableStateOf(false) }
-    val modelo = vm.configOptions.firstOrNull { it.id == "model" }?.currentLabel
-    val tecnica = listOfNotNull(modo, modelo, vm.uso?.texto(ctx)).joinToString("  \u00B7  ")
+    val modelo = Modelo.curto(vm.configOptions.firstOrNull { it.id == "model" }?.currentLabel)
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 6.dp, top = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2191,14 +2191,53 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                tecnica,
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = Mono,
-                color = MaterialTheme.colorScheme.secondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // Segunda linha: o «quem responde», em pedaços que se leem de relance — nunca uma frase
+            // corrida. Antes era `root · deepseek-official: DeepSeek-V4-Flash · contexto: 8 772 /
+            // 1 000 000 · 1%`, que enchia a linha e acabava em «co…»; e o contexto voltava a
+            // aparecer na linha de telemetria, logo abaixo (duas vezes o mesmo número).
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Chip(modo)
+                if (modelo.isNotBlank()) {
+                    Text(
+                        modelo,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                // O contexto é um medidor, não um número de relatório: uma barra fina e a
+                // percentagem. Os números exatos ficam no Resumo.
+                vm.uso?.takeIf { it.limite > 0 }?.let { uso ->
+                    Text(
+                        stringResource(R.string.contexto_curto, uso.percentagem),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = Mono,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(34.dp)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth((uso.percentagem / 100f).coerceIn(0f, 1f))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                        )
+                    }
+                }
+            }
         }
         if (vm.reconnecting) {
             Text(
@@ -2402,15 +2441,24 @@ private fun EstadoDeTrabalho(vm: MainViewModel) {
 @Composable
 private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val uso = vm.uso
     val ultimo = vm.ultimoTurno
-    if (!vm.busy && uso == null && ultimo == null) return
-
     val ferramentas = vm.transcript.count { it.role == "tool" }
+    // O **contexto** saiu daqui: passou a ser um medidor no cabeçalho (barra + percentagem). Nesta
+    // linha ele aparecia duas vezes seguidas do mesmo número, e era metade do texto que se via
+    // antes da conversa começar.
+    if (!vm.busy && ultimo == null && ferramentas == 0) return
+
     val aCorrer = vm.transcript.count { it.role == "tool" && !it.done }
-    val partes = ArrayList<String>(4)
-    if (ferramentas > 0) partes.add(stringResource(R.string.telemetria_ferramentas, ferramentas, aCorrer))
-    uso?.let { partes.add(it.texto(ctx)) }
+    val partes = ArrayList<String>(3)
+    // As ferramentas só entram **enquanto correm**: acabado o turno, o rótulo do turno já diz os
+    // passos, e «2 ferramentas · turno 3 · 1 passo» punha um número da sessão ao lado de números do
+    // turno — dois âmbitos na mesma linha.
+    if (ferramentas > 0 && (vm.busy || aCorrer > 0)) {
+        partes.add(
+            if (aCorrer > 0) stringResource(R.string.telemetria_ferramentas, ferramentas, aCorrer)
+            else stringResource(R.string.telemetria_ferramentas_paradas, ferramentas),
+        )
+    }
     if (vm.busy) partes.add(stringResource(R.string.telemetria_tempo, segundos))
     // Depois de o turno acabar, os números do **turno que acabou** (passos, duração): o motor
     // não os manda pelo protocolo, vêm do registo da sessão (ver Turno e STATUS §82).
@@ -2427,6 +2475,10 @@ private fun LinhaDeTelemetria(vm: MainViewModel, segundos: Long) {
             style = MaterialTheme.typography.labelSmall,
             fontFamily = Mono,
             color = MaterialTheme.colorScheme.secondary,
+            // Uma linha, sempre: o que não couber desvanece no fim em vez de empurrar a conversa
+            // para baixo e partir o «·» a meio de um número (era o que se via a 360 dp).
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
     }

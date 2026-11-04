@@ -31,6 +31,12 @@ class SessionStore(private val context: Context) {
         val lines: List<ChatLine>,
         /** Título por sessão (o do motor, se vier; senão o que derivamos do primeiro prompt). */
         val titles: Map<String, String> = emptyMap(),
+        /**
+         * Consumo de contexto do último turno. Guarda-se para o medidor do cabeçalho não
+         * desaparecer a cada arranque (o motor só o manda durante um turno, e depois de
+         * reiniciar a app ficava a faltar até haver outro).
+         */
+        val uso: Uso? = null,
     )
 
     fun save(
@@ -40,6 +46,7 @@ class SessionStore(private val context: Context) {
         effort: String?,
         lines: List<ChatLine>,
         titles: Map<String, String> = emptyMap(),
+        uso: Uso? = null,
     ) {
         val file = ficheiroDoModo(modoAtual)
         val arr = JSONArray()
@@ -59,6 +66,8 @@ class SessionStore(private val context: Context) {
             .put("effort", effort ?: JSONObject.NULL)
             .put("lines", arr)
             .put("titles", JSONObject(titles as Map<*, *>))
+            .put("usoUsado", uso?.usado ?: JSONObject.NULL)
+            .put("usoLimite", uso?.limite ?: JSONObject.NULL)
         runCatching { file.writeText(obj.toString()) }
     }
 
@@ -91,6 +100,8 @@ class SessionStore(private val context: Context) {
                 effort = obj.optString("effort").takeIf { it.isNotBlank() && it != "null" },
                 lines = lines,
                 titles = titles,
+                uso = obj.takeIf { it.has("usoUsado") && !it.isNull("usoUsado") && it.has("usoLimite") && !it.isNull("usoLimite") }
+                    ?.let { Uso(it.optInt("usoUsado", 0), it.optInt("usoLimite", 0)) },
             )
         }.getOrNull()
     }
