@@ -19,6 +19,8 @@ aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
   contagem da sessão com os números do turno).
 - O medidor de contexto passou a **sobreviver ao arranque** (fica no instantâneo da sessão): antes só
   aparecia depois de um turno, e a app reaberta ficava sem ele.
+- O **cabeçalho da lista** de conversas usa o mesmo medidor (`ctx 1%` + barra): era a última linha
+  com os dois números grandes, e assim os dois cabeçalhos dizem a mesma coisa da mesma maneira.
 
 ## 0.3.1 — 2026-11-04
 

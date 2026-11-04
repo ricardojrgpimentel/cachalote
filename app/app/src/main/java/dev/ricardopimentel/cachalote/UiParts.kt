@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -110,14 +111,46 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun ConsumoDeContexto(uso: Uso?) {
-    if (uso == null) return
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    Text(
-        uso.texto(ctx),
-        style = MaterialTheme.typography.bodySmall,
-        fontFamily = Mono,
-        color = MaterialTheme.colorScheme.secondary,
-    )
+    MedidorDeContexto(uso, largura = 48.dp)
+}
+
+/**
+ * O consumo de contexto como **medidor**: `ctx 1%` e uma barra fina — não dois números grandes.
+ *
+ * Vive aqui porque é usado nos dois cabeçalhos (a lista de conversas e a conversa aberta) e, antes,
+ * cada um deles inventava a sua forma: a lista mostrava `contexto: 8 875 / 1 000 000 · 1%` e a
+ * conversa repetia-o na linha técnica e outra vez na telemetria. Os números exatos ficam no Resumo,
+ * que é onde alguém os vai ler (S10+, 2026-11-04).
+ */
+@Composable
+fun MedidorDeContexto(uso: Uso?, largura: androidx.compose.ui.unit.Dp = 34.dp) {
+    if (uso == null || uso.limite <= 0) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            stringResource(R.string.contexto_curto, uso.percentagem),
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = Mono,
+            color = MaterialTheme.colorScheme.secondary,
+            maxLines = 1,
+        )
+        Box(
+            modifier = Modifier
+                .width(largura)
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth((uso.percentagem / 100f).coerceIn(0f, 1f))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+            )
+        }
+    }
 }
 
 /**

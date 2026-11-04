@@ -417,7 +417,10 @@ class ConsumoTest {
     @Test
     fun mostra_o_consumo_quando_o_motor_o_diz() {
         compose.setContent { ConsumoDeContexto(Uso(120000, 1000000)) }
-        compose.onNodeWithText("contexto: 120\u202F000 / 1\u202F000\u202F000 · 12%").assertIsDisplayed()
+        // Desde 2026-11-04 o consumo é um **medidor** («ctx 12%» + barra), não dois números grandes:
+        // o texto antigo («contexto: 120 000 / 1 000 000 · 12%») enchia a linha do cabeçalho. Os
+        // números exatos vivem no Resumo.
+        compose.onNodeWithText("ctx 12%").assertIsDisplayed()
     }
 
     @Test

@@ -3374,6 +3374,7 @@ mesma frase.
 | [`MainActivity.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/MainActivity.kt) | 2.ª linha do cabeçalho: **chip do modo** + modelo curto + **contexto como medidor** (`ctx 1%` e uma barra de 34 dp). Uma linha, com elipse. |
 | idem | Telemetria: só os números do turno; «N ferramentas» **só enquanto correm** (deixa de misturar sessão e turno); `maxLines = 1` com elipse. |
 | [`Uso.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/Uso.kt) + [`SessionStore.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/SessionStore.kt) | o consumo de contexto passa a ficar no instantâneo da sessão (`usoUsado`/`usoLimite`) e volta no arranque — antes o medidor só existia depois de um turno, e reabrir a app deixava-o vazio. |
+| [`UiParts.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/UiParts.kt) | `MedidorDeContexto`, a peça partilhada: o **cabeçalho da lista** dizia `contexto: 8 875 / 1 000 000 · 1%` e passou a `ctx 1%` + barra, igual ao da conversa. |
 | [`FalhasDeLigacaoTest`](../app/app/src/test/java/dev/ricardopimentel/cachalote/FalhasDeLigacaoTest.kt) / novo `ModeloTest` | 3 testes novos para o nome curto do modelo. |
 
 ### 88.3 A prova (S10+, no aparelho)
@@ -3387,7 +3388,18 @@ mesma frase.
 | Testes de JVM | **91**, 0 falhas |
 | `i18n-check` | 549 chaves nos dois idiomas, 500 usadas |
 
-**Nota de método:** para medir a 360 dp o tamanho/ densidade do ecrã foram mudados com `wm size` /
-`wm density` e **repostos** (`wm size reset` → 1440x3040, `wm density reset` → 560). E a limpeza dos
-avisos de acessibilidade que os meus reinstalls provocaram foi feita no instantâneo da sessão (4
-linhas de sistema), com a app parada.
+### 88.4 Os dois estragos que fiz pelo caminho (e como ficaram)
+
+O autor notou-os antes de mim, e a lição é dele: *«deixaste o telemóvel com um tamanho enorme agora,
+mudaste o dpi?»*. Tinha mudado.
+
+| Estrago | Causa | Correcção |
+|---|---|---|
+| Ecrã com tudo maior | para medir a 360 dp usei `wm size 1080x1920` + `wm density 480` e repus com `wm size reset` + `wm density reset` — mas o `reset` **não** volta ao valor que o dono tinha: volta à densidade **física** do painel (560), e o telefone estava a **504 dpi**. O `dumpsys` de antes do teste é que guardava a prova (`sw457dp w457dp h965dp 504dpi`). | `wm density 504`; confirmado no `dumpsys` outra vez com `sw457dp w457dp h965dp 504dpi` |
+| «root: negado» e «daemon instalado ✗» em Ajustes → Motor, com a faixa vermelha a pedir para instalar o motor | reinstalar a app deu-lhe um **uid novo** (10187 → 10188) e o Magisk guarda as políticas por uid; e eu tinha instalado com `install-app.sh --no-root`, que é exactamente o passo que pré-autoriza o uid novo. O motor continuava a responder porque a ligação TCP não precisa de root. | `magisk --sqlite "REPLACE INTO policies (uid,policy,…) VALUES (10188,2,0,1,1)"` (o que o `install-app.sh` faz), `Atualizar estado` → `root: concedido` e a faixa desapareceu |
+
+**Regra para a próxima:** antes de mexer em `wm`, ler `wm density` **e** guardar o valor; e depois de
+reinstalar a app, correr `install-app.sh` **sem** `--no-root` (ou repetir o `magisk --sqlite`).
+
+**Nota de método:** a limpeza dos avisos de acessibilidade que os reinstalls provocaram foi feita no
+instantâneo da sessão (4 linhas de sistema), com a app parada.

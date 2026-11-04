@@ -2212,31 +2212,9 @@ private fun CabecalhoDaConversa(vm: MainViewModel) {
                         modifier = Modifier.weight(1f, fill = false),
                     )
                 }
-                // O contexto é um medidor, não um número de relatório: uma barra fina e a
-                // percentagem. Os números exatos ficam no Resumo.
-                vm.uso?.takeIf { it.limite > 0 }?.let { uso ->
-                    Text(
-                        stringResource(R.string.contexto_curto, uso.percentagem),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = Mono,
-                        color = MaterialTheme.colorScheme.secondary,
-                        maxLines = 1,
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(34.dp)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth((uso.percentagem / 100f).coerceIn(0f, 1f))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                        )
-                    }
-                }
+                // O contexto é um medidor, não um número de relatório (peça partilhada com o
+                // cabeçalho da lista: [`MedidorDeContexto`]).
+                MedidorDeContexto(vm.uso)
             }
         }
         if (vm.reconnecting) {
