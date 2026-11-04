@@ -5,6 +5,15 @@ aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
 ## Não publicado
 
+### Testes end-to-end da app, no telefone
+
+- **`tools/app-e2e-test.sh`**: quatro percursos a sério contra o telefone — navegação (abas, as
+  oito secções dos Ajustes e a busca), conversa (turno real, telemetria, lista, fila, reinício da
+  app e apagar), aprovação (recusar não corre, autorizar corre e fica no registo) e motor
+  (reiniciar, desligar e ligar pela UI). `--list` mostra o que cada um precisa.
+- Os cenários que precisam de chave são saltados sem ela, o ensaio só apaga as conversas que
+  criou, e um trap volta a ligar o motor se o teste morrer a meio (§91).
+
 ### Menos legendas, mais acções à vista
 
 - **Apagar uma conversa** passou a ser um **deslize para a esquerda** que descobre um fundo vermelho

@@ -110,6 +110,29 @@ Testes repetíveis (protegem a tua chave: guardam e repõem o `.env`):
 ./tools/plugin-schema-test.sh     # sem telemóvel: o plugin do kernel carrega? (regressão)
 ```
 
+### Testes end-to-end, no telefone ligado por USB
+
+`tools/app-e2e-test.sh` corre quatro percursos de utilizador a sério, por `uiautomator` + `adb`:
+
+```sh
+./tools/app-e2e-test.sh --list            # os cenários e o que precisam
+./tools/app-e2e-test.sh                   # todos (uns 10–12 minutos)
+./tools/app-e2e-test.sh --only conversa   # um só; também aceita conversa,aprovacao
+./tools/app-e2e-test.sh --only navegacao,motor   # sem gastar tokens do modelo
+```
+
+| Cenário | O que prova | Precisa de |
+|---|---|---|
+| `navegacao` | arranque frio, as três abas, as oito secções dos Ajustes (ida e volta) e a busca | a app instalada e já configurada |
+| `conversa` | turno real, telemetria, prévia e contagem na lista, busca, fila, sobrevive a um force-stop e apaga-se | chave + rede |
+| `aprovacao` | a guarda de caminhos: recusar não cria o ficheiro, autorizar cria (as duas folhas) e fica no registo | chave + rede + root |
+| `motor` | reiniciar, desligar e ligar o motor pela UI, com a app a reconectar | root |
+
+Os cenários que precisam de chave são **saltados** (não falham) quando ela não existe. O ensaio
+tira uma fotografia às conversas antes e apaga só as que nasceram nele; não mexe na chave, no
+modo, nas capacidades nem no arranque com o telefone. O `force-stop` do arranque frio desliga o
+serviço de acessibilidade — a app avisa e tem o botão **Ligar** em Ajustes → Acessibilidade.
+
 O `plugin-schema-test.sh` existe por uma razão concreta: um `{}` sem `type` num schema de
 ferramenta faz o kernel recusar o plugin **inteiro** e o agente fica sem nenhuma ferramenta
 `android_*` — em silêncio, com um único `warning` no log. Apanha isso antes de chegar ao

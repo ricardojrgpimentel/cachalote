@@ -73,6 +73,12 @@ jobs:
             echo "bash -n $f"
             bash -n "$f"
           done
+
+      # Os cenários E2E só correm com um telefone ligado, mas o runner não pode rebentar já no
+      # `--list` (foi o que aconteceu com uma variável por definir): isso verifica-se sem aparelho.
+      - name: os cenários end-to-end listam-se sem telefone
+        run: ./tools/app-e2e-test.sh --list
+
       - name: node --check nos ficheiros JS
         run: |
           set -e

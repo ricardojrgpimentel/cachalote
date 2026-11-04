@@ -3494,3 +3494,65 @@ Um teste que nunca falhou não prova nada.
 **Limite assumido:** o teste cobre o menu dos Ajustes e o cartão do assistente. Não há forma honesta
 de o estender a todo o texto da app sem inventar uma convenção de nomes (um `titulo`/`detalhe` em cada
 par). Fica a regra no DESIGN.md e o teste onde o padrão já existe.
+
+---
+
+## 91. Testes end-to-end no telefone: quatro percursos, 72 verificações (2026-11-04)
+
+Os ensaios de dispositivo que existiam (`app-ui-test`, `app-capabilities-test`, `app-reconnect-test`)
+são bons a provar peças, mas nenhum percorria a app como um utilizador: abrir as oito secções dos
+Ajustes e voltar, procurar uma conversa, criar uma, mandar um turno, sair da app e voltar, apagar.
+Foi isso que ficou em [`tools/app-e2e-test.sh`](tools/app-e2e-test.sh), com os helpers de UI em
+[`tools/lib-e2e.sh`](tools/lib-e2e.sh).
+
+### 91.1 Os quatro cenários
+
+| Cenário | O que prova | Precisa de |
+|---|---|---|
+| `navegacao` | arranque frio, as três abas, as oito secções dos Ajustes (ida e volta) e a busca | app configurada |
+| `conversa` | turno real com marcador, telemetria, prévia/contagem na lista, busca, fila, sobreviver a um `force-stop` e apagar | chave + rede |
+| `aprovacao` | a guarda de caminhos: recusar não cria o ficheiro, autorizar cria (as duas folhas: caminho e sandbox) e o pedido fica no registo | chave + rede + root |
+| `motor` | reiniciar, desligar e ligar o motor pela UI, com a app a reconectar | root |
+
+O runner aceita `--list`, `--only nome[,nome]` e `--device SERIAL`; os cenários que precisam de
+chave são **saltados**, não falham, quando ela não existe. A UI é lida por `uiautomator` e as
+asserções são de texto/estado (não há coordenadas fixas), pelo que o ensaio não depende da resolução.
+
+### 91.2 A prova no S10+
+
+```
+./tools/app-e2e-test.sh
+== navegacao: 33 ok, 0 falhas, 0 saltados ==
+== conversa: 20 ok, 0 falhas, 0 saltados ==
+== aprovacao:  9 ok, 0 falhas, 0 saltados ==
+== motor:     10 ok, 0 falhas, 0 saltados ==
+== TOTAL: 72 ok, 0 falhas, 0 saltados ==
+```
+
+Corrida completa: ~11 minutos (a maior parte em três turnos reais e nas esperas do modelo). O
+telemóvel ficou com o daemon a correr, as 6 conversas que já tinha, e sem os ficheiros de teste em
+`/sdcard/Download`; o `git status` só tem os ficheiros desta ronda.
+
+### 91.3 O que os testes mexem — e como se limpam
+
+- Tiram uma fotografia das sessões antes e apagam, pelo daemon, só as que nasceram no ensaio
+  (`lib-device.sh`); uma conversa apagada pela UI não deixa lixo.
+- No `motor`, o `E2E_MOTOR_PARADO` é posto **antes** do toque em «Desligar» e um `trap` no runner
+  volta a ligar o motor mesmo que o ensaio morra a meio.
+- Não tocam na chave, no modo, nas capacidades nem no arranque com o telefone.
+- O `am force-stop` do arranque frio **desliga o serviço de acessibilidade** (é o Android); a app
+  avisa e tem o botão «Ligar». Fica dito no README do ensaio.
+
+### 91.4 Uma coisa que os testes apanharam
+
+Ao fechar uma conversa **nova**, a lista não se actualiza sozinha: `fecharConversa()` só muda a flag
+e a lista é recarregada pelo `LaunchedEffect(tab)` quando se troca de aba. O ensaio força a troca
+(é o que um utilizador faria) e continua verde; fica anotado como um arranjo de UI para uma próxima
+ronda, não como falha do ensaio.
+
+### 91.5 Custo e limites
+
+Os cenários `conversa` e `aprovacao` gastam turnos do modelo e podem demorar mais quando o agente
+insiste (na corrida de prova a aprovação pediu várias folhas depois de recusada). Para uma passagem
+sem tokens: `./tools/app-e2e-test.sh --only navegacao,motor`. Os textos procurados são pt-PT; noutra
+língua o ensaio precisa das strings equivalentes (como os restantes ensaios de dispositivo).
