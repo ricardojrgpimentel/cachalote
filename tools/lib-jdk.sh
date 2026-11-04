@@ -39,7 +39,7 @@ cachalote_exigir_jdk() {
   [ -n "$j" ] || return 0
   major="$(sed -n 's/.*JAVA_VERSION="\([0-9]*\).*/\1/p' "$j/release" 2>/dev/null | head -1)"
   if [ -n "$major" ] && [ "$major" -ge 24 ] 2>/dev/null; then
-    echo "ERRO: $j é JDK $major — o Kotlin do AGP não o suporta (falha com «IllegalArgumentException: $major…»)." >&2
+    echo "ERRO: $j é JDK ${major} — o Kotlin do AGP não o suporta (falha com «IllegalArgumentException: ${major}…»)." >&2
     echo "      Usa JDK 17-21: export JAVA_HOME=/caminho/para/jdk-21, ou põe um em .work/jdk21." >&2
     return 1
   fi
