@@ -67,6 +67,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val controller = DaemonController(app)
 
+    companion object {
+        /**
+         * Um laço de ligação por processo — não um por `ViewModel`.
+         *
+         * O daemon só aceita **um** cliente ACP de cada vez e expulsa o anterior quando entra
+         * outro ([`daemon/bridge.cjs`]). Com dois laços (duas instâncias da actividade, ou uma
+         * instância antiga que ninguém libertou) cada ligação expulsava a outra e a app passava a
+         * viver num ciclo de 1–2 s: `connected` a oscilar e o cabeçalho a piscar
+         * «ligado/desligado» (S10+, 2026-11-04 — 971 autenticações no log do daemon).
+         */
+        private val lacoDeLigacao = java.util.concurrent.atomic.AtomicBoolean(false)
+    }
+
+    /** Este ViewModel é o dono do laço (só ele o pode libertar em `onCleared`). */
+    private var donoDoLaco = false
+
+    /**
+     * Sessões que o motor já disse estarem **activas**. Enquanto um id estiver aqui, o laço não
+     * volta a mandar `session/resume` para ele: a resposta seria outra vez «already active» e, em
+     * vez de resolver, alimentava o ciclo acima. A conversa continua utilizável — o que o resume
+     * daria (modelo e esforço) é reposto do que está guardado.
+     */
+    private val sessoesActivas = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
     var daemonInfo by mutableStateOf("")   // preenchido no arranque; ver init()
     var rootOk by mutableStateOf<Boolean?>(null)
     /**
@@ -121,7 +145,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Última causa de falha de ligação e quantas vezes seguidas — ver o laço de reconexão. */
     private var erroDeLigacao by mutableStateOf("")
-    private var falhasDeLigacao = 0
+    /**
+     * Falhas de ligação seguidas. É `mutableStateOf` porque o **cabeçalho** passou a ler isto
+     * para só dizer «desligado» depois de a ligação estar mesmo perdida (ver `Header`): com um
+     * `Int` simples, a etiqueta não voltava a compor e ficava presa no primeiro valor.
+     */
+    var falhasDeLigacao by mutableStateOf(0)
+        private set
     fun pedirSecao(secao: String) { pedidoDeSecao = secao }
     var reconnecting by mutableStateOf(false)
     var pendingImage by mutableStateOf<PendingImage?>(null)
@@ -292,6 +322,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         //     activa, que é exactamente o que queríamos. Era a origem das centenas de
         //     `session is already active` no log do motor.
         viewModelScope.launch {
+            // **Um laço por processo, não um por ViewModel.** O `singleTask` do manifesto impede
+            // duas instâncias da actividade, mas isto é a rede de segurança: com dois laços, cada
+            // ligação nova do daemon expulsava a anterior («a substituir o cliente ACP anterior»,
+            // daemon/bridge.cjs) e as duas pontas ficavam a expulsar-se de 1–2 em 1–2 s — a
+            // etiqueta do cabeçalho a piscar «ligado/desligado». Visto no S10+ em 2026-11-04,
+            // com duas MainActivity na mesma tarefa e 971 autenticações no log do daemon.
+            if (!lacoDeLigacao.compareAndSet(false, true)) return@launch
+            donoDoLaco = true
             var waitMs = 1_000L
             while (true) {
                 // Sem o assistente feito não há nada a que ligar — e tentar ligar **antes** de a
@@ -328,11 +366,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     val sid = sessionId
                     val cwd = controller.workspace
                     if (!sid.isNullOrBlank() && cwd.isNotBlank()) {
-                        try {
+                        // Já sabemos que o motor tem esta sessão activa: **não se volta a pedir**.
+                        // Um `session/resume` recusado não é inofensivo: o daemon trata a ligação
+                        // seguinte como um cliente novo e expulsa a anterior (bridge.cjs), a app vê
+                        // `connected = false`, reconecta, volta a pedir… — o ciclo de 1–2 s que
+                        // piscava «ligado/desligado» no cabeçalho (S10+, 2026-11-04). Os chips
+                        // vêm do que está guardado, que é o que o resume devolveria de qualquer
+                        // maneira. Esquecer o id volta a permitir o resume quando ele mudar.
+                        if (sid in sessoesActivas) {
+                            restoreChips(snapModel, snapEffort)
+                        } else try {
                             applyConfigOptions(controller.resumeSession(sid, cwd))
                         } catch (t: Throwable) {
                             when {
-                                isSessionAlreadyActive(t) -> restoreChips(snapModel, snapEffort)
+                                isSessionAlreadyActive(t) -> {
+                                    sessoesActivas.add(sid)
+                                    restoreChips(snapModel, snapEffort)
+                                }
                                 // O motor já não tem esta sessão (reiniciou, ou foi fechada noutro
                                 // sítio). Insistir no mesmo id prendia a app num ciclo para sempre:
                                 // «desligado» no cabeçalho, «retomar: a ligação ao motor caiu» ao
@@ -420,6 +470,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             controller.client.connected.collect { connected = it }
+        }
+    }
+
+    /**
+     * Liberta o laço de ligação do processo, se este ViewModel era o dono. Sem isto, uma instância
+     * antiga a ser destruída deixava o processo com a marca «já há um laço» e ninguém a ligar ao
+     * motor — trocava-se um ciclo por uma app parada.
+     */
+    override fun onCleared() {
+        super.onCleared()
+        if (donoDoLaco) {
+            donoDoLaco = false
+            lacoDeLigacao.set(false)
         }
     }
 
@@ -1370,6 +1433,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             error("o motor só fecha a sessão activa — toca na linha para a retomares primeiro")
         }
         controller.closeSession(id)
+        sessoesActivas.remove(id)
         if (id == sessionId) {
             sessionId = null
             conversaAberta = false

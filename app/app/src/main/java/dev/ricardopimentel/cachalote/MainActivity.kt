@@ -318,9 +318,23 @@ private fun Header(vm: MainViewModel, busy: Boolean) {
                 )
             }
             Text(
-                if (vm.connected) stringResource(R.string.cabecalho_motor_ligado) else stringResource(R.string.cabecalho_motor_desligado),
+                // Três estados, não dois — a histerese vive em `FalhasDeLigacao.estadoDoMotor`
+                // (com testes): «desligado» só depois de 3 tentativas seguidas. Com dois estados, a
+                // etiqueta piscava «ligado/desligado» a cada solavanco do socket e, durante o ciclo
+                // de reconexão de 2026-11-04, piscava de 1 em 1 segundo.
+                text = when (FalhasDeLigacao.estadoDoMotor(vm.connected, vm.falhasDeLigacao)) {
+                    FalhasDeLigacao.EstadoDoMotor.LIGADO -> stringResource(R.string.cabecalho_motor_ligado)
+                    FalhasDeLigacao.EstadoDoMotor.A_LIGAR -> stringResource(R.string.cabecalho_motor_a_ligar)
+                    FalhasDeLigacao.EstadoDoMotor.DESLIGADO -> stringResource(R.string.cabecalho_motor_desligado)
+                },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
+                color = if (FalhasDeLigacao.estadoDoMotor(vm.connected, vm.falhasDeLigacao) ==
+                    FalhasDeLigacao.EstadoDoMotor.DESLIGADO
+                ) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.secondary
+                },
             )
             // Consumo de contexto: o motor já o enviava em cada turno e a app deitava fora.
             // Fica discreto, mas permanente — é a única noção de custo que o utilizador tem.

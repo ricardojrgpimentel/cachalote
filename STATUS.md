@@ -3261,3 +3261,70 @@ nesta ronda:
 
 **Para reverter** (se for preciso): `gh repo edit --visibility private --accept-visibility-change-consequences`.
 O que já foi servido publicamente (clone, download de um release asset) não se recolhe.
+
+## 87. «Ligado/desligado» a piscar no cabeçalho — era um ciclo de reconexão de 1 em 1 segundo (2026-11-04)
+
+O autor: *«há situações quando abro a app ele mostra ligado e desligado, constantemente a trocar entre
+eles no ecrã das conversas, logo por baixo do Cachalote»*. Não era o desenho a recompôr: eram
+**971 autenticações** no log do daemon e um ciclo completo de ligação a cada 1–4 s.
+
+### 87.1 O que se mediu (S10+, app em **root**)
+
+| Medição | Resultado |
+|---|---|
+| `daemon.log` | `cliente "app" autenticado no TCP` → `a substituir o cliente ACP anterior` → `cliente ACP ligado` → `cliente ACP desligado`, em ciclo; **971** autenticações acumuladas |
+| `logcat` (`cachalote-rpc`) | cada volta: `cachalote.auth` → `initialize` → `session/resume` → **`erro=true`** |
+| `engine.log` | a resposta ao resume: `{"code":-32602,"message":"Invalid params: session is already active: d0db25d5-…"}` — e, na volta seguinte, o mesmo com `7ddeffc7-…` |
+| `dumpsys activity` | **duas** `ActivityRecord{…MainActivity}` na mesma tarefa (t115), uma `RESUMED` e outra `STOPPED` |
+
+Sonda directa ao daemon (socket TCP + `cachalote.auth` + `initialize` + `session/resume`): a ligação
+é servida, o erro volta — e a **ligação anterior é expulsa** pela seguinte, porque o daemon só aceita
+**um** cliente ACP de cada vez ([`daemon/bridge.cjs`](../daemon/bridge.cjs), «a substituir o cliente
+ACP anterior»). Não é o motor que fecha: é a ligação seguinte a substituir a que estava.
+
+### 87.2 A cadeia
+
+1. a app abre com uma sessão no instantâneo (`sessao-daemon.json`) que o motor já tem **activa**;
+2. o laço de reconexão pede `session/resume` **em cada ligação**;
+3. o motor responde `already active` (não é falha — a sessão está lá);
+4. a ligação seguinte (de outro laço, ou da instância duplicada da actividade) expulsa a anterior;
+5. `connected` cai a `false` → a app reconecta → volta ao passo 2.
+
+E o cabeçalho só conhecia **dois** estados (`ligado`/`desligado`), desenhados a partir de `connected`:
+em cada volta daquele ciclo pintava «desligado» durante ~1 s. O mesmo valia para um solavanco de
+200 ms, que também não devia mudar o que se lê.
+
+### 87.3 O que ficou
+
+| Onde | Mudança |
+|---|---|
+| [`MainViewModel.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/MainViewModel.kt) | `sessoesActivas`: quando o motor diz «already active», o id fica lembrado e o laço **não volta a pedir** o resume (repõe modelo/esforço do que está guardado). Esquecido em `closeSession`. |
+| idem | **um laço por processo** (`AtomicBoolean`), libertado em `onCleared` — duas instâncias do `ViewModel` deixam de poder ligar-se ao mesmo tempo |
+| [`AndroidManifest.xml`](../app/app/src/main/AndroidManifest.xml) | `MainActivity` com `launchMode="singleTask"`: **uma** instância, sempre |
+| [`Notificacoes.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/Notificacoes.kt) | o `PendingIntent` abre a instância existente (`SINGLE_TOP | CLEAR_TOP`) em vez de empilhar outra |
+| [`FalhasDeLigacao.kt`](../app/app/src/main/java/dev/ricardopimentel/cachalote/FalhasDeLigacao.kt) | `estadoDoMotor(conectado, falhas)`: `ligado` / `a ligar…` / `desligado` **com histerese** (3 falhas seguidas), com testes |
+| `strings.xml` (os dois idiomas) | `cabecalho_motor_a_ligar` — «motor DSH no telefone · a ligar…» |
+
+### 87.4 A prova
+
+| Verificação | Resultado |
+|---|---|
+| `daemon.log` depois de abrir a app | **0** autenticações em 65 s (antes: dezenas por minuto) — e, na medição anterior à última instalação, **1** em 70 s |
+| `dumpsys activity` | **uma** `ActivityRecord` da `MainActivity` |
+| Cabeçalho no telefone | «motor DSH no telefone · ligado», estável — [78](design/revisao/78-cabecalho-ligado-estavel.png) ao lado das conversas de sempre |
+| Testes de JVM | **88**, 0 falhas (o novo: `o_cabecalho_so_diz_desligado_depois_de_tres_falhas_seguidas`) |
+| `i18n-check` | 547 chaves nos dois idiomas, 498 usadas |
+
+### 87.5 Duas notas que ficam para quem repetir
+
+- **A app no telefone estava assinada com uma chave de debug de outra máquina.** `install -r` da APK
+  nova (debug **ou** release) falhou com `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. A saída sem perder o
+  estado: `run-as <pkg> tar -cf - .` (dados da app: 28 KB — prefs, instantâneos das sessões; o
+  kernel e as conversas vivem na base do daemon), desinstalar, instalar, `run-as … tar -xf -` e
+  religar a acessibilidade (`settings put secure enabled_accessibility_services …`). A app está agora
+  na identidade de debug **desta** máquina, que é o que `install-app.sh` volta a aceitar.
+- **Durante o diagnóstico fechei a sessão `d0db25d5` à mão** (`session/close`) para confirmar a
+  cadeia — é o que separa «o ciclo pára quando deixa de haver sessão activa» de uma suspeita. Efeito
+  colateral: o motor passou a responder `session is not resumable` a esse id. O ficheiro está intacto
+  (`storages/session_projcache/sessions/d0db….json`) e a conversa lê-se; o que não volta é o
+  `resume` dessa sessão em concreto.

@@ -49,6 +49,7 @@
     <string name="cabecalho_a_reconectar">reconnecting…</string>
     <string name="cabecalho_motor_desligado">DSH engine on the phone · disconnected</string>
     <string name="cabecalho_motor_ligado">DSH engine on the phone · connected</string>
+    <string name="cabecalho_motor_a_ligar">DSH engine on the phone · connecting…</string>
     <string name="capacidades_detalhe">what the agent can do on the phone</string>
     <string name="capacidades_explicacao">The agent asks; you decide. Every request is logged below.</string>
     <string name="capacidades_titulo">Allowed capabilities</string>

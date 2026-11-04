@@ -10,6 +10,27 @@ package dev.ricardopimentel.cachalote
  */
 object FalhasDeLigacao {
 
+    /** O que o cabeçalho diz sobre o motor. Três estados, não dois. */
+    enum class EstadoDoMotor { LIGADO, A_LIGAR, DESLIGADO }
+
+    /** Tentativas seguidas antes de a app admitir que está desligada (ver [estadoDoMotor]). */
+    const val LIMIAR_DESLIGADO = 3
+
+    /**
+     * A etiqueta do cabeçalho **com histerese**: «desligado» só depois de [LIMIAR_DESLIGADO]
+     * tentativas seguidas sem ligar.
+     *
+     * Porque é que isto é lógica testável e não um `if` na UI: com dois estados (`connected` sim/não),
+     * cada solavanco de 200 ms do socket — e sobretudo o ciclo de reconexão de 1–2 s de 2026-11-04 —
+     * fazia a etiqueta piscar «ligado/desligado» à frente do utilizador. O limiar é o mesmo que já
+     * governa a mensagem de erro, para a app não dizer duas coisas diferentes sobre o mesmo estado.
+     */
+    fun estadoDoMotor(conectado: Boolean, falhasSeguidas: Int): EstadoDoMotor = when {
+        conectado -> EstadoDoMotor.LIGADO
+        falhasSeguidas >= LIMIAR_DESLIGADO -> EstadoDoMotor.DESLIGADO
+        else -> EstadoDoMotor.A_LIGAR
+    }
+
     /** Frases que significam «a porta fechada / outro daemon no porto», e não «erro do motor». */
     private val SEM_DAEMON = listOf(
         "token inválido",

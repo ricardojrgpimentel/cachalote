@@ -22,10 +22,19 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Cachalote">
 
+        <!--
+          `singleTask`: **uma** instância, sempre. Com o `standard` (o que estava), a notificação e
+          os `startActivity` internos empilhavam uma segunda MainActivity na mesma tarefa — cada
+          instância com o seu `ViewModel` e o seu laço de ligação. Como o daemon só aceita um cliente
+          ACP de cada vez, as duas expulsavam-se mutuamente de 1–2 em 1–2 s: `connected` a oscilar e
+          a etiqueta do cabeçalho a piscar «ligado/desligado» (visto no S10+ em 2026-11-04, com
+          duas ActivityRecord{…} na tarefa t115 e 971 autenticações no log do daemon).
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

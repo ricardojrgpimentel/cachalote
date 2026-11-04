@@ -71,7 +71,16 @@ object Notificacoes {
         val abrir = PendingIntent.getActivity(
             ctx,
             0,
-            Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            // `SINGLE_TOP | CLEAR_TOP` além de `NEW_TASK`: sem eles, tocar na notificação com a app
+            // já aberta empilhava uma **segunda** MainActivity e, com ela, um segundo laço de
+            // ligação — as duas expulsavam-se no daemon (2026-11-04). Com o `singleTask` do
+            // manifesto isto já não acontece; as flags são a segunda barreira, válida mesmo que o
+            // manifesto mude.
+            Intent(ctx, MainActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
+            ),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val n = NotificationCompat.Builder(ctx, CANAL)

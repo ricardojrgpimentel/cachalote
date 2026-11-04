@@ -1,5 +1,6 @@
 package dev.ricardopimentel.cachalote
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,5 +63,36 @@ class FalhasDeLigacaoTest {
     fun um_erro_que_nao_e_do_mcp_nao_dispara_a_recuperacao() {
         assertFalse(FalhasDeLigacao.suspeitaDeMcp("sem DEEPSEEK_API_KEY em home/.env", temMcp = true))
         assertFalse(FalhasDeLigacao.suspeitaDeMcp(null, temMcp = true))
+    }
+
+    /**
+     * O cabeçalho não pode piscar. Um solavanco de 200 ms (ou um ciclo de reconexão) tem de
+     * continuar a dizer «a ligar…»; só ao fim de [FalhasDeLigacao.LIMIAR_DESLIGADO] tentativas
+     * seguidas sem ligar é que a app admite «desligado».
+     */
+    @Test
+    fun o_cabecalho_so_diz_desligado_depois_de_tres_falhas_seguidas() {
+        assertEquals(
+            FalhasDeLigacao.EstadoDoMotor.LIGADO,
+            FalhasDeLigacao.estadoDoMotor(conectado = true, falhasSeguidas = 0),
+        )
+        assertEquals(
+            "um solavanco não é «desligado»",
+            FalhasDeLigacao.EstadoDoMotor.A_LIGAR,
+            FalhasDeLigacao.estadoDoMotor(conectado = false, falhasSeguidas = 1),
+        )
+        assertEquals(
+            FalhasDeLigacao.EstadoDoMotor.A_LIGAR,
+            FalhasDeLigacao.estadoDoMotor(conectado = false, falhasSeguidas = 2),
+        )
+        assertEquals(
+            FalhasDeLigacao.EstadoDoMotor.DESLIGADO,
+            FalhasDeLigacao.estadoDoMotor(conectado = false, falhasSeguidas = 3),
+        )
+        assertEquals(
+            "reencontrar a ligação volta a «ligado», mesmo com falhas antigas contadas",
+            FalhasDeLigacao.EstadoDoMotor.LIGADO,
+            FalhasDeLigacao.estadoDoMotor(conectado = true, falhasSeguidas = 9),
+        )
     }
 }

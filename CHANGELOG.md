@@ -3,7 +3,22 @@
 Formato: as versões são `MAJOR.MINOR.PATCH`; cada entrada diz o que mudou **para quem usa** e
 aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
-## Não publicado
+## 0.3.1 — 2026-11-04
+
+A versão em que o cabeçalho deixa de piscar «ligado/desligado» — e em que se percebeu porquê.
+
+### O estado do motor deixou de oscilar
+
+- **Era um ciclo, não um pisca-pisca.** Ao abrir a app com uma sessão já activa no motor, a app
+  voltava a pedir `session/resume`, o motor respondia `session is already active`, a ligação caía e a
+  app reconectava — de 1 em 1 segundo, indefinidamente (971 autenticações no log do daemon). Agora a
+  app **lembra-se** de que a sessão está activa e não volta a pedi-la: repõe o modelo e o esforço do
+  que está guardado e a ligação fica quieta (§87).
+- **Um laço de ligação por processo.** O `MainActivity` passou a `singleTask` e a notificação abre a
+  instância que já existe (`SINGLE_TOP | CLEAR_TOP`). Havia casos com **duas** instâncias na mesma
+  tarefa — e cada uma com o seu laço, a expulsar a outra no daemon (que só aceita um cliente ACP).
+- **O cabeçalho passou a ter três estados**: `ligado` · `a ligar…` · `desligado`, e só diz
+  «desligado» ao fim de 3 tentativas seguidas. Um solavanco de 200 ms já não muda o que se lê.
 
 ### Ecrã virtual com qualquer app
 

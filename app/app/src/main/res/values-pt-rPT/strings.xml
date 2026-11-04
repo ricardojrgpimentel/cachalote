@@ -49,6 +49,7 @@
     <string name="cabecalho_a_reconectar">a reconectar…</string>
     <string name="cabecalho_motor_desligado">motor DSH no telefone · desligado</string>
     <string name="cabecalho_motor_ligado">motor DSH no telefone · ligado</string>
+    <string name="cabecalho_motor_a_ligar">motor DSH no telefone · a ligar…</string>
     <string name="capacidades_detalhe">o que o agente pode fazer no telefone</string>
     <string name="capacidades_explicacao">O agente pede; tu decides. Cada pedido fica registado em baixo.</string>
     <string name="capacidades_titulo">Capacidades autorizadas</string>
