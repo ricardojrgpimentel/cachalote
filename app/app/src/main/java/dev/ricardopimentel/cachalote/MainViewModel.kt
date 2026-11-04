@@ -294,7 +294,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         // Os rótulos de estado que antes eram literais no `mutableStateOf` (agora traduzíveis).
-        daemonInfo = getApplication<Application>().getString(R.string.sem_dados_atualizar)
+        daemonInfo = getApplication<Application>().getString(R.string.sem_dados)
         embedTest = getApplication<Application>().getString(R.string.nao_testado)
         // 1) Repor a conversa anterior (a app pode ter sido morta pelo sistema).
         var snapModel: String? = null
@@ -457,7 +457,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         .onFailure { restoreChips(snapModel, snapEffort) }
                 }
             }.onFailure {
-                tokenState = getApplication<Application>().getString(R.string.token_toca_obter)
+                tokenState = getApplication<Application>().getString(R.string.token_em_falta)
                 tokenOk = false
             }
             runCatching { refreshStatus() }

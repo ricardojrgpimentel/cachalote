@@ -188,7 +188,7 @@ private fun CartaoDiagnostico(vm: MainViewModel) {
             )
 
             d == null -> Text(
-                stringResource(R.string.resumo_nao_verifiquei),
+                stringResource(R.string.resumo_nao_verificado),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )

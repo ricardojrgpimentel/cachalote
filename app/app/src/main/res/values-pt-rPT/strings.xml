@@ -197,7 +197,7 @@
     <string name="resumo_consumo">Consumo e sessão</string>
     <string name="resumo_diagnostico">Diagnóstico</string>
     <string name="resumo_embutido">No modo embutido não há daemon para diagnosticar: o motor corre dentro da app e o sandbox do Android é o limite.</string>
-    <string name="resumo_nao_verifiquei">ainda não verificado</string>
+    <string name="resumo_nao_verificado">ainda não verificado</string>
     <string name="resumo_por_fazer">%1$d por fazer</string>
     <string name="resumo_resultado">%1$d problema(s) · %2$d aviso(s) · %3$s</string>
     <string name="resumo_sem_numeros">sem números ainda — o motor só os manda depois de um turno</string>
@@ -398,7 +398,7 @@
     <string name="token_obtido_n">obtido (%1$d caracteres)</string>
     <string name="token_por_obter">(por obter)</string>
     <string name="token_rodado">%1$s — rodado</string>
-    <string name="token_toca_obter">(sem token)</string>
+    <string name="token_em_falta">(sem token)</string>
     <string name="contexto">contexto: %1$s</string>
     <string name="nao_consegui_abrir_destino">não consegui abrir o destino</string>
     <string name="nao_consegui_ler_ficheiro">não consegui ler o ficheiro</string>
@@ -407,7 +407,7 @@
     <string name="notif_canal_desc">Mantém a ligação ao motor enquanto o agente trabalha</string>
     <string name="notif_texto_servico">O agente pode continuar a trabalhar com o ecrã apagado</string>
     <string name="notif_titulo_servico">Cachalote ligado ao motor</string>
-    <string name="sem_dados_atualizar">(sem dados)</string>
+    <string name="sem_dados">(sem dados)</string>
     <string name="sem_kernel">sem kernel: nem embutido nem URL de download (define em Ajustes → Motor)</string>
     <string name="shizuku_a_arrancar">a arrancar o daemon via Shizuku…</string>
     <string name="shizuku_activo">daemon activo via Shizuku (%1$s…)</string>

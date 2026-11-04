@@ -109,7 +109,7 @@
     <string name="fila_pendente">pending</string>
     <string name="fila_quantas">%1$d in the queue</string>
     <string name="fila_remover">Remove this task from the queue</string>
-    <string name="fila_texto">Write a task and tap «Add to queue»: the agent runs them one after another and notifies you at the end of each. If it needs approval it waits — and tells you.</string>
+    <string name="fila_texto">Tasks run one after another; the agent notifies you at the end of each. If it needs approval it waits — and tells you.</string>
     <string name="fila_titulo">Task queue</string>
     <string name="fila_vazia">queue empty</string>
     <string name="fotograma_desc">virtual screen frame</string>
@@ -197,7 +197,7 @@
     <string name="resumo_consumo">Consumption and session</string>
     <string name="resumo_diagnostico">Diagnostics</string>
     <string name="resumo_embutido">In embedded mode there is no daemon to diagnose: the engine runs inside the app and the Android sandbox is the limit.</string>
-    <string name="resumo_nao_verifiquei">not checked yet — tap Check</string>
+    <string name="resumo_nao_verificado">not checked yet</string>
     <string name="resumo_por_fazer">%1$d to do</string>
     <string name="resumo_resultado">%1$d problem(s) · %2$d warning(s) · %3$s</string>
     <string name="resumo_sem_numeros">no numbers yet — the engine only sends them after a turn</string>
@@ -398,7 +398,7 @@
     <string name="token_obtido_n">obtained (%1$d characters)</string>
     <string name="token_por_obter">(not obtained yet)</string>
     <string name="token_rodado">%1$s — rotated</string>
-    <string name="token_toca_obter">(no token)</string>
+    <string name="token_em_falta">(no token)</string>
     <string name="contexto">context: %1$s</string>
     <string name="nao_consegui_abrir_destino">could not open the destination</string>
     <string name="nao_consegui_ler_ficheiro">could not read the file</string>
@@ -407,7 +407,7 @@
     <string name="notif_canal_desc">Keeps the connection to the engine while the agent works</string>
     <string name="notif_texto_servico">The agent can keep working with the screen off</string>
     <string name="notif_titulo_servico">Cachalote connected to the engine</string>
-    <string name="sem_dados_atualizar">(no data)</string>
+    <string name="sem_dados">(no data)</string>
     <string name="sem_kernel">no kernel: neither embedded nor a download URL (set it in Settings → Engine)</string>
     <string name="shizuku_a_arrancar">starting the daemon through Shizuku…</string>
     <string name="shizuku_activo">daemon running through Shizuku (%1$s…)</string>
@@ -421,7 +421,7 @@
     <string name="cap_elemento_nao_clicavel">the element was found but it does not accept clicks</string>
     <string name="cap_elemento_nao_encontrado">no element with that text/description was found</string>
     <string name="cap_sem_perm_notif">the app has no notification permission</string>
-    <string name="web_sem_motor">The web engine is not running. Tap «Start web» to bring up the full DSH interface here.</string>
+    <string name="web_sem_motor">The web engine is not running. «Start web» brings up the full DSH interface here.</string>
 
     <plurals name="mcp_gravados_n">
         <item quantity="one">saved: %d server</item>
