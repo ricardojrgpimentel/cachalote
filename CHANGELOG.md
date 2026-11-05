@@ -3,7 +3,9 @@
 Formato: as versões são `MAJOR.MINOR.PATCH`; cada entrada diz o que mudou **para quem usa** e
 aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
-## Não publicado
+## 0.3.3 — 2026-11-05
+
+A versão do ensaio sem AI — e das duas correcções que ele apanhou no painel de autorização.
 
 ### E2E sem AI: um daemon ACP falso
 

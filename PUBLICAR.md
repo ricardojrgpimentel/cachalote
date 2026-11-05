@@ -1,8 +1,9 @@
 # Publicar o repositório — auditoria e checklist
 
-> **Última release:** [`v0.3.2`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.2)
-> (2026-11-05), APK de 44 MB, `sha256 3b8e358d…`. Inclui o modo embutido (`libnode.so`), o
-> primeiro arranque corrigido e o ensaio end-to-end — ver [`STATUS.md`](STATUS.md) §92.
+> **Última release:** [`v0.3.3`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.3)
+> (2026-11-05), APK de 44 MB, `sha256 5ee45edb…`. Inclui o modo embutido (`libnode.so`), o
+> primeiro arranque corrigido, o ensaio end-to-end e o painel de autorização sem o teclado por
+> cima — ver [`STATUS.md`](STATUS.md) §92/§93/§94.
 
 Este documento existe porque o plano é **tornar o repositório público** (e, com isso, resolver o
 alojamento do kernel: um *release asset* num repositório público é descarregável pela app sem

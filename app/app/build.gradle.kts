@@ -18,8 +18,8 @@ android {
                 isIncludeAndroidResources = true   // o Robolectric precisa dos recursos (textos)
             }
         }
-        versionCode = 4
-        versionName = "0.3.2"
+        versionCode = 5
+        versionName = "0.3.3"
     }
 
     // Assinatura de release: a chave vive FORA do repositório (por omissão em .work/).

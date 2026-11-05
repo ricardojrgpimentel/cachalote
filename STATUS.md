@@ -3762,3 +3762,33 @@ tokens.
   o «todos os use-cases» sem modelo.
 - A CI testa o contrato do mock, não a app num emulador; para a app, o ensaio corre localmente com
   `--device emulator-5554`.
+
+---
+
+## 94. A 0.3.3: as correcções que o mock apanhou, publicadas (2026-11-05)
+
+A 0.3.2 saiu antes de o daemon falso (92/93) revelar dois defeitos no painel de autorização. Em vez
+de os deixar só no `main`, saiu uma 0.3.3 — é a versão que leva o ensaio sem AI e as duas
+correcções.
+
+### 94.1 O que entra
+
+| Correcção | Onde |
+|---|---|
+| O painel de autorização fecha o teclado ao aparecer; no Android 16 a transição do `ModalBottomSheet` com o IME aberto deixava a conversa sem redesenhar | `MainActivity.ApprovalDialog` |
+| A linha do transcript diz **«pedido recusado»** quando a opção escolhida é «Recusar», em vez de «autorizado» | `MainViewModel.answerApproval` |
+| O ensaio sem AI: `tools/mock-acp-daemon.cjs`, `tools/mock-e2e-test.sh` e o contrato na CI | §93 |
+
+### 94.2 Prova
+
+| Verificação | Resultado |
+|---|---|
+| Tag | `v0.3.3` |
+| Release | <https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.3> |
+| APK | 44 MB · `sha256 5ee45edb6466f7e48c2aaf23faaac6f9a769ea9d91e23aeb4fbc1b2ae9ffa8f8` |
+| Assinatura | `CN=Cachalote` · `881b04b0…` (a mesma da 0.3.1/0.3.2) |
+| Upgrade | 0.3.2 instalada → `adb install -r` da 0.3.3 → `Success`; `versionName 0.3.3` |
+| Mock E2E | **8/8** (ligação, conversa, ferramenta, telemetria, aprovação, recusa e erro) |
+| E2E real de aprovação no S10+ | **9/9** |
+| JVM | verde |
+| CI | verde, com o contrato do mock |
