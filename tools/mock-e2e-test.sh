@@ -138,6 +138,8 @@ ESFORCO="$(t "Esforço de raciocínio" "Reasoning effort")"
 VOLTAR_LISTA="$(t "Voltar às conversas" "Back to the conversations")"
 APAGAR="$(t "Apagar" "Delete")"
 APAGAR_CONV="$(t "Apagar conversa" "Delete conversation")"
+JUNTAR="$(t "Juntar à fila" "Add to queue")"
+CORRER="$(t "Correr a fila" "Run the queue")"
 
 echo "== ligação e lista =="
 if e2e_wait_for "$(t "motor DSH no telefone · ligado" "DSH engine on the phone · connected")" 20; then
@@ -209,6 +211,18 @@ sleep 1
 if e2e_wait_for "Pedido autorizado pelo mock." 20; then ok "o mock recebeu a autorização"; else fail "o mock recebeu a autorização"; fi
 if e2e_wait_for "autorizado" 5; then ok "o transcript diz que o pedido foi autorizado"; else fail "o transcript diz que o pedido foi autorizado"; fi
 
+echo "== fila a correr =="
+escrever "tarefa um" || fail "escrever a primeira tarefa"
+e2e_hide_kb
+e2e_tap "$JUNTAR" >/dev/null 2>&1 || fail "juntar a primeira tarefa"
+escrever "tarefa dois" || fail "escrever a segunda tarefa"
+e2e_hide_kb
+e2e_tap "$JUNTAR" >/dev/null 2>&1 || fail "juntar a segunda tarefa"
+if e2e_wait_for "$(t "2 na fila" "2 in the queue")" 10; then ok "a fila tem duas tarefas"; else fail "a fila tem duas tarefas"; fi
+e2e_tap "$CORRER" >/dev/null 2>&1 || fail "correr a fila"
+if e2e_wait_for "tarefa dois" 25; then ok "a fila correu até à segunda tarefa"; else fail "a fila correu até à segunda tarefa"; fi
+if e2e_wait_for "$(t "fila vazia" "queue empty")" 15; then ok "as tarefas ficaram concluídas"; else fail "as tarefas ficaram concluídas"; fi
+
 echo "== erro guionado =="
 escrever "erro mock" || fail "escrever o terceiro prompt"
 e2e_hide_kb
@@ -220,10 +234,8 @@ e2e_tap "$VOLTAR_LISTA" >/dev/null 2>&1 || e2e_tap_exact "←" >/dev/null 2>&1 |
 e2e_wait_for "ola mock" 10 || true
 e2e_ver_has "ola mock" "a conversa aparece na lista"
 e2e_tap_exact "ola mock" >/dev/null 2>&1 || e2e_tap "ola mock" >/dev/null 2>&1 || fail "reabrir a conversa"
-if e2e_wait_for "Pedido autorizado pelo mock." 15; then ok "o histórico abriu no fim da conversa"; else fail "o histórico abriu no fim da conversa"; fi
-# O histórico completo já se prova com os dois turnos anteriores; o primeiro fica acima da
-# dobra e não se insiste num gesto de scroll que só tornava o ensaio sensível à altura do ecrã.
-if e2e_wait_for "Pedido recusado pelo mock." 10; then ok "o histórico inclui a recusa"; else fail "o histórico inclui a recusa"; fi
+if e2e_wait_for "tarefa dois" 15; then ok "o histórico abriu no último turno (fila)"; else fail "o histórico abriu no último turno (fila)"; fi
+if e2e_wait_for "Olá do mock" 10; then ok "o histórico inclui a resposta do mock"; else fail "o histórico inclui a resposta do mock"; fi
 
 e2e_tap "$VOLTAR_LISTA" >/dev/null 2>&1 || fail "voltar à lista para apagar"
 e2e_wait_for "ola mock" 10 || true
