@@ -273,16 +273,31 @@ class InterfaceTest {
         var decidido: String? = "nada"
         painel(decidido = { decidido = it })
         // Sem tocar em nada, autorizar decide a primeira opção — como no desenho.
-        compose.onNodeWithText("Autorizar").performScrollTo().performClick()
+        compose.onNodeWithText("Confirmar").performScrollTo().performClick()
         assertEquals("once", decidido)
     }
 
     @Test
-    fun escolher_a_segunda_opcao_e_autorizar_decide_essa() {
+    fun o_botao_de_confirmar_nao_diz_autorizar_quando_a_escolha_e_recusar() {
+        var decidido: String? = null
+        painel(
+            opcoes = listOf("once" to "Permitir uma vez", "reject" to "Recusar"),
+            decidido = { decidido = it },
+        )
+        compose.onNodeWithText("Recusar").performScrollTo().performClick()
+        // O botão primário não pode dizer «Autorizar» com «Recusar» escolhido: era o rótulo a
+        // mentir sobre a acção (o teste de dispositivo tocava em «Autorizar» para recusar).
+        compose.onAllNodesWithText("Autorizar").assertCountEquals(0)
+        compose.onNodeWithText("Confirmar").performScrollTo().performClick()
+        assertEquals("reject", decidido)
+    }
+
+    @Test
+    fun escolher_a_segunda_opcao_e_confirmar_decide_essa() {
         var decidido: String? = null
         painel(decidido = { decidido = it })
         compose.onNodeWithText("Permitir sempre").performClick()
-        compose.onNodeWithText("Autorizar").performScrollTo().performClick()
+        compose.onNodeWithText("Confirmar").performScrollTo().performClick()
         assertEquals("always", decidido)
     }
 
@@ -400,7 +415,7 @@ class InterfaceEnTest {
         compose.onNodeWithText("Authorisation").assertIsDisplayed()
         compose.onNodeWithText("THE AGENT WANTS TO RUN:").assertIsDisplayed()
         compose.onNodeWithText("OUTSIDE THE SANDBOX").assertIsDisplayed()
-        compose.onNodeWithText("Authorise").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Confirm").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Reject the turn").performScrollTo().assertIsDisplayed()
     }
 

@@ -1084,6 +1084,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun fecharConversa() {
         conversaAberta = false
+        // A lista é o ecrã para onde se volta; tem de mostrar a conversa que se acabou de fechar.
+        // Antes só a flag mudava e a lista só era relida pelo `LaunchedEffect(tab)` (ao trocar de
+        // aba): uma conversa nova parecia ter desaparecido (apanhado no ensaio E2E de 2026-11-05).
+        // Entra já na lista, com o que a app sabe; o daemon volta a dar a versão canónica quando a
+        // lista for recarregada (troca de aba, arranque, etc.).
+        val id = sessionId ?: return
+        val existente = sessions.firstOrNull { it.id == id }
+        val ultima = transcript.lastOrNull { it.role != "system" }?.text
+            ?.replace(Regex("\\s+"), " ")?.trim()?.take(90).orEmpty()
+        val linha = SessionRow(
+            id = id,
+            title = existente?.title ?: sessionTitles[id] ?: id.take(8),
+            // Uma conversa que já estava na lista não salta para o topo só por a ter aberto e
+            // fechado; uma nova entra com a hora actual (é a mais recente de todas).
+            updatedAt = existente?.updatedAt ?: java.time.Instant.now().toString(),
+            previa = ultima.ifBlank { existente?.previa.orEmpty() },
+        )
+        sessions = if (existente == null) {
+            listOf(linha) + sessions
+        } else {
+            sessions.map { if (it.id == id) linha else it }
+        }
     }
 
     /**

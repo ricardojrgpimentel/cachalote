@@ -5,6 +5,17 @@ aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
 ## Não publicado
 
+### Dois defeitos de UI que o ensaio end-to-end apanhou
+
+- **A lista não mostrava a conversa que se acabou de fechar.** Ao sair de uma conversa nova, a lista continuava
+  com a fotografia antiga: só aparecia ao trocar de aba. Agora `fecharConversa()` entra já na lista
+  com o título, a prévia e a hora; uma conversa antiga não salta para o topo só por ter sido aberta
+  (§92.1).
+- **O botão do painel de autorização dizia «Autorizar» mesmo com «Recusar» escolhido.** Passou a
+  **«Confirmar»** (e «Confirm» em inglês): confirma a opção marcada e nunca diz o contrário do que
+  vai acontecer. O ensaio de dispositivo que recusava pedidos a carregar em «Autorizar» passou a
+  carregar em «Confirmar» (§92.2).
+
 ### Testes end-to-end da app, no telefone
 
 - **`tools/app-e2e-test.sh`**: quatro percursos a sério contra o telefone — navegação (abas, as

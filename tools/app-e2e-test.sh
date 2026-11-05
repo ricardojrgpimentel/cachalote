@@ -228,10 +228,13 @@ cenario_conversa() {
   e2e_tap "Remover esta tarefa da fila" >/dev/null 2>&1 || e2e_fail "remover a tarefa da fila"
   e2e_ver_no "1 na fila" "a fila voltou a ficar vazia"
 
-  # De volta à lista: a conversa nova tem de aparecer, com a prévia do marcador.
+  # De volta à lista: a conversa nova tem de aparecer **sem trocar de aba**. Era aqui que a app
+  # falhava: `fecharConversa()` só mudava a flag e a lista só era relida pelo `LaunchedEffect(tab)`.
   e2e_ir_lista || e2e_fail "voltar à lista"
+  e2e_wait_for "$marca" 4 || true
+  e2e_ver_has "$marca" "a conversa nova aparece na lista sem trocar de aba"
   e2e_refresh_lista
-  e2e_ver_has "$marca" "a conversa nova aparece na lista"
+  e2e_ver_has "$marca" "a conversa nova continua na lista depois de refrescar"
   depois="$(e2e_contagem_conversas)"
   e2e_ver_igual "$depois" "$((antes + 1))" "a lista tem mais uma conversa"
 

@@ -34,7 +34,7 @@
     <string name="arranque_boot_texto">root only: the Magisk service.d brings the engine up at boot</string>
     <string name="atualizar">Refresh</string>
     <string name="autorizacao_agente_quer">The agent wants to run:</string>
-    <string name="autorizacao_confirmar">Authorise</string>
+    <string name="autorizacao_confirmar">Confirm</string>
     <string name="autorizacao_explicacao">Outside the allowed areas nothing runs without your approval. This request goes into the device log.</string>
     <string name="autorizacao_fora_sandbox">Outside the sandbox</string>
     <string name="autorizacao_rodape">PID: %1$d · mode %2$s</string>

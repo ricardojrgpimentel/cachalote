@@ -3523,10 +3523,10 @@ asserções são de texto/estado (não há coordenadas fixas), pelo que o ensaio
 ```
 ./tools/app-e2e-test.sh
 == navegacao: 33 ok, 0 falhas, 0 saltados ==
-== conversa: 20 ok, 0 falhas, 0 saltados ==
+== conversa: 21 ok, 0 falhas, 0 saltados ==
 == aprovacao:  9 ok, 0 falhas, 0 saltados ==
 == motor:     10 ok, 0 falhas, 0 saltados ==
-== TOTAL: 72 ok, 0 falhas, 0 saltados ==
+== TOTAL: 73 ok, 0 falhas, 0 saltados ==
 ```
 
 Corrida completa: ~11 minutos (a maior parte em três turnos reais e nas esperas do modelo). O
@@ -3543,12 +3543,11 @@ telemóvel ficou com o daemon a correr, as 6 conversas que já tinha, e sem os f
 - O `am force-stop` do arranque frio **desliga o serviço de acessibilidade** (é o Android); a app
   avisa e tem o botão «Ligar». Fica dito no README do ensaio.
 
-### 91.4 Uma coisa que os testes apanharam
+### 91.4 Duas coisas que os testes apanharam — e que ficaram corrigidas
 
-Ao fechar uma conversa **nova**, a lista não se actualiza sozinha: `fecharConversa()` só muda a flag
-e a lista é recarregada pelo `LaunchedEffect(tab)` quando se troca de aba. O ensaio força a troca
-(é o que um utilizador faria) e continua verde; fica anotado como um arranjo de UI para uma próxima
-ronda, não como falha do ensaio.
+O ensaio apanhou dois defeitos de UI; os dois foram reproduzidos com um teste a falhar **antes** da
+correcção (ver §92). O primeiro era a lista a não mostrar a conversa fechada; o segundo, o botão do
+painel de autorização a dizer «Autorizar» com «Recusar» escolhido. Ambos estão fechados.
 
 ### 91.5 Custo e limites
 
@@ -3556,3 +3555,64 @@ Os cenários `conversa` e `aprovacao` gastam turnos do modelo e podem demorar ma
 insiste (na corrida de prova a aprovação pediu várias folhas depois de recusada). Para uma passagem
 sem tokens: `./tools/app-e2e-test.sh --only navegacao,motor`. Os textos procurados são pt-PT; noutra
 língua o ensaio precisa das strings equivalentes (como os restantes ensaios de dispositivo).
+
+---
+
+## 92. Dois defeitos de UI que o ensaio apanhou (2026-11-05)
+
+O §91 deixou dois defeitos por resolver, ambos encontrados a percorrer a app como um utilizador.
+A regra desta ronda foi a pedida: **primeiro o teste que falha, depois a correcção**.
+
+### 92.1 A lista não mostrava a conversa que se acabou de fechar
+
+**Reprodução (teste a falhar):** no cenário `conversa` do `tools/app-e2e-test.sh`, depois de criar
+uma conversa, mandar um turno e voltar atrás, passou a exigir-se o marcador na lista **sem trocar de
+aba**. Antes da correcção:
+
+```
+FALHA  a conversa nova aparece na lista sem trocar de aba
+== conversa: 20 ok, 1 falhas, 0 saltados ==
+```
+
+**Causa:** `MainViewModel.fecharConversa()` só punha `conversaAberta = false`; a lista (`sessions`)
+só era relida pelo `LaunchedEffect(tab)` ao mudar de aba ou no arranque. A conversa existia no
+daemon, mas a lista ficava com a fotografia antiga.
+
+**Correcção:** `fecharConversa()` passa a actualizar a lista em memória com o que a app já sabe —
+título, prévia da última mensagem e hora (só para conversas novas; uma conversa que já estava na
+lista não salta para o topo só por ter sido aberta). O daemon continua a ser a fonte canónica na
+próxima recarga.
+
+**Prova depois:** `== conversa: 21 ok, 0 falhas, 0 saltados ==`, incluindo as duas verificações
+novas (aparece sem trocar de aba; continua depois do refresh).
+
+### 92.2 O botão do painel de autorização dizia «Autorizar» com «Recusar» escolhido
+
+**Reprodução (teste a falhar):** em `InterfaceTest`, o teste novo escolhe a opção «Recusar», exige
+que não exista nenhum botão «Autorizar» e carrega em «Confirmar» para decidir `reject`. Antes:
+
+```
+InterfaceTest > o_botao_de_confirmar_nao_diz_autorizar_quando_a_escolha_e_recusar FAILED
+java.lang.AssertionError at InterfaceTest.kt:290
+```
+
+**Causa:** `PainelDeAutorizacao` usava sempre `R.string.autorizacao_confirmar` («Autorizar») no
+botão primário, independentemente da opção marcada. Quem escolhesse «Recusar» e carregasse no botão
+grande estava a **recusar** — o rótulo dizia o contrário da acção. Foi assim que o ensaio de
+dispositivo recusou pedidos: seleccionava «Recusar» e tocava em «Autorizar».
+
+**Correcção:** o botão passou a **«Confirmar» / «Confirm»** (as duas línguas). É o rótulo honesto
+para «confirmar a opção escolhida» e nunca contradiz a opção; a escolha continua à vista nas
+cartas («Permitir uma vez», «Recusar»). O E2E passou a tocar em «Confirmar».
+
+**Prova depois:** `InterfaceTest` verde (18 testes), todos os testes de JVM verdes, e no S10+ o
+cenário `aprovacao` **9/9** — recusar continua a não criar o ficheiro; autorizar cria.
+
+### 92.3 Estado
+
+| Verificação | Resultado |
+|---|---|
+| JVM | `testDebugUnitTest` verde (inclui o teste novo do rótulo) |
+| E2E `conversa` | **21/21** — lista actualiza sem trocar de aba |
+| E2E `aprovacao` | **9/9** — «Confirmar» recusa ou autoriza conforme a carta escolhida |
+| App no S10+ | debug rebuild instalada por cima, preferências e conversas intactas |

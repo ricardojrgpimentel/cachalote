@@ -471,7 +471,7 @@ e2e_aprovar() { # $1 = permitir|recusar; $2 = máximo de folhas
     else
       e2e_tap_exact "Permitir uma vez" >/dev/null 2>&1 || { e2e_fail "não encontrei a opção Permitir uma vez"; break; }
     fi
-    e2e_tap_exact "Autorizar" >/dev/null 2>&1 || { e2e_fail "não encontrei o botão Autorizar"; break; }
+    e2e_tap_exact "Confirmar" >/dev/null 2>&1 || { e2e_fail "não encontrei o botão Confirmar"; break; }
     n=$((n + 1))
     sleep 1.5
   done
