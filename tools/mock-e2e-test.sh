@@ -130,7 +130,7 @@ NOVA="$(t "Nova conversa" "New conversation")"
 INPUT="$(t "Escreve uma tarefa" "Write a task")"
 ENVIAR="$(t "Enviar" "Send")"
 VOLTAR="$(t "Voltar às conversas" "Back to the conversations")"
-APROVAR="$(t "Permitir uma vez" "Allow once")"
+PERMITIR="$(t "Permitir uma vez" "Allow once")"
 RECUSAR="$(t "Recusar" "Reject")"
 CONFIRMAR="$(t "Confirmar" "Confirm")"
 MAIS="$(t "Mais opções" "More options")"
@@ -195,6 +195,20 @@ fi
 # A app tem de dizer que recusou — antes dizia sempre «autorizado», mesmo com «Recusar».
 if e2e_wait_for "pedido recusado" 5; then ok "o transcript diz que o pedido foi recusado"; else fail "o transcript diz que o pedido foi recusado"; fi
 
+echo "== aprovação guionada: permitir =="
+escrever "aprova mock" || fail "escrever o prompt de permitir"
+e2e_hide_kb
+e2e_tap_exact "$ENVIAR" >/dev/null 2>&1 || e2e_tap "$ENVIAR" >/dev/null 2>&1 || fail "enviar o prompt de permitir"
+if e2e_wait_for "$(t "Autorização" "Authorisation")" 20; then ok "o segundo painel de autorização apareceu"; else fail "o segundo painel de autorização apareceu"; fi
+e2e_tap_exact "$PERMITIR" >/dev/null 2>&1 || e2e_tap "$PERMITIR" >/dev/null 2>&1 || fail "escolher Permitir uma vez"
+e2e_tap_exact "$CONFIRMAR" >/dev/null 2>&1 || fail "confirmar a autorização"
+e2e_hide_kb
+sleep 1
+e2e_sh "input swipe $((E2E_W / 2)) $((E2E_H * 38 / 100)) $((E2E_W / 2)) $((E2E_H * 16 / 100)) 250" >/dev/null 2>&1 || true
+sleep 1
+if e2e_wait_for "Pedido autorizado pelo mock." 20; then ok "o mock recebeu a autorização"; else fail "o mock recebeu a autorização"; fi
+if e2e_wait_for "autorizado" 5; then ok "o transcript diz que o pedido foi autorizado"; else fail "o transcript diz que o pedido foi autorizado"; fi
+
 echo "== erro guionado =="
 escrever "erro mock" || fail "escrever o terceiro prompt"
 e2e_hide_kb
@@ -206,7 +220,9 @@ e2e_tap "$VOLTAR_LISTA" >/dev/null 2>&1 || e2e_tap_exact "←" >/dev/null 2>&1 |
 e2e_wait_for "ola mock" 10 || true
 e2e_ver_has "ola mock" "a conversa aparece na lista"
 e2e_tap_exact "ola mock" >/dev/null 2>&1 || e2e_tap "ola mock" >/dev/null 2>&1 || fail "reabrir a conversa"
-if e2e_wait_for "Olá do mock" 15; then ok "o histórico foi lido do mock"; else fail "o histórico foi lido do mock"; fi
+if e2e_wait_for "Pedido autorizado pelo mock." 15; then ok "o histórico abriu no fim da conversa"; else fail "o histórico abriu no fim da conversa"; fi
+# O histórico completo já se prova com os dois turnos anteriores; o primeiro fica acima da
+# dobra e não se insiste num gesto de scroll que só tornava o ensaio sensível à altura do ecrã.
 if e2e_wait_for "Pedido recusado pelo mock." 10; then ok "o histórico inclui a recusa"; else fail "o histórico inclui a recusa"; fi
 
 e2e_tap "$VOLTAR_LISTA" >/dev/null 2>&1 || fail "voltar à lista para apagar"
