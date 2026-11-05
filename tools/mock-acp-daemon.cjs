@@ -32,6 +32,10 @@ const VERBOSE = args.includes("--verbose");
 
 let seq = 0;
 const sessions = new Map();
+// Estado das opções da sessão: o picker da app pede `session/set_config_option` e tem de ver o
+// valor novo ao reabrir o menu.
+let modeloActual = "mock-model";
+let esforcoActual = "low";
 
 function log(...a) {
   if (VERBOSE) console.log(new Date().toISOString(), ...a);
@@ -56,13 +60,13 @@ function configOptions() {
     {
       id: "model",
       name: "Model",
-      currentValue: "mock-model",
+      currentValue: modeloActual,
       options: [{ value: "mock-model", name: "Mock Model" }],
     },
     {
       id: "reasoning_effort",
       name: "Reasoning effort",
-      currentValue: "low",
+      currentValue: esforcoActual,
       options: [
         { value: "low", name: "Low" },
         { value: "high", name: "High" },
@@ -289,6 +293,9 @@ function tratar(socket, msg) {
   }
 
   if (method === "session/set_config_option") {
+    if (String(params.configId || "") === "reasoning_effort") esforcoActual = String(params.value || esforcoActual);
+    if (String(params.configId || "") === "model") modeloActual = String(params.value || modeloActual);
+    log("opção definida", params.configId, params.value);
     responder(socket, id, { configOptions: configOptions() });
     return;
   }

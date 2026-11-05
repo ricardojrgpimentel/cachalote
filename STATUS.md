@@ -3735,12 +3735,13 @@ mandar ESC como segunda tentativa).
 ### 93.3 Prova
 
 ```
-== mock e2e: 8 ok, 0 falhas ==
+== mock e2e: 14 ok, 0 falhas ==
 ```
 
 Cobre: ligação ao mock, lista vazia, `session/new`, resposta guionada, cartão de ferramenta,
-telemetria, consumo, painel de autorização, recusa e erro. O contrato do mock tem teste próprio,
-sem Android, e corre na CI:
+telemetria, consumo, **escolha do esforço** (`configOptions`), painel de autorização, recusa, erro,
+**histórico** (reabrir a conversa) e **apagar**. O contrato do mock tem teste próprio, sem Android,
+e corre na CI:
 
 ```
 node tools/mock-acp-test.cjs
@@ -3757,9 +3758,9 @@ tokens.
 
 - Corre **num emulador** e numa APK **debug** (por causa do `run-as`/preferências); não é um teste
   de instalação de release (esse é o §92).
-- Cobre hoje conversa, ferramenta, aprovação e erro. O mesmo mock pode crescer para onboarding,
-  escolha de modelo/esforço, fila a correr, ecrã virtual, backup e os três modos — é o caminho para
-  o «todos os use-cases» sem modelo.
+- Cobre hoje conversa, ferramenta, aprovação, erro, escolha de esforço, histórico e apagar. O
+  mesmo mock pode crescer para fila a correr, aprovar (o caminho «Permitir uma vez»), ecrã virtual,
+  onboarding, backup e os três modos — é o caminho para o «todos os use-cases» sem modelo.
 - A CI testa o contrato do mock, não a app num emulador; para a app, o ensaio corre localmente com
   `--device emulator-5554`.
 

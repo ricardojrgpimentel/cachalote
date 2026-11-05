@@ -133,6 +133,11 @@ VOLTAR="$(t "Voltar às conversas" "Back to the conversations")"
 APROVAR="$(t "Permitir uma vez" "Allow once")"
 RECUSAR="$(t "Recusar" "Reject")"
 CONFIRMAR="$(t "Confirmar" "Confirm")"
+MAIS="$(t "Mais opções" "More options")"
+ESFORCO="$(t "Esforço de raciocínio" "Reasoning effort")"
+VOLTAR_LISTA="$(t "Voltar às conversas" "Back to the conversations")"
+APAGAR="$(t "Apagar" "Delete")"
+APAGAR_CONV="$(t "Apagar conversa" "Delete conversation")"
 
 echo "== ligação e lista =="
 if e2e_wait_for "$(t "motor DSH no telefone · ligado" "DSH engine on the phone · connected")" 20; then
@@ -157,6 +162,13 @@ if e2e_wait_for "Olá do mock" 20; then ok "a resposta guionada apareceu"; else 
 e2e_ver_has "bash" "o cartão da ferramenta apareceu"
 e2e_ver_has "$(t "turno 1" "turn 1")" "a telemetria do turno apareceu"
 e2e_ver_has "ctx" "o consumo de contexto apareceu"
+
+echo "== escolha de esforço (configOptions) =="
+e2e_tap "$MAIS" >/dev/null 2>&1 || fail "abrir o menu da conversa"
+e2e_tap_exact "$ESFORCO" >/dev/null 2>&1 || e2e_tap "$ESFORCO" >/dev/null 2>&1 || fail "abrir o esforço"
+if e2e_wait_for "High" 15; then ok "o picker mostra as opções do mock"; else fail "o picker mostra as opções do mock"; fi
+e2e_tap_exact "High" >/dev/null 2>&1 || e2e_tap_exact "Alto" >/dev/null 2>&1 || fail "escolher High"
+if e2e_wait_for "reasoning_effort = high" 10; then ok "a escolha foi aplicada (e o mock a recebeu)"; else fail "a escolha foi aplicada (e o mock a recebeu)"; fi
 
 echo "== aprovação guionada =="
 escrever "aprova mock" || fail "escrever o segundo prompt"
@@ -188,6 +200,32 @@ escrever "erro mock" || fail "escrever o terceiro prompt"
 e2e_hide_kb
 e2e_tap_exact "$ENVIAR" >/dev/null 2>&1 || e2e_tap "$ENVIAR" >/dev/null 2>&1 || fail "enviar o terceiro prompt"
 if e2e_wait_for "erro simulado pelo mock" 15; then ok "o erro do mock chegou à UI"; else fail "o erro do mock chegou à UI"; fi
+
+echo "== histórico e apagar =="
+e2e_tap "$VOLTAR_LISTA" >/dev/null 2>&1 || e2e_tap_exact "←" >/dev/null 2>&1 || fail "voltar à lista"
+e2e_wait_for "ola mock" 10 || true
+e2e_ver_has "ola mock" "a conversa aparece na lista"
+e2e_tap_exact "ola mock" >/dev/null 2>&1 || e2e_tap "ola mock" >/dev/null 2>&1 || fail "reabrir a conversa"
+if e2e_wait_for "Olá do mock" 15; then ok "o histórico foi lido do mock"; else fail "o histórico foi lido do mock"; fi
+if e2e_wait_for "Pedido recusado pelo mock." 10; then ok "o histórico inclui a recusa"; else fail "o histórico inclui a recusa"; fi
+
+e2e_tap "$VOLTAR_LISTA" >/dev/null 2>&1 || fail "voltar à lista para apagar"
+e2e_wait_for "ola mock" 10 || true
+C="$(e2e_coords "ola mock")" || C=""
+if [ -n "$C" ]; then
+  set -- $C
+  e2e_sh "input swipe $1 $2 $1 $2 900" >/dev/null 2>&1 || true
+  sleep 1
+  if e2e_wait_for "$APAGAR_CONV" 10; then ok "o diálogo de apagar apareceu"; else fail "o diálogo de apagar apareceu"; fi
+  e2e_tap_exact "$APAGAR" >/dev/null 2>&1 || fail "confirmar o apagar"
+  if e2e_wait_for "$(t "Ainda não há conversas" "No conversations yet")" 15; then
+    ok "a conversa desapareceu (mock apagou)"
+  else
+    fail "a conversa desapareceu (mock apagou)"
+  fi
+else
+  fail "encontrar a conversa para apagar"
+fi
 
 echo
 echo "== mock e2e: $OK ok, $FALHAS falhas =="
