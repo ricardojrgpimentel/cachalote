@@ -142,6 +142,7 @@ no computador e chega ao emulador por `adb reverse`.
 
 ```sh
 ./tools/mock-e2e-test.sh --device emulator-5554
+./tools/onboarding-e2e-test.sh --device emulator-5554   # primeiro arranque, 7 passos
 node tools/mock-acp-test.cjs          # só o contrato do mock; corre na CI
 ```
 

@@ -3794,3 +3794,12 @@ correcções.
 | E2E real de aprovação no S10+ | **9/9** |
 | JVM | verde |
 | CI | verde, com o contrato do mock |
+
+### 93.5 O primeiro arranque, sem AI
+
+`tools/onboarding-e2e-test.sh` faz `pm clear` na app de debug e percorre o início do assistente no
+emulador: passo 1, «Continuar» (que na 0.3.2 ficava preso enquanto o kernel preparava), passo 2 com
+os três modos, «Saltar» e a lista vazia. **7/7**, sem chave, rede ou modelo.
+
+Não espera pelos 211 MB do kernel nem configura os três motores: é o percurso de entrada e a
+regressão do «Continuar». O download e o motor embutido ficam provados no ensaio de release (§92.4).
