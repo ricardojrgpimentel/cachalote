@@ -133,6 +133,21 @@ tira uma fotografia às conversas antes e apaga só as que nasceram nele; não m
 modo, nas capacidades nem no arranque com o telefone. O `force-stop` do arranque frio desliga o
 serviço de acessibilidade — a app avisa e tem o botão **Ligar** em Ajustes → Acessibilidade.
 
+### E2E sem AI, com um daemon falso
+
+`tools/mock-e2e-test.sh` percorre a conversa, a ferramenta, a aprovação e o erro **sem chave, rede
+ou modelo**: um daemon ACP falso ([`tools/mock-acp-daemon.cjs`](tools/mock-acp-daemon.cjs)) corre
+no computador e chega ao emulador por `adb reverse`.
+
+```sh
+./tools/mock-e2e-test.sh --device emulator-5554
+node tools/mock-acp-test.cjs          # só o contrato do mock; corre na CI
+```
+
+Precisa de um **emulador** com a APK de **debug** (o ensaio escreve as preferências da app para a
+apontar ao mock e repõe-nas no fim; por isso não toca no telefone). O `mock-acp-test.cjs` corre na
+CI e garante que o contrato do daemon não parte sem aparelho.
+
 O `plugin-schema-test.sh` existe por uma razão concreta: um `{}` sem `type` num schema de
 ferramenta faz o kernel recusar o plugin **inteiro** e o agente fica sem nenhuma ferramenta
 `android_*` — em silêncio, com um único `warning` no log. Apanha isso antes de chegar ao

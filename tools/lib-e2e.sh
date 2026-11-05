@@ -240,10 +240,18 @@ e2e_foreground() {
 }
 
 e2e_hide_kb() {
-  if e2e_sh "dumpsys input_method" | grep -q "mInputShown=true"; then
+  # Em Android 16 o campo passou a ser `mIsInputViewShown` em alguns IMEs; o `mInputShown`
+  # sozinho dizia «fechado» com o teclado à vista (visto no emulador em 2026-11-05).
+  if e2e_sh "dumpsys input_method" | grep -Eq "mInputShown=true|mIsInputViewShown=true"; then
     # O BACK só se carrega quando o teclado está mesmo aberto: sem ele, o BACK fechava a app.
     e2e_sh "input keyevent 4" >/dev/null 2>&1 || true
     sleep 0.6
+    # Em Android 16 há IMEs em que o BACK não fecha a vista (mas `mIsInputViewShown` continua
+    # true): o ESC é o segundo caminho, e não mexe na navegação da app.
+    if e2e_sh "dumpsys input_method" | grep -Eq "mInputShown=true|mIsInputViewShown=true"; then
+      e2e_sh "input keyevent 111" >/dev/null 2>&1 || true
+      sleep 0.4
+    fi
     e2e_foreground || true
   fi
 }

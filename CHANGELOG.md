@@ -3,6 +3,25 @@
 Formato: as versões são `MAJOR.MINOR.PATCH`; cada entrada diz o que mudou **para quem usa** e
 aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
+## Não publicado
+
+### E2E sem AI: um daemon ACP falso
+
+- **`tools/mock-acp-daemon.cjs` + `tools/mock-e2e-test.sh`**: a app é percorrida contra um daemon
+  falso — ligação, sessão, prompt, ferramenta, aprovação e erro — sem chave, rede ou modelo. O
+  mock corre no computador e chega ao emulador por `adb reverse`; o teste repõe as preferências da
+  app no fim.
+- **`tools/mock-acp-test.cjs`** valida o contrato do mock (auth, initialize, prompt, ferramentas,
+  autorização e erro) e corre na CI, sem telefone.
+
+### O painel de autorização e o teclado
+
+- O painel de autorização passa a **fechar o teclado** ao aparecer: no Android 16, com o IME aberto,
+  a transição do `ModalBottomSheet` deixava a conversa sem redesenhar. O ensaio sem AI ficou a ver
+  a resposta depois desta correcção.
+- A linha do transcript deixa de dizer **«autorizado»** quando a opção escolhida é **«Recusar»**:
+  passa a dizer **«pedido recusado»**, como já acontecia ao fechar o painel.
+
 ## 0.3.2 — 2026-11-05
 
 A versão em que a lista de conversas deixa de mentir, o painel de autorização passa a dizer

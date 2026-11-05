@@ -357,6 +357,11 @@ private fun ApprovalDialog(vm: MainViewModel, ap: PendingApproval) {
     // a folha e a ligação ao modelo. Antes era um AlertDialog com um botão por opção, que decidia
     // no toque — sem se ver o que se estava a escolher.
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // O painel é uma decisão de segurança: o teclado não pode ficar por cima dele (e no Android 16
+    // a transição do `ModalBottomSheet` com o IME aberto deixava a conversa sem redesenhar). Fecha-se
+    // o teclado ao nascer o pedido.
+    val teclado = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    LaunchedEffect(ap.requestId) { teclado?.hide() }
 
     ModalBottomSheet(onDismissRequest = { vm.answerApproval(null) }, sheetState = sheet) {
         Column(

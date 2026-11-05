@@ -1735,7 +1735,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             JSONObject().put("outcome", JSONObject().put("outcome", "selected").put("optionId", optionId))
         }
         controller.client.respond(req.requestId, outcome)
-        transcript.add(ChatLine("system", if (optionId == null) "pedido recusado" else "autorizado"))
+        // O `optionId` não nulo também pode ser uma recusa («Recusar» escolhido no painel): a
+        // linha tem de dizer o que aconteceu, não «autorizado» por o pedido ter tido resposta.
+        val recusou = optionId == null || optionId.contains("reject", ignoreCase = true)
+        transcript.add(ChatLine("system", if (recusou) "pedido recusado" else "autorizado"))
     }
 
     /** Interrompe o turno em curso (ACP `session/cancel`). */

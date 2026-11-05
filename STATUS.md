@@ -3681,3 +3681,84 @@ A release foi publicada depois de a APK ser instalada num Android 16 limpo e de 
 | Versão instalada | `versionCode 4`, `versionName 0.3.2` |
 | Upgrade | 0.3.1 instalada → `adb install -r` da 0.3.2 → `Success`, versão 0.3.2 |
 | Modo embutido | kernel de 211 MB descarregado e «engine answering» no emulador limpo (§92.4) |
+
+---
+
+## 93. E2E sem AI: o daemon ACP falso (2026-11-05)
+
+O ensaio do §91 percorre a app a sério, mas dois cenários dependem do modelo (chave e rede). Para
+os tornar determinísticos — e poder correr a UI toda sem gastar um turno — passou a haver um
+**daemon ACP falso**: `tools/mock-acp-daemon.cjs`, com o ensaio `tools/mock-e2e-test.sh`.
+
+### 93.1 Como funciona
+
+```
+app no emulador  ──127.0.0.1:39732──►  adb reverse  ──►  mock no computador
+```
+
+O mock fala o mesmo JSON-RPC por linha que a app já usa: autenticação do daemon, `initialize`,
+`session/new`, `session/prompt`, `session/update` (texto, pensamento, ferramenta, consumo), pedido
+de autorização, metadados, turnos e histórico. As respostas são guionadas pelo texto do prompt:
+
+| Prompt | O que o mock faz |
+|---|---|
+| `ola mock` | duas bolhas de texto, um cartão `bash` e a telemetria de 1 passo / 1,2 s |
+| `aprova mock` | envia `session/request_permission`; recusar vira «Pedido recusado pelo mock.» |
+| `erro mock` | devolve um erro JSON-RPC e a app mostra o cartão de erro |
+
+O ensaio copia as preferências do emulador, faz `pm clear` (estado limpo), escreve
+`mode=daemon`, `port=39732`, um token de teste e `wizardConcluido=true`, arranca o mock e a app, e
+no fim repõe as preferências originais. **Nunca corre no telemóvel**: recusa um dispositivo que não
+seja `emulator-*`.
+
+### 93.2 O que o mock apanhou (reproduzido a falhar primeiro)
+
+**1. «Autorizado» numa recusa.** O ensaio passou a exigir «pedido recusado» no transcript depois de
+escolher **Recusar** e **Confirmar**. Antes:
+
+```
+FALHA  o transcript diz que o pedido foi recusado
+```
+
+A causa era `answerApproval`: qualquer `optionId` não nulo escrevia «autorizado», mesmo
+`reject_once`. Passou a olhar para o id (`contains("reject")`).
+
+**2. A conversa não redesenhava depois do painel.** O mock recebia a recusa e enviava a resposta,
+mas o `uiautomator` continuava a ver o cartão `bash` em `RUNNING` e o teclado aberto. A transição
+do `ModalBottomSheet` com o IME aberto no Android 16 deixava a UI presa. O `ApprovalDialog` passou a
+fechar o teclado ao nascer cada pedido (`LocalSoftwareKeyboardController.hide()`).
+
+**3. O ensaio não via o teclado.** O `e2e_hide_kb` procurava `mInputShown=true`; no Android 16 o
+IME reporta `mIsInputViewShown=true` e o primeiro ficava `false`. Passou a aceitar os dois (e a
+mandar ESC como segunda tentativa).
+
+### 93.3 Prova
+
+```
+== mock e2e: 8 ok, 0 falhas ==
+```
+
+Cobre: ligação ao mock, lista vazia, `session/new`, resposta guionada, cartão de ferramenta,
+telemetria, consumo, painel de autorização, recusa e erro. O contrato do mock tem teste próprio,
+sem Android, e corre na CI:
+
+```
+node tools/mock-acp-test.cjs
+   OK auth · initialize · session/new · prompt · ferramenta · consumo
+   OK autorização · recusa · erro · metadados · turnos · histórico
+mock: tudo bem
+```
+
+O ensaio usa um **emulador Android 16** com a APK de debug; o telefone ficou fora dele. O teste
+não substitui o §91 (que prova o motor real), mas permite alargar a cobertura da UI sem AI e sem
+tokens.
+
+### 93.4 Limites e próximo passo
+
+- Corre **num emulador** e numa APK **debug** (por causa do `run-as`/preferências); não é um teste
+  de instalação de release (esse é o §92).
+- Cobre hoje conversa, ferramenta, aprovação e erro. O mesmo mock pode crescer para onboarding,
+  escolha de modelo/esforço, fila a correr, ecrã virtual, backup e os três modos — é o caminho para
+  o «todos os use-cases» sem modelo.
+- A CI testa o contrato do mock, não a app num emulador; para a app, o ensaio corre localmente com
+  `--device emulator-5554`.

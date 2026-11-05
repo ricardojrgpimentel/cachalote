@@ -79,6 +79,11 @@ jobs:
       - name: os cenários end-to-end listam-se sem telefone
         run: ./tools/app-e2e-test.sh --list
 
+      # O daemon ACP falso é o que permite os E2E sem AI. Aqui testa-se o contrato dele (auth,
+      # initialize, sessão, prompt, ferramentas, autorização e erro) sem emulador.
+      - name: mock ACP (sem telefone)
+        run: node tools/mock-acp-test.cjs
+
       - name: node --check nos ficheiros JS
         run: |
           set -e
