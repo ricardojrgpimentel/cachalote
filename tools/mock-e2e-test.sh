@@ -91,6 +91,9 @@ def b(n, v):
     rm(n); ET.SubElement(root, "boolean", {"name": n, "value": "true" if v else "false"})
 s("mode", "daemon"); b("wizardConcluido", True); b("modoEscolhido", True)
 b("motorParado", False); b("a11yJaEsteveLigada", False)
+# O ecrã virtual é local da app; o ensaio autoriza as quatro capacidades para o poder iniciar.
+for cap in ("vscreen_start", "vscreen_status", "vscreen_frame", "vscreen_stop"):
+    b("cap_" + cap, True)
 i("port", int(porta)); s("token", token)
 t.write(dst, encoding="utf-8", xml_declaration=True)
 PY
@@ -254,6 +257,14 @@ if [ -n "$C" ]; then
 else
   fail "encontrar a conversa para apagar"
 fi
+
+echo "== ecrã virtual =="
+e2e_tap_exact "$(t "Ajustes" "Settings")" >/dev/null 2>&1 || e2e_tap "$(t "Ajustes" "Settings")" >/dev/null 2>&1 || fail "abrir os Ajustes"
+e2e_tap_exact "$(t "Ecrã virtual" "Virtual screen")" >/dev/null 2>&1 || e2e_tap "$(t "Ecrã virtual" "Virtual screen")" >/dev/null 2>&1 || fail "abrir o Ecrã virtual"
+e2e_tap_exact "$(t "Iniciar" "Start")" >/dev/null 2>&1 || fail "iniciar o ecrã virtual"
+if e2e_wait_for "display_id=" 20; then ok "o ecrã virtual iniciou com um display"; else fail "o ecrã virtual iniciou com um display"; fi
+e2e_tap_exact "$(t "Parar" "Stop")" >/dev/null 2>&1 || fail "parar o ecrã virtual"
+if e2e_wait_for "$(t "parado" "stopped")" 10; then ok "o ecrã virtual parou"; else fail "o ecrã virtual parou"; fi
 
 echo
 echo "== mock e2e: $OK ok, $FALHAS falhas =="

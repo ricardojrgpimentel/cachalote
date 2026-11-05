@@ -136,7 +136,8 @@ serviço de acessibilidade — a app avisa e tem o botão **Ligar** em Ajustes �
 ### E2E sem AI, com um daemon falso
 
 `tools/mock-e2e-test.sh` percorre a conversa, a ferramenta, a aprovação (recusar e permitir), a
-fila a correr, o erro, a escolha de esforço, o histórico e o apagar **sem chave, rede ou modelo**: um daemon ACP falso ([`tools/mock-acp-daemon.cjs`](tools/mock-acp-daemon.cjs)) corre
+fila a correr, o erro, a escolha de esforço, o histórico, o apagar e o ecrã virtual **sem chave,
+rede ou modelo**: um daemon ACP falso ([`tools/mock-acp-daemon.cjs`](tools/mock-acp-daemon.cjs)) corre
 no computador e chega ao emulador por `adb reverse`.
 
 ```sh
