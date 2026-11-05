@@ -129,9 +129,9 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
             }
             Button(
                 onClick = { if (ultimo) onConcluir() else passo++ },
-                // «Continuar» travado enquanto o kernel se prepara: no modo embutido a extracção
-                // começa no passo 2 e leva 1–2 min no S10+ — sem isto o passo parecia pendurado e
-                // o botão levava a um passo que ainda não tinha nada para mostrar (ROADMAP G4).
+                // «Continuar» travado enquanto o kernel se prepara — menos no passo 0, que tem de
+                // avançar para o passo 2, onde a barra de progresso vive. Nos passos seguintes a
+                // espera evita levar a um passo que ainda não tem nada para mostrar (ROADMAP G4).
                 enabled = podeContinuar(passo, vm.kernelPreparando),
                 modifier = Modifier.weight(if (passo > 0) 1.6f else 1f),
             ) {

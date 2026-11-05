@@ -3665,3 +3665,19 @@ no emulador com «libnode.so não está na APK». Faltava `.work/jniLibs/arm64-v
 Depois de `prepare-embed.sh`, a APK voltou a **44 MB** e o `unzip -l` confirma
 `lib/arm64-v8a/libnode.so` e os `assets/motor-*`. A verificação de assinatura continua na mesma
 identidade (`881b04b0…`).
+
+### 92.6 A publicação da 0.3.2
+
+A release foi publicada depois de a APK ser instalada num Android 16 limpo e de o upgrade
+0.3.1 → 0.3.2 ter passado sem mudar de assinatura:
+
+| Verificação | Resultado |
+|---|---|
+| Tag | `v0.3.2` (commit `ea7c432`) |
+| Release | <https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.2> |
+| Asset | `app-release.apk`, 45 650 697 bytes |
+| sha256 | `3b8e358da531c03ad41f2cb306dd2c87cf7ad032e36b20902897c0f476296a59` |
+| Assinatura | `CN=Cachalote` · SHA-256 `881b04b0…` (a mesma da 0.3.1) |
+| Versão instalada | `versionCode 4`, `versionName 0.3.2` |
+| Upgrade | 0.3.1 instalada → `adb install -r` da 0.3.2 → `Success`, versão 0.3.2 |
+| Modo embutido | kernel de 211 MB descarregado e «engine answering» no emulador limpo (§92.4) |

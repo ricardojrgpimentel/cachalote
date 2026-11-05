@@ -1,5 +1,9 @@
 # Publicar o repositório — auditoria e checklist
 
+> **Última release:** [`v0.3.2`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.2)
+> (2026-11-05), APK de 44 MB, `sha256 3b8e358d…`. Inclui o modo embutido (`libnode.so`), o
+> primeiro arranque corrigido e o ensaio end-to-end — ver [`STATUS.md`](STATUS.md) §92.
+
 Este documento existe porque o plano é **tornar o repositório público** (e, com isso, resolver o
 alojamento do kernel: um *release asset* num repositório público é descarregável pela app sem
 token). Antes disso, isto é o que foi verificado e o que ficou por decidir.
@@ -71,6 +75,7 @@ A publicação **já foi feita no repositório privado**, à espera de o tornar 
 |---|---|---|
 | `kernel.zip` | release [`kernel-77fa6785a4e4`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/kernel-77fa6785a4e4) | 211 MB |
 | `cachalote-0.3.0-f2.apk` | mesma release (assinada com `.work/cachalote-release.jks`) | 42 MB |
+| `app-release.apk` | release [`v0.3.2`](https://github.com/ricardojrgpimentel/cachalote/releases/tag/v0.3.2) (a actual) | 44 MB |
 
 O `app/app/src/main/assets/kernel.remote.json` (não versionado) já aponta para
 `https://github.com/ricardojrgpimentel/cachalote/releases/download/kernel-77fa6785a4e4/kernel.zip`
