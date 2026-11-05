@@ -3612,7 +3612,56 @@ cenário `aprovacao` **9/9** — recusar continua a não criar o ficheiro; autor
 
 | Verificação | Resultado |
 |---|---|
-| JVM | `testDebugUnitTest` verde (inclui o teste novo do rótulo) |
+| JVM | `testDebugUnitTest` verde (inclui o teste do rótulo e o `AssistenteTest`) |
 | E2E `conversa` | **21/21** — lista actualiza sem trocar de aba |
 | E2E `aprovacao` | **9/9** — «Confirmar» recusa ou autoriza conforme a carta escolhida |
 | App no S10+ | debug rebuild instalada por cima, preferências e conversas intactas |
+| Release 0.3.2 no emulador limpo | instalada, assistente até ao passo 3, kernel embutido descarregado e «engine answering» (§92.4/§92.5) |
+
+### 92.4 O primeiro «Continuar» do assistente podia ficar preso no kernel
+
+**Como apareceu:** ao instalar a APK de release **0.3.2** num emulador Android 16 limpo (sem root,
+sem Shizuku), o passo 1 do assistente mostrava o «Continuar» cinzento e não deixava avançar — sem
+barra, sem explicação, à espera de um download de 211 MB que só se vê no passo 2.
+
+**Causa:** o modo sugerido nesse telefone é o embutido; `sugerirModo()` chama `switchMode(EMBEDDED)`,
+que começa logo a `provisionKernel()`. O botão do assistente estava `enabled = !vm.kernelPreparando`
+em **todos** os passos — inclusive no 0, que não tem nada para esperar.
+
+**Reprodução (teste a falhar):** extraiu-se a regra para `podeContinuar(passo, kernelPreparando)` e
+o `AssistenteTest` exigiu `podeContinuar(0, true) == true`. Antes da correcção:
+
+```
+AssistenteTest > o_primeiro_continuar_nao_fica_preso_no_kernel FAILED
+AssertionError: no passo 0 tem de deixar avançar para ver o progresso (AssistenteTest.kt:12)
+```
+
+**Correcção:** `podeContinuar` passou a `passo == 0 || !kernelPreparando`; do passo 1 em diante
+continua a espera pelo kernel, como o ROADMAP G4 pedia.
+
+**Prova depois, na release instalada no emulador limpo:**
+
+1. passo 1 → «Continuar» abre o passo 2;
+2. passo 2 → `downloading the kernel: 68/211 MB`, barra e «you can carry on when this finishes»;
+3. terminado o download → passo 3 com `✓ embedded engine (kernel extracted)` e
+   `✓ engine answering` / `motor embutido a correr`.
+
+[Captura](design/revisao/92-release-0.3.2-embutido.png) guardada nesta ronda. O `AssistenteTest`
+fica na JVM.
+
+### 92.5 O build de release podia sair sem o runtime embutido
+
+**Como apareceu:** a primeira APK de 0.3.2 desta ronda saiu com **11 MB** e o modo embutido falhou
+no emulador com «libnode.so não está na APK». Faltava `.work/jniLibs/arm64-v8a/libnode.so`: o
+`build-release.sh` compilava na mesma, sem aviso, e a app só falhava no telefone.
+
+**Correcção:** o `build-release.sh` passou a exigir `libnode.so` e, se faltar, pára com:
+
+```
+./tools/fetch-runtime.sh
+./tools/prepare-embed.sh
+```
+
+Depois de `prepare-embed.sh`, a APK voltou a **44 MB** e o `unzip -l` confirma
+`lib/arm64-v8a/libnode.so` e os `assets/motor-*`. A verificação de assinatura continua na mesma
+identidade (`881b04b0…`).

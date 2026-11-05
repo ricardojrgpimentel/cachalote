@@ -132,7 +132,7 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
                 // «Continuar» travado enquanto o kernel se prepara: no modo embutido a extracção
                 // começa no passo 2 e leva 1–2 min no S10+ — sem isto o passo parecia pendurado e
                 // o botão levava a um passo que ainda não tinha nada para mostrar (ROADMAP G4).
-                enabled = !vm.kernelPreparando,
+                enabled = podeContinuar(passo, vm.kernelPreparando),
                 modifier = Modifier.weight(if (passo > 0) 1.6f else 1f),
             ) {
                 Text(
@@ -148,6 +148,17 @@ fun Assistente(vm: MainViewModel, onConcluir: () -> Unit) {
         }
     }
 }
+
+/**
+ * O «Continuar» fica travado enquanto o kernel se prepara — **menos no primeiro passo**.
+ *
+ * No embutido a preparação começa assim que o modo é sugerido (antes de o utilizador ver o
+ * passo 2). Se o primeiro «Continuar» também ficasse travado, quem instala de fresco num telefone
+ * sem root/Shizuku via um botão cinzento sem barra nem explicação, à espera de 211 MB. Deixá-lo
+ * avançar leva ao passo 2, que é onde a barra de progresso vive.
+ */
+internal fun podeContinuar(passo: Int, kernelPreparando: Boolean): Boolean =
+    passo == 0 || !kernelPreparando
 
 /** Barra de progresso segmentada: um segmento por passo, os já feitos a teal. */
 @Composable

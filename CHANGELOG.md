@@ -3,7 +3,11 @@
 Formato: as versões são `MAJOR.MINOR.PATCH`; cada entrada diz o que mudou **para quem usa** e
 aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
 
-## Não publicado
+## 0.3.2 — 2026-11-05
+
+A versão em que a lista de conversas deixa de mentir, o painel de autorização passa a dizer
+«Confirmar», o primeiro arranque deixa de ficar preso no «Continuar» — e a app ganha um ensaio
+end-to-end que percorre os ecrãs como um utilizador.
 
 ### Dois defeitos de UI que o ensaio end-to-end apanhou
 
@@ -15,6 +19,20 @@ aponta para a secção do [`STATUS.md`](STATUS.md) onde está a prova.
   **«Confirmar»** (e «Confirm» em inglês): confirma a opção marcada e nunca diz o contrário do que
   vai acontecer. O ensaio de dispositivo que recusava pedidos a carregar em «Autorizar» passou a
   carregar em «Confirmar» (§92.2).
+
+### O primeiro arranque já não fica preso no «Continuar»
+
+- Num telefone **sem root nem Shizuku**, o modo sugerido é o embutido e a preparação do kernel
+  começa antes de o utilizador ver o passo 2 — mas o «Continuar» do passo 1 também ficava cinzento,
+  sem barra nem progresso, à espera do download de 211 MB. Agora o primeiro passo avança sempre;
+  é o passo 2 que mostra a barra e o «Continuar» que espera pelo kernel (§92.4).
+
+### A release deixa de poder sair sem o motor embutido
+
+- O `build-release.sh` compilava uma APK de 11 MB mesmo sem `.work/jniLibs/.../libnode.so` — a app
+  instalava-se, mas o modo embutido falhava no telefone com «libnode.so não está na APK». O script
+  passou a parar com a instrução de correr `tools/prepare-embed.sh`; a APK completa volta a ter
+  ~44 MB e o modo embutido foi verificado num emulador limpo (§92.5).
 
 ### Testes end-to-end da app, no telefone
 

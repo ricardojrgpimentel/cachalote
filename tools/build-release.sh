@@ -77,6 +77,20 @@ FIM
   echo "   (guarda este ficheiro e a password — sem eles não consegues actualizar a app)"
 fi
 
+# A release promete o modo embutido (README: «libnode.so + kernel extraído»). Sem o runtime
+# preparado, o Gradle compila na mesma uma APK mais pequena — e o embutido só falha no telefone,
+# com «libnode.so não está na APK». Já aconteceu nesta ronda (0.3.2, 2026-11-05).
+if [ ! -f "$WS/.work/jniLibs/arm64-v8a/libnode.so" ]; then
+  cat >&2 <<'FIM'
+ERRO: falta o runtime embutido em .work/jniLibs/arm64-v8a/libnode.so.
+      A release sairia sem o modo embutido (a app instala, mas o motor in-app falha).
+
+  ./tools/fetch-runtime.sh          # se ainda não houver runtime
+  ./tools/prepare-embed.sh          # copia o node e as bibliotecas para jniLibs
+FIM
+  exit 1
+fi
+
 echo "== a compilar release =="
 ( cd "$WS/app" && "$GRADLE" --no-daemon --console=plain assembleRelease | tail -6 )
 

@@ -100,7 +100,8 @@ gh repo edit ricardojrgpimentel/cachalote --visibility public --accept-visibilit
 # 3. reconstruir e instalar a app SEM o kernel embutido (ficheiro de metadados já lá está)
 ./tools/install-app.sh
 
-# 4. (quando houver release assinada) verificar a instalação de raiz
+# 4. (quando houver release assinada) preparar o runtime embutido e construir/verificar
+./tools/prepare-embed.sh       # sem isto o build-release pára (evita APK sem modo embutido)
 ./tools/build-release.sh
 ```
 
@@ -119,8 +120,9 @@ Notas:
 - [x] Confirmar os três jobs da CI verdes no repositório público. *(2026-11-04, commit da 0.3.1)*
 - [x] Confirmar que o URL do kernel responde a um `GET` sem autenticação
       (`curl -sI <url> | head -1`). *(2026-10-22, §86 do STATUS; repetido para o asset da 0.3.1)*
-- [ ] Instalar a app noutro telefone (ou no emulador) e deixar o modo embutido descarregar o
-      kernel com verificação de integridade.
+- [x] Instalar a app noutro telefone (ou no emulador) e deixar o modo embutido descarregar o
+      kernel com verificação de integridade. *(2026-11-05, release 0.3.2 num Android 16 limpo:
+      211 MB descarregados, kernel extraído e «engine answering» — §92.4/§92.5)*
 - [x] Verificar que nenhum segredo entrou por engano: `git log -p | grep -iE "sk-[a-z0-9]{20}"`.
       *(`tools/secret-scan.sh`: árvore e 164 commits)*
 
